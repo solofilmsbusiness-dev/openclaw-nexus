@@ -13,7 +13,23 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-function AgentDetailView({ agent }: { agent: Agent }) {
+type Tab = "agents" | "backlog" | "insights";
+
+const tabs: { id: Tab; label: string; icon: typeof Layers }[] = [
+  { id: "agents", label: "Agents", icon: BarChart3 },
+  { id: "backlog", label: "Backlog", icon: Layers },
+  { id: "insights", label: "Insights", icon: Lightbulb },
+];
+
+const insights = [
+  { title: "Revenue trending up", detail: "OF bundle converting at 23% WoW increase", agent: "Analyst", color: "text-neon-green" },
+  { title: "Content bottleneck detected", detail: "Content Command backlog at 12 — pipeline stalled", agent: "Brain", color: "text-neon-orange" },
+  { title: "FlipEngine offline", detail: "Payment gateway timeout — needs manual restart", agent: "Architect", color: "text-neon-red" },
+  { title: "Trending topic detected", detail: "AI automation trending — Scout recommends pivot", agent: "Scout", color: "text-neon-blue" },
+  { title: "Video pipeline optimal", detail: "45s reel rendered, engagement predicted high", agent: "Videographer", color: "text-neon-green" },
+  { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
+];
+
   const color = statusColor(agent.status);
   const recentEvents = SAMPLE_EVENTS.filter(e => e.agentId === agent.id).slice(0, 3);
   const avgLatency = (agent.metrics.latency.reduce((a, b) => a + b, 0) / agent.metrics.latency.length * 100).toFixed(0);
