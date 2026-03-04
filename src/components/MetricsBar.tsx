@@ -1,17 +1,19 @@
 import { motion } from "framer-motion";
-import { AGENTS } from "@/data/agents";
 import { Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import AnimatedCounter from "@/components/AnimatedCounter";
+import type { Agent } from "@/data/agents";
 
-const metrics = [
-  { label: "Total", value: AGENTS.length, icon: Activity, colorClass: "text-neon-cyan" },
-  { label: "Healthy", value: AGENTS.filter(a => a.status === "healthy").length, icon: CheckCircle, colorClass: "text-neon-green" },
-  { label: "Active", value: AGENTS.filter(a => a.status === "active").length, icon: Activity, colorClass: "text-neon-blue" },
-  { label: "Degraded", value: AGENTS.filter(a => a.status === "degraded").length, icon: AlertTriangle, colorClass: "text-neon-orange" },
-  { label: "Down", value: AGENTS.filter(a => a.status === "down").length, icon: XCircle, colorClass: "text-neon-red" },
-];
+export default function MetricsBar({ agents }: { agents: Agent[] }) {
+  const downCount = agents.filter((a) => a.status === "down").length;
 
-export default function MetricsBar() {
+  const metrics = [
+    { label: "Total", value: agents.length, icon: Activity, colorClass: "text-neon-cyan" },
+    { label: "Healthy", value: agents.filter((a) => a.status === "healthy").length, icon: CheckCircle, colorClass: "text-neon-green" },
+    { label: "Active", value: agents.filter((a) => a.status === "active").length, icon: Activity, colorClass: "text-neon-blue" },
+    { label: "Degraded", value: agents.filter((a) => a.status === "degraded").length, icon: AlertTriangle, colorClass: "text-neon-orange" },
+    { label: "Down", value: downCount, icon: XCircle, colorClass: "text-neon-red" },
+  ];
+
   return (
     <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-3 sm:px-6 py-3 glass-panel">
       <div className="flex items-center gap-2 mr-2 sm:mr-4">
@@ -24,7 +26,7 @@ export default function MetricsBar() {
       {metrics.map((m) => (
         <motion.div
           key={m.label}
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-1.5 relative"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -32,6 +34,10 @@ export default function MetricsBar() {
           <m.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${m.colorClass}`} />
           <span className="hidden sm:inline text-muted-foreground text-xs uppercase tracking-wider">{m.label}</span>
           <AnimatedCounter value={m.value} className={`metric-counter text-sm sm:text-base ${m.colorClass}`} />
+          {/* Red notification dot for down agents */}
+          {m.label === "Down" && downCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-neon-red animate-pulse-glow" />
+          )}
         </motion.div>
       ))}
       <div className="ml-auto flex items-center gap-2">

@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { AGENTS, SAMPLE_EVENTS, statusColor, Agent, AgentStatus } from "@/data/agents";
 import AnimatedCounter from "@/components/AnimatedCounter";
-import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
@@ -50,7 +51,6 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
       case "Restart":
         onStatusChange(agent.id, "active", { currentTask: "Restarting…", progress: 5 });
         toast.success(`${agent.name} restarting`, { description: "Agent will be back online shortly" });
-        // Simulate restart completing
         setTimeout(() => {
           onStatusChange(agent.id, "healthy", { currentTask: agent.currentTask.replace("Paused — ", ""), progress: 50 });
         }, 2000);
@@ -67,7 +67,6 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
       className="overflow-hidden"
     >
       <div className="pt-2 mt-2 border-t border-border/20 space-y-3">
-        {/* Metric summary */}
         <div className="grid grid-cols-3 gap-1.5">
           {[
             { label: "AVG LATENCY", value: `${avgLatency}ms`, color: "text-neon-cyan" },
@@ -80,8 +79,6 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
             </div>
           ))}
         </div>
-
-        {/* Recent events */}
         {recentEvents.length > 0 && (
           <div>
             <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Recent Events</p>
@@ -95,8 +92,6 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
             </div>
           </div>
         )}
-
-        {/* Action buttons */}
         <div className="flex gap-1.5">
           {[
             { icon: Play, label: "Run", disabled: agent.status === "active" },
@@ -119,14 +114,39 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
   );
 }
 
-function AgentsTab({ agents, onReorder, onStatusChange }: { agents: Agent[]; onReorder: (newOrder: Agent[]) => void; onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void }) {
+function AgentsTab({
+  agents, onReorder, onStatusChange, selectedAgentId, onSelectAgent,
+}: {
+  agents: Agent[];
+  onReorder: (newOrder: Agent[]) => void;
+  onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void;
+  selectedAgentId: string | null;
+  onSelectAgent: (id: string | null) => void;
+}) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Auto-expand and scroll to selected agent
+  useEffect(() => {
+    if (selectedAgentId) {
+      setExpandedId(selectedAgentId);
+      const el = cardRefs.current[selectedAgentId];
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedAgentId]);
+
+  const handleClick = (agent: Agent) => {
+    const newExpanded = expandedId === agent.id ? null : agent.id;
+    setExpandedId(newExpanded);
+    onSelectAgent(newExpanded ? agent.id : null);
+  };
 
   return (
     <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
       {agents.map((agent, i) => {
         const color = statusColor(agent.status);
         const isExpanded = expandedId === agent.id;
+        const isSelected = selectedAgentId === agent.id;
         return (
           <Reorder.Item
             key={agent.id}
@@ -136,12 +156,15 @@ function AgentsTab({ agents, onReorder, onStatusChange }: { agents: Agent[]; onR
             transition={{ delay: i * 0.03 }}
             whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 18px ${color.bg}30` }}
             whileTap={{ scale: 0.98 }}
-            className="p-3 rounded-lg border border-border/30 hover:border-border/60 transition-colors cursor-grab active:cursor-grabbing group"
+            className={`p-3 rounded-lg border transition-colors cursor-grab active:cursor-grabbing group ${
+              isSelected ? "border-primary/50 bg-primary/5" : "border-border/30 hover:border-border/60"
+            }`}
             style={{ borderLeftWidth: 3, borderLeftColor: color.bg }}
           >
             <div
+              ref={(el) => { cardRefs.current[agent.id] = el; }}
               className="cursor-pointer"
-              onClick={() => setExpandedId(isExpanded ? null : agent.id)}
+              onClick={() => handleClick(agent)}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
@@ -196,9 +219,9 @@ function AgentsTab({ agents, onReorder, onStatusChange }: { agents: Agent[]; onR
   );
 }
 
-function BacklogTab() {
-  const sorted = [...AGENTS].sort((a, b) => b.backlogCount - a.backlogCount);
-  const totalBacklog = AGENTS.reduce((s, a) => s + a.backlogCount, 0);
+function BacklogTab({ agents }: { agents: Agent[] }) {
+  const sorted = [...agents].sort((a, b) => b.backlogCount - a.backlogCount);
+  const totalBacklog = agents.reduce((s, a) => s + a.backlogCount, 0);
 
   return (
     <div className="space-y-3">
@@ -216,7 +239,6 @@ function BacklogTab() {
           <p className="text-[9px] text-muted-foreground font-mono mt-0.5">CLEAR</p>
         </div>
       </div>
-
       {sorted.map((agent, i) => {
         const color = statusColor(agent.status);
         const pct = totalBacklog > 0 ? (agent.backlogCount / totalBacklog) * 100 : 0;
@@ -273,9 +295,7 @@ function InsightsTab() {
             <div>
               <h4 className="font-display font-semibold text-xs text-foreground">{insight.title}</h4>
               <p className="text-[10px] text-muted-foreground mt-0.5">{insight.detail}</p>
-              <span className="text-[9px] font-mono text-muted-foreground mt-1 inline-block">
-                via {insight.agent}
-              </span>
+              <span className="text-[9px] font-mono text-muted-foreground mt-1 inline-block">via {insight.agent}</span>
             </div>
           </div>
         </motion.div>
@@ -284,12 +304,24 @@ function InsightsTab() {
   );
 }
 
-export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]; onAgentsChange: (agents: Agent[]) => void }) {
+interface AgentCardsProps {
+  agents: Agent[];
+  onAgentsChange: (agents: Agent[]) => void;
+  selectedAgentId: string | null;
+  onSelectAgent: (id: string | null) => void;
+}
+
+export default function AgentCards({ agents, onAgentsChange, selectedAgentId, onSelectAgent }: AgentCardsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("agents");
+  const [search, setSearch] = useState("");
 
   const handleStatusChange = useCallback((id: string, status: AgentStatus, update?: Partial<Agent>) => {
     onAgentsChange(agents.map(a => a.id === id ? { ...a, ...update, status } : a));
   }, [agents, onAgentsChange]);
+
+  const filteredAgents = search
+    ? agents.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()) || a.type.toLowerCase().includes(search.toLowerCase()))
+    : agents;
 
   return (
     <motion.div
@@ -298,6 +330,23 @@ export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="glass-panel neon-border p-4 h-full overflow-hidden flex flex-col"
     >
+      {/* Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search agents..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-8 pr-8 py-1.5 rounded-md bg-muted/30 border border-border/30 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+            <X className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+          </button>
+        )}
+      </div>
+
       {/* Tab bar */}
       <div className="flex gap-1 mb-3 p-0.5 bg-muted/30 rounded-lg">
         {tabs.map((tab) => (
@@ -317,7 +366,7 @@ export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <ScrollArea className="flex-1">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -326,12 +375,20 @@ export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={onAgentsChange} onStatusChange={handleStatusChange} />}
-            {activeTab === "backlog" && <BacklogTab />}
+            {activeTab === "agents" && (
+              <AgentsTab
+                agents={filteredAgents}
+                onReorder={onAgentsChange}
+                onStatusChange={handleStatusChange}
+                selectedAgentId={selectedAgentId}
+                onSelectAgent={onSelectAgent}
+              />
+            )}
+            {activeTab === "backlog" && <BacklogTab agents={agents} />}
             {activeTab === "insights" && <InsightsTab />}
           </motion.div>
         </AnimatePresence>
-      </div>
+      </ScrollArea>
     </motion.div>
   );
 }

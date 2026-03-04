@@ -1,23 +1,50 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import MetricsBar from "@/components/MetricsBar";
 import AgentGraph from "@/components/AgentGraph";
 import EventTimeline from "@/components/EventTimeline";
 import TerminalLog from "@/components/TerminalLog";
 import AgentCards from "@/components/AgentCards";
+import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSimulation } from "@/hooks/useSimulation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AGENTS, type Agent } from "@/data/agents";
+import { AGENTS, SAMPLE_EVENTS, type Agent, type AgentEvent, type AgentStatus } from "@/data/agents";
 
 const Index = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
+  const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
   const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
+  const handleNewEvent = useCallback((event: AgentEvent) => {
+    setEvents((prev) => [event, ...prev].slice(0, 50));
+  }, []);
+
+  const handleStatusChange = useCallback((id: string, status: AgentStatus) => {
+    setAgents((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? { ...a, status, progress: status === "down" ? 0 : a.progress, currentTask: status === "down" ? "Halted" : a.currentTask }
+          : a
+      )
+    );
+  }, []);
+
+  // Real-time simulation
+  useSimulation(agents, handleAgentsChange, handleNewEvent);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <MetricsBar />
+      <MetricsBar agents={agents} />
+
+      <CommandPalette
+        agents={agents}
+        onSelectAgent={setSelectedAgentId}
+        onStatusChange={handleStatusChange}
+      />
 
       <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0">
         {/* Left sidebar */}
@@ -27,7 +54,12 @@ const Index = () => {
           }`}
         >
           <div className="w-full lg:w-[320px] h-full min-h-[300px] lg:min-h-0">
-            <AgentCards agents={agents} onAgentsChange={handleAgentsChange} />
+            <AgentCards
+              agents={agents}
+              onAgentsChange={handleAgentsChange}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={setSelectedAgentId}
+            />
           </div>
         </div>
 
@@ -50,7 +82,11 @@ const Index = () => {
 
         {/* Graph - main focus */}
         <div className="flex-1 min-h-[400px] lg:min-h-0">
-          <AgentGraph agents={agents} />
+          <AgentGraph
+            agents={agents}
+            selectedAgentId={selectedAgentId}
+            onSelectAgent={setSelectedAgentId}
+          />
         </div>
 
         {/* Right toggle button (desktop) */}
@@ -78,13 +114,27 @@ const Index = () => {
         >
           <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0">
             <div className="min-h-[250px] lg:flex-1 lg:min-h-0">
-              <EventTimeline />
+              <EventTimeline
+                events={events}
+                selectedAgentId={selectedAgentId}
+                onSelectAgent={setSelectedAgentId}
+              />
             </div>
             <div className="min-h-[200px] lg:flex-1 lg:min-h-0">
-              <TerminalLog />
+              <TerminalLog events={events} />
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Cmd+K hint */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-panel neon-border text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <span>⌘K</span>
+        </button>
       </div>
     </div>
   );

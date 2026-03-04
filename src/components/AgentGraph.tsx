@@ -43,18 +43,23 @@ function FloatingGroup({ children, index, isHovered }: { children: React.ReactNo
 }
 
 function AgentNode({
-  agent, x, y, onHover, isHovered, hoveredId,
+  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId,
 }: {
   agent: Agent; x: number; y: number;
   onHover: (a: Agent | null) => void;
+  onClick: (a: Agent) => void;
   isHovered: boolean;
+  isSelected: boolean;
   hoveredId: string | null;
+  selectedId: string | null;
 }) {
   const color = statusColor(agent.status);
   const size = 20 + agent.backlogCount * 1.5;
-  const scale = isHovered ? 1.15 : 1;
-  const glowOpacity = isHovered ? 0.7 : 0.3;
-  const dimmed = hoveredId && !isHovered ? 0.5 : 1;
+  const active = isHovered || isSelected;
+  const scale = active ? 1.15 : 1;
+  const glowOpacity = active ? 0.7 : 0.3;
+  const anyFocused = hoveredId || selectedId;
+  const dimmed = anyFocused && !active ? 0.4 : 1;
 
   return (
     <motion.g
@@ -64,14 +69,22 @@ function AgentNode({
       style={{ cursor: "pointer", transformOrigin: `${x}px ${y}px` }}
       onMouseEnter={() => onHover(agent)}
       onMouseLeave={() => onHover(null)}
+      onClick={() => onClick(agent)}
     >
+      {/* Selection ring */}
+      {isSelected && (
+        <circle cx={x} cy={y} r={size + 18} fill="none" stroke={color.bg} strokeWidth={2} strokeDasharray="4 2" opacity={0.8}>
+          <animate attributeName="stroke-dashoffset" values="0;-12" dur="1.5s" repeatCount="indefinite" />
+          <animate attributeName="r" values={`${size + 16};${size + 20};${size + 16}`} dur="2s" repeatCount="indefinite" />
+        </circle>
+      )}
       {/* Glow */}
-      <circle cx={x} cy={y} r={size + (isHovered ? 14 : 8)} fill="none" stroke={color.bg} strokeWidth={isHovered ? 2 : 1} opacity={glowOpacity}>
-        <animate attributeName="r" values={`${size + 6};${size + (isHovered ? 16 : 12)};${size + 6}`} dur="3s" repeatCount="indefinite" />
+      <circle cx={x} cy={y} r={size + (active ? 14 : 8)} fill="none" stroke={color.bg} strokeWidth={active ? 2 : 1} opacity={glowOpacity}>
+        <animate attributeName="r" values={`${size + 6};${size + (active ? 16 : 12)};${size + 6}`} dur="3s" repeatCount="indefinite" />
         <animate attributeName="opacity" values={`${glowOpacity * 0.8};${glowOpacity};${glowOpacity * 0.8}`} dur="3s" repeatCount="indefinite" />
       </circle>
       {/* Main circle */}
-      <circle cx={x} cy={y} r={size} fill={`${color.bg}22`} stroke={color.bg} strokeWidth={isHovered ? 3 : 2}>
+      <circle cx={x} cy={y} r={size} fill={`${color.bg}22`} stroke={color.bg} strokeWidth={active ? 3 : 2}>
         <animate attributeName="r" values={`${size - 1};${size + 1};${size - 1}`} dur="4s" repeatCount="indefinite" />
       </circle>
       {/* Icon */}
@@ -116,36 +129,14 @@ function AnimatedEdge({
         opacity={highlighted ? 0.8 : 0.25}
         style={{ transition: "opacity 0.3s, stroke-width 0.3s" }}
       >
-        <animate
-          attributeName="stroke-dashoffset"
-          values="0;-20"
-          dur={highlighted ? "1s" : "2s"}
-          repeatCount="indefinite"
-        />
+        <animate attributeName="stroke-dashoffset" values="0;-20" dur={highlighted ? "1s" : "2s"} repeatCount="indefinite" />
       </path>
       {Array.from({ length: particleCount }).map((_, i) => (
-        <circle
-          key={i}
-          r={particleR}
-          fill={color}
-          filter="url(#particleGlow)"
-          opacity="0"
-        >
-          <animateMotion
-            dur={`${dur}s`}
-            begin={`${(i * dur) / particleCount}s`}
-            repeatCount="indefinite"
-          >
+        <circle key={i} r={particleR} fill={color} filter="url(#particleGlow)" opacity="0">
+          <animateMotion dur={`${dur}s`} begin={`${(i * dur) / particleCount}s`} repeatCount="indefinite">
             <mpath href={`#${pathId}`} />
           </animateMotion>
-          <animate
-            attributeName="opacity"
-            values={`0;${particleOpacity};${particleOpacity};0`}
-            keyTimes="0;0.1;0.9;1"
-            dur={`${dur}s`}
-            begin={`${(i * dur) / particleCount}s`}
-            repeatCount="indefinite"
-          />
+          <animate attributeName="opacity" values={`0;${particleOpacity};${particleOpacity};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} begin={`${(i * dur) / particleCount}s`} repeatCount="indefinite" />
         </circle>
       ))}
     </g>
@@ -153,15 +144,17 @@ function AnimatedEdge({
 }
 
 const PARTICLE_PATHS = [
-  "M0,120 L800,120",
-  "M0,280 L800,280",
-  "M0,440 L800,440",
-  "M200,0 L200,600",
-  "M440,0 L440,600",
-  "M640,0 L640,600",
+  "M0,120 L800,120", "M0,280 L800,280", "M0,440 L800,440",
+  "M200,0 L200,600", "M440,0 L440,600", "M640,0 L640,600",
 ];
 
-export default function AgentGraph({ agents }: { agents: Agent[] }) {
+interface AgentGraphProps {
+  agents: Agent[];
+  selectedAgentId: string | null;
+  onSelectAgent: (id: string | null) => void;
+}
+
+export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGraphProps) {
   const positions = useMemo(() => getNodePositions(agents), [agents]);
   const [hovered, setHovered] = useState<Agent | null>(null);
   const [mouse, setMouse] = useState({ x: 400, y: 300 });
@@ -176,28 +169,34 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
     setMouse({ x, y });
   }, []);
 
+  const handleNodeClick = useCallback((agent: Agent) => {
+    onSelectAgent(selectedAgentId === agent.id ? null : agent.id);
+  }, [selectedAgentId, onSelectAgent]);
+
+  const handleBgClick = useCallback(() => {
+    if (selectedAgentId) onSelectAgent(null);
+  }, [selectedAgentId, onSelectAgent]);
+
   const parallaxX = (mouse.x - 400) * 0.015;
   const parallaxY = (mouse.y - 300) * 0.015;
 
   const hoveredId = hovered?.id ?? null;
+  const focusId = hoveredId || selectedAgentId;
   const connectedIds = useMemo(() => {
-    if (!hoveredId) return new Set<string>();
+    if (!focusId) return new Set<string>();
     const ids = new Set<string>();
     EDGES.forEach((e) => {
-      if (e.from === hoveredId) ids.add(e.to);
-      if (e.to === hoveredId) ids.add(e.from);
+      if (e.from === focusId) ids.add(e.to);
+      if (e.to === focusId) ids.add(e.from);
     });
     return ids;
-  }, [hoveredId]);
+  }, [focusId]);
+
+  const displayAgent = hovered || (selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null);
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden scanline">
-      <svg
-        ref={svgRef}
-        viewBox="0 0 800 600"
-        className="w-full h-full"
-        onMouseMove={handleMouseMove}
-      >
+      <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full" onMouseMove={handleMouseMove} onClick={handleBgClick}>
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.6" />
@@ -216,15 +215,10 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           <mask id="gridBrightMask">
             <rect width="800" height="600" fill="url(#cursorGridMask)" />
           </mask>
-          <filter id="blur">
-            <feGaussianBlur stdDeviation="3" />
-          </filter>
+          <filter id="blur"><feGaussianBlur stdDeviation="3" /></filter>
           <filter id="particleGlow">
             <feGaussianBlur stdDeviation="2" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(220, 15%, 12%)" strokeWidth="0.5" />
@@ -234,29 +228,19 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           </pattern>
         </defs>
 
-        {/* Base grid with parallax */}
         <g style={{ transform: `translate(${parallaxX}px, ${parallaxY}px)` }}>
           <rect width="800" height="600" fill="url(#grid)" />
         </g>
-
-        {/* Bright grid masked by cursor proximity */}
         <g style={{ transform: `translate(${parallaxX}px, ${parallaxY}px)` }}>
           <rect width="800" height="600" fill="url(#gridBright)" mask="url(#gridBrightMask)" />
         </g>
-
-        {/* Cursor glow overlay */}
         <rect width="800" height="600" fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
 
-        {/* Data particles along grid lines */}
         {PARTICLE_PATHS.map((pathD, i) => (
           <g key={`particle-${i}`}>
             <path id={`ppath-${i}`} d={pathD} fill="none" stroke="none" />
             <circle r="1.5" fill="hsl(160, 100%, 45%)" opacity="0.5">
-              <animateMotion
-                dur={`${6 + i * 2}s`}
-                begin={`${i * 1.5}s`}
-                repeatCount="indefinite"
-              >
+              <animateMotion dur={`${6 + i * 2}s`} begin={`${i * 1.5}s`} repeatCount="indefinite">
                 <mpath href={`#ppath-${i}`} />
               </animateMotion>
               <animate attributeName="opacity" values="0;0.6;0.6;0" dur={`${6 + i * 2}s`} begin={`${i * 1.5}s`} repeatCount="indefinite" />
@@ -264,28 +248,18 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           </g>
         ))}
 
-        {/* Edges */}
         {EDGES.map((edge) => {
           const from = positions[edge.from];
           const to = positions[edge.to];
           if (!from || !to) return null;
-          const fromAgent = agents.find(a => a.id === edge.from);
+          const fromAgent = agents.find((a) => a.id === edge.from);
           const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(185, 100%, 50%)";
-          const highlighted = hoveredId ? (edge.from === hoveredId || edge.to === hoveredId) : false;
+          const highlighted = focusId ? (edge.from === focusId || edge.to === focusId) : false;
           return (
-            <AnimatedEdge
-              pathId={`edge-${edge.id}`}
-              key={edge.id}
-              x1={from.x} y1={from.y}
-              x2={to.x} y2={to.y}
-              color={color}
-              weight={edge.weight}
-              highlighted={highlighted}
-            />
+            <AnimatedEdge pathId={`edge-${edge.id}`} key={edge.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} color={color} weight={edge.weight} highlighted={highlighted} />
           );
         })}
 
-        {/* Core node - floating */}
         <FloatingGroup index={99} isHovered={false}>
           <circle cx={CORE_X} cy={CORE_Y} r="70" fill="url(#coreGlow)" filter="url(#blur)">
             <animate attributeName="r" values="65;75;65" dur="4s" repeatCount="indefinite" />
@@ -304,55 +278,57 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           </text>
         </FloatingGroup>
 
-        {/* Agent nodes - floating */}
         {agents.map((agent, i) => {
           const pos = positions[agent.id];
           const isHovered = hoveredId === agent.id;
+          const isSelected = selectedAgentId === agent.id;
           return (
-            <FloatingGroup key={agent.id} index={i} isHovered={isHovered}>
+            <FloatingGroup key={agent.id} index={i} isHovered={isHovered || isSelected}>
               <AgentNode
                 agent={agent}
                 x={pos.x}
                 y={pos.y}
                 onHover={setHovered}
+                onClick={handleNodeClick}
                 isHovered={isHovered}
+                isSelected={isSelected}
                 hoveredId={hoveredId}
+                selectedId={selectedAgentId}
               />
             </FloatingGroup>
           );
         })}
       </svg>
 
-      {/* Hover tooltip */}
-      {hovered && (
+      {displayAgent && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="absolute top-4 right-4 glass-panel neon-border p-4 w-64"
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">{hovered.icon}</span>
+            <span className="text-xl">{displayAgent.icon}</span>
             <div>
-              <h3 className="font-display font-bold text-sm text-foreground">{hovered.name}</h3>
+              <h3 className="font-display font-bold text-sm text-foreground">{displayAgent.name}</h3>
               <span className={`text-xs font-mono ${
-                hovered.status === 'healthy' ? 'status-healthy' :
-                hovered.status === 'degraded' ? 'status-degraded' :
-                hovered.status === 'down' ? 'status-down' : 'status-active'
-              }`}>{hovered.status.toUpperCase()}</span>
+                displayAgent.status === 'healthy' ? 'status-healthy' :
+                displayAgent.status === 'degraded' ? 'status-degraded' :
+                displayAgent.status === 'down' ? 'status-down' : 'status-active'
+              }`}>{displayAgent.status.toUpperCase()}</span>
             </div>
           </div>
           <div className="space-y-1 text-xs font-mono text-muted-foreground">
-            <div className="flex justify-between"><span>Task:</span><span className="text-foreground">{hovered.currentTask}</span></div>
-            <div className="flex justify-between"><span>Progress:</span><span className="text-foreground">{hovered.progress}%</span></div>
-            <div className="flex justify-between"><span>Backlog:</span><span className="text-foreground">{hovered.backlogCount}</span></div>
+            <div className="flex justify-between"><span>Task:</span><span className="text-foreground">{displayAgent.currentTask}</span></div>
+            <div className="flex justify-between"><span>Progress:</span><span className="text-foreground">{displayAgent.progress}%</span></div>
+            <div className="flex justify-between"><span>Backlog:</span><span className="text-foreground">{displayAgent.backlogCount}</span></div>
           </div>
           <div className="mt-3">
             <svg viewBox="0 0 100 20" className="w-full h-5">
               <polyline
                 fill="none"
-                stroke={statusColor(hovered.status).bg}
+                stroke={statusColor(displayAgent.status).bg}
                 strokeWidth="1.5"
-                points={hovered.metrics.activity.map((v, i) => `${(i / 19) * 100},${20 - v * 18}`).join(" ")}
+                points={displayAgent.metrics.activity.map((v, i) => `${(i / 19) * 100},${20 - v * 18}`).join(" ")}
               />
             </svg>
             <span className="text-[9px] text-muted-foreground font-mono">ACTIVITY</span>
