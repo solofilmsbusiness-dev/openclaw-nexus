@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { AGENTS, statusColor, Agent } from "@/data/agents";
+import { AGENTS, SAMPLE_EVENTS, statusColor, Agent } from "@/data/agents";
 import AnimatedCounter from "@/components/AnimatedCounter";
-import { Layers, Lightbulb, BarChart3, GripVertical } from "lucide-react";
+import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity } from "lucide-react";
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   const points = data.map((v, i) => `${(i / (data.length - 1)) * 60},${16 - v * 14}`).join(" ");
@@ -30,11 +30,80 @@ const insights = [
   { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
 ];
 
+function AgentDetailView({ agent }: { agent: Agent }) {
+  const color = statusColor(agent.status);
+  const recentEvents = SAMPLE_EVENTS.filter(e => e.agentId === agent.id).slice(0, 3);
+  const avgLatency = (agent.metrics.latency.reduce((a, b) => a + b, 0) / agent.metrics.latency.length * 100).toFixed(0);
+  const avgSuccess = (agent.metrics.successRate.reduce((a, b) => a + b, 0) / agent.metrics.successRate.length * 100).toFixed(0);
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeInOut" }}
+      className="overflow-hidden"
+    >
+      <div className="pt-2 mt-2 border-t border-border/20 space-y-3">
+        {/* Metric summary */}
+        <div className="grid grid-cols-3 gap-1.5">
+          {[
+            { label: "AVG LATENCY", value: `${avgLatency}ms`, color: "text-neon-cyan" },
+            { label: "SUCCESS", value: `${avgSuccess}%`, color: "text-neon-green" },
+            { label: "BACKLOG", value: `${agent.backlogCount}`, color: agent.backlogCount > 5 ? "text-neon-red" : "text-neon-orange" },
+          ].map((m) => (
+            <div key={m.label} className="text-center p-1.5 rounded bg-muted/30">
+              <span className={`font-mono text-xs font-bold ${m.color}`}>{m.value}</span>
+              <p className="text-[8px] text-muted-foreground font-mono mt-0.5">{m.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent events */}
+        {recentEvents.length > 0 && (
+          <div>
+            <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Recent Events</p>
+            <div className="space-y-1">
+              {recentEvents.map((ev) => (
+                <div key={ev.id} className="flex items-start gap-1.5 text-[10px]">
+                  <Activity className="w-2.5 h-2.5 mt-0.5 shrink-0 text-neon-cyan" />
+                  <span className="text-foreground/70 truncate">{ev.message}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex gap-1.5">
+          {[
+            { icon: Play, label: "Run", disabled: agent.status === "active" },
+            { icon: Pause, label: "Pause", disabled: agent.status === "down" },
+            { icon: RotateCcw, label: "Restart", disabled: false },
+          ].map((action) => (
+            <button
+              key={action.label}
+              disabled={action.disabled}
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[9px] font-mono uppercase tracking-wider border border-border/30 hover:border-border/60 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <action.icon className="w-2.5 h-2.5" />
+              {action.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function AgentsTab({ agents, onReorder }: { agents: Agent[]; onReorder: (newOrder: Agent[]) => void }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   return (
     <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
       {agents.map((agent, i) => {
         const color = statusColor(agent.status);
+        const isExpanded = expandedId === agent.id;
         return (
           <Reorder.Item
             key={agent.id}
@@ -47,43 +116,56 @@ function AgentsTab({ agents, onReorder }: { agents: Agent[]; onReorder: (newOrde
             className="p-3 rounded-lg border border-border/30 hover:border-border/60 transition-colors cursor-grab active:cursor-grabbing group"
             style={{ borderLeftWidth: 3, borderLeftColor: color.bg }}
           >
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <GripVertical className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                <span className="text-sm">{agent.icon}</span>
-                <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
+            <div
+              className="cursor-pointer"
+              onClick={() => setExpandedId(isExpanded ? null : agent.id)}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <GripVertical className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  <span className="text-sm">{agent.icon}</span>
+                  <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded"
+                    style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
+                  >
+                    {agent.status.toUpperCase()}
+                  </span>
+                  <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                  </motion.div>
+                </div>
               </div>
-              <span
-                className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded"
-                style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
-              >
-                {agent.status.toUpperCase()}
-              </span>
+              <p className="text-[10px] text-muted-foreground mb-1.5 truncate">{agent.currentTask}</p>
+              <div className="w-full h-1 bg-muted rounded-full mb-1.5">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ backgroundColor: color.bg }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${agent.progress}%` }}
+                  transition={{ delay: i * 0.04, duration: 0.8 }}
+                />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Sparkline data={agent.metrics.latency} color={color.bg} />
+                  <span className="text-[8px] text-muted-foreground font-mono">LATENCY</span>
+                </div>
+                <div className="flex-1">
+                  <Sparkline data={agent.metrics.successRate} color={color.bg} />
+                  <span className="text-[8px] text-muted-foreground font-mono">SUCCESS</span>
+                </div>
+                <div className="flex-1">
+                  <Sparkline data={agent.metrics.activity} color={color.bg} />
+                  <span className="text-[8px] text-muted-foreground font-mono">ACTIVITY</span>
+                </div>
+              </div>
             </div>
-            <p className="text-[10px] text-muted-foreground mb-1.5 truncate">{agent.currentTask}</p>
-            <div className="w-full h-1 bg-muted rounded-full mb-1.5">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ backgroundColor: color.bg }}
-                initial={{ width: 0 }}
-                animate={{ width: `${agent.progress}%` }}
-                transition={{ delay: i * 0.04, duration: 0.8 }}
-              />
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <Sparkline data={agent.metrics.latency} color={color.bg} />
-                <span className="text-[8px] text-muted-foreground font-mono">LATENCY</span>
-              </div>
-              <div className="flex-1">
-                <Sparkline data={agent.metrics.successRate} color={color.bg} />
-                <span className="text-[8px] text-muted-foreground font-mono">SUCCESS</span>
-              </div>
-              <div className="flex-1">
-                <Sparkline data={agent.metrics.activity} color={color.bg} />
-                <span className="text-[8px] text-muted-foreground font-mono">ACTIVITY</span>
-              </div>
-            </div>
+            <AnimatePresence>
+              {isExpanded && <AgentDetailView agent={agent} />}
+            </AnimatePresence>
           </Reorder.Item>
         );
       })}
