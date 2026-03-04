@@ -91,32 +91,64 @@ function AgentNode({
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted,
+  x1, y1, x2, y2, color, weight, highlighted, pathId,
 }: {
   x1: number; y1: number; x2: number; y2: number;
-  color: string; weight: number; highlighted: boolean;
+  color: string; weight: number; highlighted: boolean; pathId: string;
 }) {
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 20), [x1, x2, y1]);
   const midY = useMemo(() => (y1 + y2) / 2 + (Math.cos(x2 + y2) * 20), [y1, y2, x2]);
   const path = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
+  const dur = highlighted ? 2 + weight * 0.5 : 4 + weight;
+  const particleCount = highlighted ? 3 : 2;
+  const particleR = highlighted ? 3.5 : 2;
+  const particleOpacity = highlighted ? 0.9 : 0.5;
 
   return (
-    <path
-      d={path}
-      fill="none"
-      stroke={color}
-      strokeWidth={highlighted ? weight * 2.5 : weight * 1.5}
-      strokeDasharray={highlighted ? "8 3" : "6 4"}
-      opacity={highlighted ? 0.8 : 0.25}
-      style={{ transition: "opacity 0.3s, stroke-width 0.3s" }}
-    >
-      <animate
-        attributeName="stroke-dashoffset"
-        values="0;-20"
-        dur={highlighted ? "1s" : "2s"}
-        repeatCount="indefinite"
-      />
-    </path>
+    <g>
+      <path
+        id={pathId}
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth={highlighted ? weight * 2.5 : weight * 1.5}
+        strokeDasharray={highlighted ? "8 3" : "6 4"}
+        opacity={highlighted ? 0.8 : 0.25}
+        style={{ transition: "opacity 0.3s, stroke-width 0.3s" }}
+      >
+        <animate
+          attributeName="stroke-dashoffset"
+          values="0;-20"
+          dur={highlighted ? "1s" : "2s"}
+          repeatCount="indefinite"
+        />
+      </path>
+      {Array.from({ length: particleCount }).map((_, i) => (
+        <circle
+          key={i}
+          r={particleR}
+          fill={color}
+          filter="url(#particleGlow)"
+          opacity="0"
+        >
+          <animateMotion
+            dur={`${dur}s`}
+            begin={`${(i * dur) / particleCount}s`}
+            repeatCount="indefinite"
+          >
+            <mpath href={`#${pathId}`} />
+          </animateMotion>
+          <animate
+            attributeName="opacity"
+            values={`0;${particleOpacity};${particleOpacity};0`}
+            keyTimes="0;0.1;0.9;1"
+            dur={`${dur}s`}
+            begin={`${(i * dur) / particleCount}s`}
+            repeatCount="indefinite"
+          />
+        </circle>
+      ))}
+    </g>
   );
 }
 
