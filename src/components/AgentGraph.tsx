@@ -51,7 +51,7 @@ function AgentNode({ agent, x, y, onHover }: { agent: Agent; x: number; y: numbe
         {agent.name}
       </text>
       {/* Status badge */}
-      <text x={x} y={y + size + 28} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" opacity="0.7" textTransform="uppercase">
+      <text x={x} y={y + size + 28} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" opacity="0.7" style={{ textTransform: "uppercase" }}>
         {agent.status.toUpperCase()}
       </text>
     </motion.g>
