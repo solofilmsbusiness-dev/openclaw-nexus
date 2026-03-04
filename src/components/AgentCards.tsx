@@ -50,7 +50,6 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
       case "Restart":
         onStatusChange(agent.id, "active", { currentTask: "Restarting…", progress: 5 });
         toast.success(`${agent.name} restarting`, { description: "Agent will be back online shortly" });
-        // Simulate restart completing
         setTimeout(() => {
           onStatusChange(agent.id, "healthy", { currentTask: agent.currentTask.replace("Paused — ", ""), progress: 50 });
         }, 2000);
@@ -66,11 +65,10 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
       transition={{ duration: 0.25, ease: "easeInOut" }}
       className="overflow-hidden"
     >
-      <div className="pt-2 mt-2 border-t border-border/20 space-y-3">
-        {/* Metric summary */}
+      <div className="pt-2 mt-2 border-t border-border/20 space-y-2">
         <div className="grid grid-cols-3 gap-1.5">
           {[
-            { label: "AVG LATENCY", value: `${avgLatency}ms`, color: "text-neon-cyan" },
+            { label: "AVG LATENCY", value: `${avgLatency}ms`, color: "text-primary" },
             { label: "SUCCESS", value: `${avgSuccess}%`, color: "text-neon-green" },
             { label: "BACKLOG", value: `${agent.backlogCount}`, color: agent.backlogCount > 5 ? "text-neon-red" : "text-neon-orange" },
           ].map((m) => (
@@ -81,14 +79,13 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
           ))}
         </div>
 
-        {/* Recent events */}
         {recentEvents.length > 0 && (
           <div>
             <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Recent Events</p>
             <div className="space-y-1">
               {recentEvents.map((ev) => (
                 <div key={ev.id} className="flex items-start gap-1.5 text-[10px]">
-                  <Activity className="w-2.5 h-2.5 mt-0.5 shrink-0 text-neon-cyan" />
+                  <Activity className="w-2.5 h-2.5 mt-0.5 shrink-0 text-primary" />
                   <span className="text-foreground/70 truncate">{ev.message}</span>
                 </div>
               ))}
@@ -96,7 +93,6 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
           </div>
         )}
 
-        {/* Action buttons */}
         <div className="flex gap-1.5">
           {[
             { icon: Play, label: "Run", disabled: agent.status === "active" },
@@ -107,7 +103,7 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
               key={action.label}
               disabled={action.disabled}
               onClick={(e) => { e.stopPropagation(); handleAction(action.label); }}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[9px] font-mono uppercase tracking-wider border border-border/30 hover:border-border/60 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[9px] font-mono uppercase tracking-wider border border-border/30 hover:border-primary/40 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
               <action.icon className="w-2.5 h-2.5" />
               {action.label}
@@ -119,80 +115,74 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
   );
 }
 
-function AgentsTab({ agents, onReorder, onStatusChange }: { agents: Agent[]; onReorder: (newOrder: Agent[]) => void; onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void }) {
+function AgentCard({ agent, isExpanded, onToggle, onStatusChange, index }: {
+  agent: Agent; isExpanded: boolean; onToggle: () => void;
+  onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void;
+  index: number;
+}) {
+  const color = statusColor(agent.status);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03 }}
+      whileHover={{ scale: 1.03, boxShadow: `0 0 20px hsl(45 100% 50% / 0.15)` }}
+      whileTap={{ scale: 0.98 }}
+      className="shrink-0 w-[200px] p-3 rounded-lg border border-border/30 hover:border-primary/30 transition-colors cursor-pointer"
+      style={{ borderTopWidth: 2, borderTopColor: color.bg }}
+      onClick={onToggle}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm">{agent.icon}</span>
+          <span className="font-display font-semibold text-[11px] text-foreground">{agent.name}</span>
+        </div>
+        <span
+          className="text-[8px] font-mono font-semibold px-1.5 py-0.5 rounded"
+          style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
+        >
+          {agent.status.toUpperCase()}
+        </span>
+      </div>
+      <p className="text-[9px] text-muted-foreground mb-1 truncate">{agent.currentTask}</p>
+      <div className="w-full h-1 bg-muted rounded-full mb-1">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: color.bg }}
+          initial={{ width: 0 }}
+          animate={{ width: `${agent.progress}%` }}
+          transition={{ delay: index * 0.04, duration: 0.8 }}
+        />
+      </div>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Sparkline data={agent.metrics.activity} color={color.bg} />
+        </div>
+      </div>
+      <AnimatePresence>
+        {isExpanded && <AgentDetailView agent={agent} onStatusChange={onStatusChange} />}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function AgentsTab({ agents, onStatusChange }: { agents: Agent[]; onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
-    <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
-      {agents.map((agent, i) => {
-        const color = statusColor(agent.status);
-        const isExpanded = expandedId === agent.id;
-        return (
-          <Reorder.Item
-            key={agent.id}
-            value={agent}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.03 }}
-            whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 18px ${color.bg}30` }}
-            whileTap={{ scale: 0.98 }}
-            className="p-3 rounded-lg border border-border/30 hover:border-border/60 transition-colors cursor-grab active:cursor-grabbing group"
-            style={{ borderLeftWidth: 3, borderLeftColor: color.bg }}
-          >
-            <div
-              className="cursor-pointer"
-              onClick={() => setExpandedId(isExpanded ? null : agent.id)}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <GripVertical className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                  <span className="text-sm">{agent.icon}</span>
-                  <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded"
-                    style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
-                  >
-                    {agent.status.toUpperCase()}
-                  </span>
-                  <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                  </motion.div>
-                </div>
-              </div>
-              <p className="text-[10px] text-muted-foreground mb-1.5 truncate">{agent.currentTask}</p>
-              <div className="w-full h-1 bg-muted rounded-full mb-1.5">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ backgroundColor: color.bg }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${agent.progress}%` }}
-                  transition={{ delay: i * 0.04, duration: 0.8 }}
-                />
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <Sparkline data={agent.metrics.latency} color={color.bg} />
-                  <span className="text-[8px] text-muted-foreground font-mono">LATENCY</span>
-                </div>
-                <div className="flex-1">
-                  <Sparkline data={agent.metrics.successRate} color={color.bg} />
-                  <span className="text-[8px] text-muted-foreground font-mono">SUCCESS</span>
-                </div>
-                <div className="flex-1">
-                  <Sparkline data={agent.metrics.activity} color={color.bg} />
-                  <span className="text-[8px] text-muted-foreground font-mono">ACTIVITY</span>
-                </div>
-              </div>
-            </div>
-            <AnimatePresence>
-              {isExpanded && <AgentDetailView agent={agent} onStatusChange={onStatusChange} />}
-            </AnimatePresence>
-          </Reorder.Item>
-        );
-      })}
-    </Reorder.Group>
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+      {agents.map((agent, i) => (
+        <AgentCard
+          key={agent.id}
+          agent={agent}
+          isExpanded={expandedId === agent.id}
+          onToggle={() => setExpandedId(expandedId === agent.id ? null : agent.id)}
+          onStatusChange={onStatusChange}
+          index={i}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -201,19 +191,15 @@ function BacklogTab() {
   const totalBacklog = AGENTS.reduce((s, a) => s + a.backlogCount, 0);
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
+    <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="shrink-0 flex flex-col gap-2 w-[120px]">
         <div className="text-center p-2 rounded-lg bg-muted/30">
           <AnimatedCounter value={totalBacklog} className="metric-counter text-lg text-neon-orange" />
-          <p className="text-[9px] text-muted-foreground font-mono mt-0.5">TOTAL ITEMS</p>
+          <p className="text-[9px] text-muted-foreground font-mono mt-0.5">TOTAL</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-muted/30">
           <AnimatedCounter value={sorted.filter(a => a.backlogCount > 5).length} className="metric-counter text-lg text-neon-red" />
           <p className="text-[9px] text-muted-foreground font-mono mt-0.5">CRITICAL</p>
-        </div>
-        <div className="text-center p-2 rounded-lg bg-muted/30">
-          <AnimatedCounter value={sorted.filter(a => a.backlogCount === 0).length} className="metric-counter text-lg text-neon-green" />
-          <p className="text-[9px] text-muted-foreground font-mono mt-0.5">CLEAR</p>
         </div>
       </div>
 
@@ -223,30 +209,25 @@ function BacklogTab() {
         return (
           <motion.div
             key={agent.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04 }}
-            whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 15px ${color.bg}30` }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-3 p-2 rounded-lg border border-border/20 hover:border-border/50 transition-colors cursor-pointer"
+            whileHover={{ scale: 1.03, boxShadow: `0 0 15px hsl(45 100% 50% / 0.15)` }}
+            className="shrink-0 w-[140px] flex flex-col items-center gap-1 p-2 rounded-lg border border-border/20 hover:border-primary/30 transition-colors cursor-pointer"
           >
-            <span className="text-sm">{agent.icon}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-display font-semibold text-[11px] text-foreground">{agent.name}</span>
-                <span className="font-mono text-xs font-bold" style={{ color: color.bg }}>
-                  <AnimatedCounter value={agent.backlogCount} duration={800} />
-                </span>
-              </div>
-              <div className="w-full h-1 bg-muted rounded-full">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ backgroundColor: color.bg }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ delay: i * 0.05, duration: 0.6 }}
-                />
-              </div>
+            <span className="text-lg">{agent.icon}</span>
+            <span className="font-display font-semibold text-[10px] text-foreground">{agent.name}</span>
+            <span className="font-mono text-sm font-bold" style={{ color: color.bg }}>
+              <AnimatedCounter value={agent.backlogCount} duration={800} />
+            </span>
+            <div className="w-full h-1 bg-muted rounded-full">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ backgroundColor: color.bg }}
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ delay: i * 0.05, duration: 0.6 }}
+              />
             </div>
           </motion.div>
         );
@@ -257,22 +238,21 @@ function BacklogTab() {
 
 function InsightsTab() {
   return (
-    <div className="space-y-2">
+    <div className="flex gap-2 overflow-x-auto pb-1">
       {insights.map((insight, i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.06 }}
-          whileHover={{ scale: 1.02, x: 4, boxShadow: "0 0 15px hsl(160 100% 45% / 0.15)" }}
-          whileTap={{ scale: 0.98 }}
-          className="p-3 rounded-lg border border-border/20 hover:border-border/50 transition-colors cursor-pointer"
+          whileHover={{ scale: 1.03, boxShadow: "0 0 15px hsl(45 100% 50% / 0.15)" }}
+          className="shrink-0 w-[220px] p-3 rounded-lg border border-border/20 hover:border-primary/30 transition-colors cursor-pointer"
         >
           <div className="flex items-start gap-2">
             <Lightbulb className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${insight.color}`} />
             <div>
               <h4 className="font-display font-semibold text-xs text-foreground">{insight.title}</h4>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{insight.detail}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{insight.detail}</p>
               <span className="text-[9px] font-mono text-muted-foreground mt-1 inline-block">
                 via {insight.agent}
               </span>
@@ -293,21 +273,21 @@ export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -30 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="glass-panel neon-border p-4 h-full overflow-hidden flex flex-col"
+      className="glass-panel neon-border p-3 h-full overflow-hidden flex flex-col"
     >
       {/* Tab bar */}
-      <div className="flex gap-1 mb-3 p-0.5 bg-muted/30 rounded-lg">
+      <div className="flex gap-1 mb-2 shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-1.5 py-1 px-3 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all ${
               activeTab === tab.id
-                ? "bg-secondary text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground/70"
+                ? "bg-primary/15 text-primary border border-primary/30 shadow-sm"
+                : "text-muted-foreground hover:text-foreground/70 border border-transparent"
             }`}
           >
             <tab.icon className="w-3 h-3" />
@@ -317,7 +297,7 @@ export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -325,8 +305,9 @@ export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
+            className="h-full"
           >
-            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={onAgentsChange} onStatusChange={handleStatusChange} />}
+            {activeTab === "agents" && <AgentsTab agents={agents} onStatusChange={handleStatusChange} />}
             {activeTab === "backlog" && <BacklogTab />}
             {activeTab === "insights" && <InsightsTab />}
           </motion.div>

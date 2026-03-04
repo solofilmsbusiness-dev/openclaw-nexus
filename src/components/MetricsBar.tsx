@@ -4,7 +4,7 @@ import { Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import AnimatedCounter from "@/components/AnimatedCounter";
 
 const metrics = [
-  { label: "Total", value: AGENTS.length, icon: Activity, colorClass: "text-neon-cyan" },
+  { label: "Total", value: AGENTS.length, icon: Activity, colorClass: "text-primary" },
   { label: "Healthy", value: AGENTS.filter(a => a.status === "healthy").length, icon: CheckCircle, colorClass: "text-neon-green" },
   { label: "Active", value: AGENTS.filter(a => a.status === "active").length, icon: Activity, colorClass: "text-neon-blue" },
   { label: "Degraded", value: AGENTS.filter(a => a.status === "degraded").length, icon: AlertTriangle, colorClass: "text-neon-orange" },
@@ -13,14 +13,14 @@ const metrics = [
 
 export default function MetricsBar() {
   return (
-    <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-3 sm:px-6 py-3 glass-panel">
+    <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-3 sm:px-6 py-3 glass-panel border-b border-primary/20">
       <div className="flex items-center gap-2 mr-2 sm:mr-4">
-        <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse-glow" />
-        <span className="font-display font-bold text-xs sm:text-sm tracking-widest uppercase text-foreground">
+        <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+        <span className="font-display font-bold text-xs sm:text-sm tracking-widest uppercase text-primary">
           OpenClaw
         </span>
       </div>
-      <div className="hidden sm:block h-6 w-px bg-border" />
+      <div className="hidden sm:block h-6 w-px bg-primary/20" />
       {metrics.map((m) => (
         <motion.div
           key={m.label}
