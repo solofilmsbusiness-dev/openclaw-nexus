@@ -5,7 +5,7 @@ export default function EventTimeline() {
   return (
     <div className="glass-panel neon-border p-4 h-full overflow-hidden flex flex-col">
       <h2 className="font-display font-bold text-xs tracking-widest uppercase text-muted-foreground mb-3 flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse-glow" />
+        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
         Event Timeline
       </h2>
       <div className="flex-1 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
