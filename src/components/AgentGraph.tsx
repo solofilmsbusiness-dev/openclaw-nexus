@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { EDGES, statusColor, type Agent } from "@/data/agents";
 
@@ -20,26 +20,58 @@ function getNodePositions(agents: Agent[]) {
   return positions;
 }
 
-function AgentNode({ agent, x, y, onHover }: { agent: Agent; x: number; y: number; onHover: (a: Agent | null) => void }) {
+function FloatingGroup({ children, index, isHovered }: { children: React.ReactNode; index: number; isHovered?: boolean }) {
+  const dur = 6 + (index % 4) * 1.3;
+  const dx = 3 + (index % 3);
+  const dy = 2 + ((index + 1) % 3);
+  const phase = index * 0.7;
+
+  return (
+    <g style={{ animationPlayState: isHovered ? "paused" : "running" }}>
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        values={`0,0; ${dx},${-dy}; ${-dx * 0.6},${dy * 0.8}; ${dx * 0.4},${-dy * 0.3}; 0,0`}
+        dur={`${dur}s`}
+        begin={`${phase}s`}
+        repeatCount="indefinite"
+        additive="sum"
+      />
+      {children}
+    </g>
+  );
+}
+
+function AgentNode({
+  agent, x, y, onHover, isHovered, hoveredId,
+}: {
+  agent: Agent; x: number; y: number;
+  onHover: (a: Agent | null) => void;
+  isHovered: boolean;
+  hoveredId: string | null;
+}) {
   const color = statusColor(agent.status);
   const size = 20 + agent.backlogCount * 1.5;
+  const scale = isHovered ? 1.15 : 1;
+  const glowOpacity = isHovered ? 0.7 : 0.3;
+  const dimmed = hoveredId && !isHovered ? 0.5 : 1;
 
   return (
     <motion.g
       initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.3, type: "spring" }}
-      style={{ cursor: "pointer" }}
+      animate={{ opacity: dimmed, scale }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      style={{ cursor: "pointer", transformOrigin: `${x}px ${y}px` }}
       onMouseEnter={() => onHover(agent)}
       onMouseLeave={() => onHover(null)}
     >
       {/* Glow */}
-      <circle cx={x} cy={y} r={size + 8} fill="none" stroke={color.bg} strokeWidth={1} opacity={0.3}>
-        <animate attributeName="r" values={`${size + 6};${size + 12};${size + 6}`} dur="3s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite" />
+      <circle cx={x} cy={y} r={size + (isHovered ? 14 : 8)} fill="none" stroke={color.bg} strokeWidth={isHovered ? 2 : 1} opacity={glowOpacity}>
+        <animate attributeName="r" values={`${size + 6};${size + (isHovered ? 16 : 12)};${size + 6}`} dur="3s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values={`${glowOpacity * 0.8};${glowOpacity};${glowOpacity * 0.8}`} dur="3s" repeatCount="indefinite" />
       </circle>
       {/* Main circle */}
-      <circle cx={x} cy={y} r={size} fill={`${color.bg}22`} stroke={color.bg} strokeWidth={2}>
+      <circle cx={x} cy={y} r={size} fill={`${color.bg}22`} stroke={color.bg} strokeWidth={isHovered ? 3 : 2}>
         <animate attributeName="r" values={`${size - 1};${size + 1};${size - 1}`} dur="4s" repeatCount="indefinite" />
       </circle>
       {/* Icon */}
@@ -58,9 +90,14 @@ function AgentNode({ agent, x, y, onHover }: { agent: Agent; x: number; y: numbe
   );
 }
 
-function AnimatedEdge({ x1, y1, x2, y2, color, weight }: { x1: number; y1: number; x2: number; y2: number; color: string; weight: number }) {
-  const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 40;
-  const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 40;
+function AnimatedEdge({
+  x1, y1, x2, y2, color, weight, highlighted,
+}: {
+  x1: number; y1: number; x2: number; y2: number;
+  color: string; weight: number; highlighted: boolean;
+}) {
+  const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 20), [x1, x2, y1]);
+  const midY = useMemo(() => (y1 + y2) / 2 + (Math.cos(x2 + y2) * 20), [y1, y2, x2]);
   const path = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
 
   return (
@@ -68,39 +105,125 @@ function AnimatedEdge({ x1, y1, x2, y2, color, weight }: { x1: number; y1: numbe
       d={path}
       fill="none"
       stroke={color}
-      strokeWidth={weight * 1.5}
-      strokeDasharray="6 4"
-      opacity={0.4}
+      strokeWidth={highlighted ? weight * 2.5 : weight * 1.5}
+      strokeDasharray={highlighted ? "8 3" : "6 4"}
+      opacity={highlighted ? 0.8 : 0.25}
+      style={{ transition: "opacity 0.3s, stroke-width 0.3s" }}
     >
-      <animate attributeName="stroke-dashoffset" values="0;-20" dur="2s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="0.2;0.5;0.2" dur="4s" repeatCount="indefinite" />
+      <animate
+        attributeName="stroke-dashoffset"
+        values="0;-20"
+        dur={highlighted ? "1s" : "2s"}
+        repeatCount="indefinite"
+      />
     </path>
   );
 }
 
+const PARTICLE_PATHS = [
+  "M0,120 L800,120",
+  "M0,280 L800,280",
+  "M0,440 L800,440",
+  "M200,0 L200,600",
+  "M440,0 L440,600",
+  "M640,0 L640,600",
+];
+
 export default function AgentGraph({ agents }: { agents: Agent[] }) {
   const positions = useMemo(() => getNodePositions(agents), [agents]);
   const [hovered, setHovered] = useState<Agent | null>(null);
+  const [mouse, setMouse] = useState({ x: 400, y: 300 });
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 800;
+    const y = ((e.clientY - rect.top) / rect.height) * 600;
+    setMouse({ x, y });
+  }, []);
+
+  const parallaxX = (mouse.x - 400) * 0.015;
+  const parallaxY = (mouse.y - 300) * 0.015;
+
+  const hoveredId = hovered?.id ?? null;
+  const connectedIds = useMemo(() => {
+    if (!hoveredId) return new Set<string>();
+    const ids = new Set<string>();
+    EDGES.forEach((e) => {
+      if (e.from === hoveredId) ids.add(e.to);
+      if (e.to === hoveredId) ids.add(e.from);
+    });
+    return ids;
+  }, [hoveredId]);
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden scanline">
-      <svg viewBox="0 0 800 600" className="w-full h-full">
+      <svg
+        ref={svgRef}
+        viewBox="0 0 800 600"
+        className="w-full h-full"
+        onMouseMove={handleMouseMove}
+      >
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.6" />
             <stop offset="50%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.15" />
             <stop offset="100%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0" />
           </radialGradient>
+          <radialGradient id="cursorGlow" cx={mouse.x / 800} cy={mouse.y / 600} r="0.25">
+            <stop offset="0%" stopColor="hsl(160, 100%, 45%)" stopOpacity="0.15" />
+            <stop offset="60%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="cursorGridMask" cx={mouse.x / 800} cy={mouse.y / 600} r="0.3">
+            <stop offset="0%" stopColor="white" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
+          <mask id="gridBrightMask">
+            <rect width="800" height="600" fill="url(#cursorGridMask)" />
+          </mask>
           <filter id="blur">
             <feGaussianBlur stdDeviation="3" />
           </filter>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(220, 15%, 12%)" strokeWidth="0.5" />
+          </pattern>
+          <pattern id="gridBright" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(160, 100%, 45%)" strokeWidth="0.8" />
+          </pattern>
         </defs>
 
-        {/* Grid background */}
-        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(220, 15%, 12%)" strokeWidth="0.5" />
-        </pattern>
-        <rect width="800" height="600" fill="url(#grid)" />
+        {/* Base grid with parallax */}
+        <g style={{ transform: `translate(${parallaxX}px, ${parallaxY}px)` }}>
+          <rect width="800" height="600" fill="url(#grid)" />
+        </g>
+
+        {/* Bright grid masked by cursor proximity */}
+        <g style={{ transform: `translate(${parallaxX}px, ${parallaxY}px)` }}>
+          <rect width="800" height="600" fill="url(#gridBright)" mask="url(#gridBrightMask)" />
+        </g>
+
+        {/* Cursor glow overlay */}
+        <rect width="800" height="600" fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
+
+        {/* Data particles along grid lines */}
+        {PARTICLE_PATHS.map((pathD, i) => (
+          <g key={`particle-${i}`}>
+            <path id={`ppath-${i}`} d={pathD} fill="none" stroke="none" />
+            <circle r="1.5" fill="hsl(160, 100%, 45%)" opacity="0.5">
+              <animateMotion
+                dur={`${6 + i * 2}s`}
+                begin={`${i * 1.5}s`}
+                repeatCount="indefinite"
+              >
+                <mpath href={`#ppath-${i}`} />
+              </animateMotion>
+              <animate attributeName="opacity" values="0;0.6;0.6;0" dur={`${6 + i * 2}s`} begin={`${i * 1.5}s`} repeatCount="indefinite" />
+            </circle>
+          </g>
+        ))}
 
         {/* Edges */}
         {EDGES.map((edge) => {
@@ -109,6 +232,7 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           if (!from || !to) return null;
           const fromAgent = agents.find(a => a.id === edge.from);
           const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(185, 100%, 50%)";
+          const highlighted = hoveredId ? (edge.from === hoveredId || edge.to === hoveredId) : false;
           return (
             <AnimatedEdge
               key={edge.id}
@@ -116,37 +240,45 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
               x2={to.x} y2={to.y}
               color={color}
               weight={edge.weight}
+              highlighted={highlighted}
             />
           );
         })}
 
-        {/* Core node */}
-        <circle cx={CORE_X} cy={CORE_Y} r="70" fill="url(#coreGlow)" filter="url(#blur)">
-          <animate attributeName="r" values="65;75;65" dur="4s" repeatCount="indefinite" />
-        </circle>
-        <circle cx={CORE_X} cy={CORE_Y} r="35" fill="hsl(220, 18%, 8%)" stroke="hsl(185, 100%, 50%)" strokeWidth="2">
-          <animate attributeName="r" values="33;37;33" dur="4s" repeatCount="indefinite" />
-        </circle>
-        <circle cx={CORE_X} cy={CORE_Y} r="8" fill="hsl(185, 100%, 60%)">
-          <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
-        </circle>
-        <text x={CORE_X} y={CORE_Y + 55} textAnchor="middle" fill="hsl(185, 100%, 50%)" fontSize="11" fontFamily="Space Grotesk" fontWeight="700" letterSpacing="3">
-          OPENCLAW CORE
-        </text>
-        <text x={CORE_X} y={CORE_Y + 67} textAnchor="middle" fill="hsl(185, 100%, 50%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.5">
-          NEURAL COMMAND
-        </text>
+        {/* Core node - floating */}
+        <FloatingGroup index={99} isHovered={false}>
+          <circle cx={CORE_X} cy={CORE_Y} r="70" fill="url(#coreGlow)" filter="url(#blur)">
+            <animate attributeName="r" values="65;75;65" dur="4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={CORE_X} cy={CORE_Y} r="35" fill="hsl(220, 18%, 8%)" stroke="hsl(185, 100%, 50%)" strokeWidth="2">
+            <animate attributeName="r" values="33;37;33" dur="4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={CORE_X} cy={CORE_Y} r="8" fill="hsl(185, 100%, 60%)">
+            <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
+          </circle>
+          <text x={CORE_X} y={CORE_Y + 55} textAnchor="middle" fill="hsl(185, 100%, 50%)" fontSize="11" fontFamily="Space Grotesk" fontWeight="700" letterSpacing="3">
+            OPENCLAW CORE
+          </text>
+          <text x={CORE_X} y={CORE_Y + 67} textAnchor="middle" fill="hsl(185, 100%, 50%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.5">
+            NEURAL COMMAND
+          </text>
+        </FloatingGroup>
 
-        {agents.map((agent) => {
+        {/* Agent nodes - floating */}
+        {agents.map((agent, i) => {
           const pos = positions[agent.id];
+          const isHovered = hoveredId === agent.id;
           return (
-            <AgentNode
-              key={agent.id}
-              agent={agent}
-              x={pos.x}
-              y={pos.y}
-              onHover={setHovered}
-            />
+            <FloatingGroup key={agent.id} index={i} isHovered={isHovered}>
+              <AgentNode
+                agent={agent}
+                x={pos.x}
+                y={pos.y}
+                onHover={setHovered}
+                isHovered={isHovered}
+                hoveredId={hoveredId}
+              />
+            </FloatingGroup>
           );
         })}
       </svg>
@@ -174,7 +306,6 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
             <div className="flex justify-between"><span>Progress:</span><span className="text-foreground">{hovered.progress}%</span></div>
             <div className="flex justify-between"><span>Backlog:</span><span className="text-foreground">{hovered.backlogCount}</span></div>
           </div>
-          {/* Mini sparkline */}
           <div className="mt-3">
             <svg viewBox="0 0 100 20" className="w-full h-5">
               <polyline
@@ -191,5 +322,3 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
     </div>
   );
 }
-
-
