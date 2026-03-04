@@ -11,6 +11,7 @@ import { AGENTS, type Agent } from "@/data/agents";
 const Index = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
   const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
 
