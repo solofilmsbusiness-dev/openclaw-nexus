@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import MetricsBar from "@/components/MetricsBar";
 import AgentGraph from "@/components/AgentGraph";
 import EventTimeline from "@/components/EventTimeline";
@@ -6,10 +6,13 @@ import TerminalLog from "@/components/TerminalLog";
 import AgentCards from "@/components/AgentCards";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AGENTS, type Agent } from "@/data/agents";
 
 const Index = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
+  const [agents, setAgents] = useState<Agent[]>(AGENTS);
+  const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -23,7 +26,7 @@ const Index = () => {
           }`}
         >
           <div className="w-full lg:w-[320px] h-full min-h-[300px] lg:min-h-0">
-            <AgentCards />
+            <AgentCards agents={agents} onAgentsChange={handleAgentsChange} />
           </div>
         </div>
 
@@ -46,7 +49,7 @@ const Index = () => {
 
         {/* Graph - main focus */}
         <div className="flex-1 min-h-[400px] lg:min-h-0">
-          <AgentGraph />
+          <AgentGraph agents={agents} />
         </div>
 
         {/* Right panel */}

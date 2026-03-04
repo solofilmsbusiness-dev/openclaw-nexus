@@ -1,17 +1,17 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { AGENTS, EDGES, statusColor, type Agent } from "@/data/agents";
+import { EDGES, statusColor, type Agent } from "@/data/agents";
 
 const CORE_X = 400;
 const CORE_Y = 300;
 const RADIUS = 220;
 
-function getNodePositions() {
+function getNodePositions(agents: Agent[]) {
   const positions: Record<string, { x: number; y: number }> = {
     core: { x: CORE_X, y: CORE_Y },
   };
-  AGENTS.forEach((agent, i) => {
-    const angle = (2 * Math.PI * i) / AGENTS.length - Math.PI / 2;
+  agents.forEach((agent, i) => {
+    const angle = (2 * Math.PI * i) / agents.length - Math.PI / 2;
     positions[agent.id] = {
       x: CORE_X + RADIUS * Math.cos(angle),
       y: CORE_Y + RADIUS * Math.sin(angle),
@@ -78,8 +78,8 @@ function AnimatedEdge({ x1, y1, x2, y2, color, weight }: { x1: number; y1: numbe
   );
 }
 
-export default function AgentGraph() {
-  const positions = useMemo(getNodePositions, []);
+export default function AgentGraph({ agents }: { agents: Agent[] }) {
+  const positions = useMemo(() => getNodePositions(agents), [agents]);
   const [hovered, setHovered] = useState<Agent | null>(null);
 
   return (
@@ -107,8 +107,7 @@ export default function AgentGraph() {
           const from = positions[edge.from];
           const to = positions[edge.to];
           if (!from || !to) return null;
-          const fromAgent = AGENTS.find(a => a.id === edge.from);
-          const toAgent = AGENTS.find(a => a.id === edge.to);
+          const fromAgent = agents.find(a => a.id === edge.from);
           const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(185, 100%, 50%)";
           return (
             <AnimatedEdge
@@ -138,8 +137,7 @@ export default function AgentGraph() {
           NEURAL COMMAND
         </text>
 
-        {/* Agent nodes */}
-        {AGENTS.map((agent) => {
+        {agents.map((agent) => {
           const pos = positions[agent.id];
           return (
             <AgentNode
