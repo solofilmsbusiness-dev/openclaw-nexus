@@ -53,13 +53,36 @@ const Index = () => {
           <AgentGraph agents={agents} />
         </div>
 
+        {/* Right toggle button (desktop) */}
+        <button
+          onClick={() => setRightCollapsed(!rightCollapsed)}
+          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-md border border-border/30 hover:border-border/60 bg-secondary/50 hover:bg-secondary transition-colors self-center h-16"
+          title={rightCollapsed ? "Expand panels" : "Collapse panels"}
+        >
+          {rightCollapsed ? <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+        </button>
+
+        {/* Right mobile toggle */}
+        <button
+          onClick={() => setRightCollapsed(!rightCollapsed)}
+          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md border border-border/30 bg-secondary/50 text-[10px] font-mono uppercase tracking-wider text-muted-foreground self-start"
+        >
+          {rightCollapsed ? <><ChevronLeft className="w-3 h-3" /> Show Panels</> : <><ChevronRight className="w-3 h-3" /> Hide Panels</>}
+        </button>
+
         {/* Right panel */}
-        <div className="w-full lg:w-[280px] shrink-0 flex flex-col gap-3 min-h-0">
-          <div className="min-h-[250px] lg:flex-1 lg:min-h-0">
-            <EventTimeline />
-          </div>
-          <div className="min-h-[200px] lg:flex-1 lg:min-h-0">
-            <TerminalLog />
+        <div
+          className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+            rightCollapsed ? "w-0 lg:w-0" : "w-full lg:w-[280px]"
+          }`}
+        >
+          <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0">
+            <div className="min-h-[250px] lg:flex-1 lg:min-h-0">
+              <EventTimeline />
+            </div>
+            <div className="min-h-[200px] lg:flex-1 lg:min-h-0">
+              <TerminalLog />
+            </div>
           </div>
         </div>
       </div>
