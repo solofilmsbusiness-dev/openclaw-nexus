@@ -30,6 +30,7 @@ const insights = [
   { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
 ];
 
+function AgentDetailView({ agent }: { agent: Agent }) {
   const color = statusColor(agent.status);
   const recentEvents = SAMPLE_EVENTS.filter(e => e.agentId === agent.id).slice(0, 3);
   const avgLatency = (agent.metrics.latency.reduce((a, b) => a + b, 0) / agent.metrics.latency.length * 100).toFixed(0);
