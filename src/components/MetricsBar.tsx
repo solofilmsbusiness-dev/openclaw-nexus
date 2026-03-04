@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { AGENTS } from "@/data/agents";
 import { Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import AnimatedCounter from "@/components/AnimatedCounter";
 
 const metrics = [
   { label: "Total", value: AGENTS.length, icon: Activity, colorClass: "text-neon-cyan" },
@@ -30,7 +31,7 @@ export default function MetricsBar() {
         >
           <m.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${m.colorClass}`} />
           <span className="hidden sm:inline text-muted-foreground text-xs uppercase tracking-wider">{m.label}</span>
-          <span className={`metric-counter text-sm sm:text-base ${m.colorClass}`}>{m.value}</span>
+          <AnimatedCounter value={m.value} className={`metric-counter text-sm sm:text-base ${m.colorClass}`} />
         </motion.div>
       ))}
       <div className="ml-auto flex items-center gap-2">
