@@ -3,7 +3,7 @@ import { Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import type { Agent } from "@/data/agents";
 
-export default function MetricsBar({ agents }: { agents: Agent[] }) {
+export default function MetricsBar({ agents = [] }: { agents: Agent[] }) {
   const downCount = agents.filter((a) => a.status === "down").length;
 
   const metrics = [
