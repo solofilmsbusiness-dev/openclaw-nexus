@@ -113,9 +113,9 @@ export function useSimulation(
           onAgentsChange(updated);
 
           // Toast notification
-          if (newStatus === "down") {
+        if (newStatus === "down") {
             toast.error(`${agent.name} went down`, { description: "Agent is offline" });
-          } else if (oldStatus === "down" && newStatus !== "down") {
+          } else if (oldStatus === "down") {
             toast.success(`${agent.name} is back online`, { description: `Status: ${newStatus}` });
           } else if (newStatus === "degraded") {
             toast.warning(`${agent.name} degraded`, { description: "Performance impacted" });
