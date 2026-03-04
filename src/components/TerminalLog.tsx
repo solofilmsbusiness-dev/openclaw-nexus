@@ -24,7 +24,7 @@ export default function TerminalLog() {
             className="terminal-text"
           >
             <span className="text-muted-foreground">[{new Date(event.ts).toLocaleTimeString()}]</span>{" "}
-            <span className="text-primary">{event.agentName}</span>{" "}
+            <span className="text-neon-cyan">{event.agentName}</span>{" "}
             <span className="text-muted-foreground">→</span>{" "}
             <span className="text-foreground/70">{event.message}</span>
           </motion.div>

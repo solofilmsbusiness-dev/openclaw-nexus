@@ -50,11 +50,6 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        gold: {
-          DEFAULT: "hsl(var(--gold))",
-          dim: "hsl(var(--gold-dim))",
-          bright: "hsl(var(--gold-bright))",
-        },
         neon: {
           green: "hsl(var(--neon-green))",
           orange: "hsl(var(--neon-orange))",

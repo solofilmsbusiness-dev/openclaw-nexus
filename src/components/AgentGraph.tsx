@@ -65,19 +65,24 @@ function AgentNode({
       onMouseEnter={() => onHover(agent)}
       onMouseLeave={() => onHover(null)}
     >
+      {/* Glow */}
       <circle cx={x} cy={y} r={size + (isHovered ? 14 : 8)} fill="none" stroke={color.bg} strokeWidth={isHovered ? 2 : 1} opacity={glowOpacity}>
         <animate attributeName="r" values={`${size + 6};${size + (isHovered ? 16 : 12)};${size + 6}`} dur="3s" repeatCount="indefinite" />
         <animate attributeName="opacity" values={`${glowOpacity * 0.8};${glowOpacity};${glowOpacity * 0.8}`} dur="3s" repeatCount="indefinite" />
       </circle>
+      {/* Main circle */}
       <circle cx={x} cy={y} r={size} fill={`${color.bg}22`} stroke={color.bg} strokeWidth={isHovered ? 3 : 2}>
         <animate attributeName="r" values={`${size - 1};${size + 1};${size - 1}`} dur="4s" repeatCount="indefinite" />
       </circle>
+      {/* Icon */}
       <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fontSize="16">
         {agent.icon}
       </text>
+      {/* Label */}
       <text x={x} y={y + size + 16} textAnchor="middle" fill={color.bg} fontSize="10" fontFamily="Space Grotesk" fontWeight="600">
         {agent.name}
       </text>
+      {/* Status badge */}
       <text x={x} y={y + size + 28} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" opacity="0.7" style={{ textTransform: "uppercase" }}>
         {agent.status.toUpperCase()}
       </text>
@@ -163,14 +168,14 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
       >
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="hsl(45, 100%, 50%)" stopOpacity="0.6" />
-            <stop offset="50%" stopColor="hsl(45, 100%, 50%)" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="hsl(45, 100%, 50%)" stopOpacity="0" />
+            <stop offset="0%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.6" />
+            <stop offset="50%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0" />
           </radialGradient>
           <radialGradient id="cursorGlow" cx={mouse.x / 800} cy={mouse.y / 600} r="0.25">
-            <stop offset="0%" stopColor="hsl(45, 100%, 50%)" stopOpacity="0.12" />
-            <stop offset="60%" stopColor="hsl(45, 100%, 50%)" stopOpacity="0.03" />
-            <stop offset="100%" stopColor="hsl(45, 100%, 50%)" stopOpacity="0" />
+            <stop offset="0%" stopColor="hsl(160, 100%, 45%)" stopOpacity="0.15" />
+            <stop offset="60%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="hsl(185, 100%, 50%)" stopOpacity="0" />
           </radialGradient>
           <radialGradient id="cursorGridMask" cx={mouse.x / 800} cy={mouse.y / 600} r="0.3">
             <stop offset="0%" stopColor="white" stopOpacity="0.6" />
@@ -183,10 +188,10 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
             <feGaussianBlur stdDeviation="3" />
           </filter>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(30, 6%, 10%)" strokeWidth="0.5" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(220, 15%, 12%)" strokeWidth="0.5" />
           </pattern>
           <pattern id="gridBright" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(45, 100%, 50%)" strokeWidth="0.8" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(160, 100%, 45%)" strokeWidth="0.8" />
           </pattern>
         </defs>
 
@@ -207,7 +212,7 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
         {PARTICLE_PATHS.map((pathD, i) => (
           <g key={`particle-${i}`}>
             <path id={`ppath-${i}`} d={pathD} fill="none" stroke="none" />
-            <circle r="1.5" fill="hsl(45, 100%, 50%)" opacity="0.5">
+            <circle r="1.5" fill="hsl(160, 100%, 45%)" opacity="0.5">
               <animateMotion
                 dur={`${6 + i * 2}s`}
                 begin={`${i * 1.5}s`}
@@ -215,7 +220,7 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
               >
                 <mpath href={`#ppath-${i}`} />
               </animateMotion>
-              <animate attributeName="opacity" values="0;0.5;0.5;0" dur={`${6 + i * 2}s`} begin={`${i * 1.5}s`} repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0;0.6;0.6;0" dur={`${6 + i * 2}s`} begin={`${i * 1.5}s`} repeatCount="indefinite" />
             </circle>
           </g>
         ))}
@@ -226,7 +231,7 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           const to = positions[edge.to];
           if (!from || !to) return null;
           const fromAgent = agents.find(a => a.id === edge.from);
-          const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(45, 100%, 50%)";
+          const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(185, 100%, 50%)";
           const highlighted = hoveredId ? (edge.from === hoveredId || edge.to === hoveredId) : false;
           return (
             <AnimatedEdge
@@ -245,16 +250,16 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           <circle cx={CORE_X} cy={CORE_Y} r="70" fill="url(#coreGlow)" filter="url(#blur)">
             <animate attributeName="r" values="65;75;65" dur="4s" repeatCount="indefinite" />
           </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="35" fill="hsl(0, 0%, 6%)" stroke="hsl(45, 100%, 50%)" strokeWidth="2">
+          <circle cx={CORE_X} cy={CORE_Y} r="35" fill="hsl(220, 18%, 8%)" stroke="hsl(185, 100%, 50%)" strokeWidth="2">
             <animate attributeName="r" values="33;37;33" dur="4s" repeatCount="indefinite" />
           </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="8" fill="hsl(45, 100%, 65%)">
+          <circle cx={CORE_X} cy={CORE_Y} r="8" fill="hsl(185, 100%, 60%)">
             <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
           </circle>
-          <text x={CORE_X} y={CORE_Y + 55} textAnchor="middle" fill="hsl(45, 100%, 50%)" fontSize="11" fontFamily="Space Grotesk" fontWeight="700" letterSpacing="3">
+          <text x={CORE_X} y={CORE_Y + 55} textAnchor="middle" fill="hsl(185, 100%, 50%)" fontSize="11" fontFamily="Space Grotesk" fontWeight="700" letterSpacing="3">
             OPENCLAW CORE
           </text>
-          <text x={CORE_X} y={CORE_Y + 67} textAnchor="middle" fill="hsl(45, 80%, 35%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
+          <text x={CORE_X} y={CORE_Y + 67} textAnchor="middle" fill="hsl(185, 100%, 50%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.5">
             NEURAL COMMAND
           </text>
         </FloatingGroup>
