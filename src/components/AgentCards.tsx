@@ -284,13 +284,12 @@ function InsightsTab() {
   );
 }
 
-export default function AgentCards() {
+export default function AgentCards({ agents, onAgentsChange }: { agents: Agent[]; onAgentsChange: (agents: Agent[]) => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("agents");
-  const [agents, setAgents] = useState<Agent[]>(AGENTS);
 
   const handleStatusChange = useCallback((id: string, status: AgentStatus, update?: Partial<Agent>) => {
-    setAgents(prev => prev.map(a => a.id === id ? { ...a, ...update, status } : a));
-  }, []);
+    onAgentsChange(agents.map(a => a.id === id ? { ...a, ...update, status } : a));
+  }, [agents, onAgentsChange]);
 
   return (
     <motion.div
@@ -327,7 +326,7 @@ export default function AgentCards() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={setAgents} onStatusChange={handleStatusChange} />}
+            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={onAgentsChange} onStatusChange={handleStatusChange} />}
             {activeTab === "backlog" && <BacklogTab />}
             {activeTab === "insights" && <InsightsTab />}
           </motion.div>
