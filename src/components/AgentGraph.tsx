@@ -219,6 +219,13 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           <filter id="blur">
             <feGaussianBlur stdDeviation="3" />
           </filter>
+          <filter id="particleGlow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(220, 15%, 12%)" strokeWidth="0.5" />
           </pattern>
@@ -267,6 +274,7 @@ export default function AgentGraph({ agents }: { agents: Agent[] }) {
           const highlighted = hoveredId ? (edge.from === hoveredId || edge.to === hoveredId) : false;
           return (
             <AnimatedEdge
+              pathId={`edge-${edge.id}`}
               key={edge.id}
               x1={from.x} y1={from.y}
               x2={to.x} y2={to.y}
