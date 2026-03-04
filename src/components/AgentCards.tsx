@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { AGENTS, SAMPLE_EVENTS, statusColor, Agent } from "@/data/agents";
+import { AGENTS, SAMPLE_EVENTS, statusColor, Agent, AgentStatus } from "@/data/agents";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity } from "lucide-react";
+import { toast } from "sonner";
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   const points = data.map((v, i) => `${(i / (data.length - 1)) * 60},${16 - v * 14}`).join(" ");
@@ -30,11 +31,32 @@ const insights = [
   { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
 ];
 
-function AgentDetailView({ agent }: { agent: Agent }) {
+function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChange: (id: string, status: AgentStatus, taskUpdate?: Partial<Agent>) => void }) {
   const color = statusColor(agent.status);
   const recentEvents = SAMPLE_EVENTS.filter(e => e.agentId === agent.id).slice(0, 3);
   const avgLatency = (agent.metrics.latency.reduce((a, b) => a + b, 0) / agent.metrics.latency.length * 100).toFixed(0);
   const avgSuccess = (agent.metrics.successRate.reduce((a, b) => a + b, 0) / agent.metrics.successRate.length * 100).toFixed(0);
+
+  const handleAction = (action: string) => {
+    switch (action) {
+      case "Run":
+        onStatusChange(agent.id, "active", { currentTask: agent.currentTask === "Halted" ? "Resuming operations" : agent.currentTask, progress: Math.max(agent.progress, 10) });
+        toast.success(`${agent.name} is now running`, { description: "Agent activated successfully" });
+        break;
+      case "Pause":
+        onStatusChange(agent.id, "degraded", { currentTask: `Paused — ${agent.currentTask}`, progress: agent.progress });
+        toast.warning(`${agent.name} paused`, { description: "Agent is now in degraded state" });
+        break;
+      case "Restart":
+        onStatusChange(agent.id, "active", { currentTask: "Restarting…", progress: 5 });
+        toast.success(`${agent.name} restarting`, { description: "Agent will be back online shortly" });
+        // Simulate restart completing
+        setTimeout(() => {
+          onStatusChange(agent.id, "healthy", { currentTask: agent.currentTask.replace("Paused — ", ""), progress: 50 });
+        }, 2000);
+        break;
+    }
+  };
 
   return (
     <motion.div
@@ -78,12 +100,13 @@ function AgentDetailView({ agent }: { agent: Agent }) {
         <div className="flex gap-1.5">
           {[
             { icon: Play, label: "Run", disabled: agent.status === "active" },
-            { icon: Pause, label: "Pause", disabled: agent.status === "down" },
+            { icon: Pause, label: "Pause", disabled: agent.status === "down" || agent.status === "degraded" },
             { icon: RotateCcw, label: "Restart", disabled: false },
           ].map((action) => (
             <button
               key={action.label}
               disabled={action.disabled}
+              onClick={(e) => { e.stopPropagation(); handleAction(action.label); }}
               className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[9px] font-mono uppercase tracking-wider border border-border/30 hover:border-border/60 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
               <action.icon className="w-2.5 h-2.5" />
@@ -96,7 +119,7 @@ function AgentDetailView({ agent }: { agent: Agent }) {
   );
 }
 
-function AgentsTab({ agents, onReorder }: { agents: Agent[]; onReorder: (newOrder: Agent[]) => void }) {
+function AgentsTab({ agents, onReorder, onStatusChange }: { agents: Agent[]; onReorder: (newOrder: Agent[]) => void; onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
@@ -164,7 +187,7 @@ function AgentsTab({ agents, onReorder }: { agents: Agent[]; onReorder: (newOrde
               </div>
             </div>
             <AnimatePresence>
-              {isExpanded && <AgentDetailView agent={agent} />}
+              {isExpanded && <AgentDetailView agent={agent} onStatusChange={onStatusChange} />}
             </AnimatePresence>
           </Reorder.Item>
         );
@@ -265,6 +288,10 @@ export default function AgentCards() {
   const [activeTab, setActiveTab] = useState<Tab>("agents");
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
 
+  const handleStatusChange = useCallback((id: string, status: AgentStatus, update?: Partial<Agent>) => {
+    setAgents(prev => prev.map(a => a.id === id ? { ...a, ...update, status } : a));
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -30 }}
@@ -300,7 +327,7 @@ export default function AgentCards() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={setAgents} />}
+            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={setAgents} onStatusChange={handleStatusChange} />}
             {activeTab === "backlog" && <BacklogTab />}
             {activeTab === "insights" && <InsightsTab />}
           </motion.div>
