@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AGENTS, statusColor } from "@/data/agents";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { AGENTS, statusColor, Agent } from "@/data/agents";
 import AnimatedCounter from "@/components/AnimatedCounter";
-import { Layers, Lightbulb, BarChart3 } from "lucide-react";
+import { Layers, Lightbulb, BarChart3, GripVertical } from "lucide-react";
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   const points = data.map((v, i) => `${(i / (data.length - 1)) * 60},${16 - v * 14}`).join(" ");
@@ -30,22 +30,26 @@ const insights = [
   { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
 ];
 
-function AgentsTab() {
+function AgentsTab({ agents, onReorder }: { agents: Agent[]; onReorder: (newOrder: Agent[]) => void }) {
   return (
-    <div className="space-y-2">
-      {AGENTS.map((agent, i) => {
+    <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
+      {agents.map((agent, i) => {
         const color = statusColor(agent.status);
         return (
-          <motion.div
+          <Reorder.Item
             key={agent.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            value={agent}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.03 }}
-            className="p-3 rounded-lg border border-border/30 hover:border-border/60 transition-all"
+            whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 18px ${color.bg}30` }}
+            whileTap={{ scale: 0.98 }}
+            className="p-3 rounded-lg border border-border/30 hover:border-border/60 transition-colors cursor-grab active:cursor-grabbing group"
             style={{ borderLeftWidth: 3, borderLeftColor: color.bg }}
           >
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
+                <GripVertical className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 <span className="text-sm">{agent.icon}</span>
                 <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
               </div>
@@ -80,10 +84,10 @@ function AgentsTab() {
                 <span className="text-[8px] text-muted-foreground font-mono">ACTIVITY</span>
               </div>
             </div>
-          </motion.div>
+          </Reorder.Item>
         );
       })}
-    </div>
+    </Reorder.Group>
   );
 }
 
@@ -93,7 +97,6 @@ function BacklogTab() {
 
   return (
     <div className="space-y-3">
-      {/* Summary counters */}
       <div className="grid grid-cols-3 gap-2">
         <div className="text-center p-2 rounded-lg bg-muted/30">
           <AnimatedCounter value={totalBacklog} className="metric-counter text-lg text-neon-orange" />
@@ -109,7 +112,6 @@ function BacklogTab() {
         </div>
       </div>
 
-      {/* Backlog list */}
       {sorted.map((agent, i) => {
         const color = statusColor(agent.status);
         const pct = totalBacklog > 0 ? (agent.backlogCount / totalBacklog) * 100 : 0;
@@ -119,7 +121,9 @@ function BacklogTab() {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.04 }}
-            className="flex items-center gap-3 p-2 rounded-lg border border-border/20 hover:border-border/50 transition-colors"
+            whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 15px ${color.bg}30` }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-3 p-2 rounded-lg border border-border/20 hover:border-border/50 transition-colors cursor-pointer"
           >
             <span className="text-sm">{agent.icon}</span>
             <div className="flex-1 min-w-0">
@@ -155,7 +159,9 @@ function InsightsTab() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.06 }}
-          className="p-3 rounded-lg border border-border/20 hover:border-border/50 transition-colors"
+          whileHover={{ scale: 1.02, x: 4, boxShadow: "0 0 15px hsl(160 100% 45% / 0.15)" }}
+          whileTap={{ scale: 0.98 }}
+          className="p-3 rounded-lg border border-border/20 hover:border-border/50 transition-colors cursor-pointer"
         >
           <div className="flex items-start gap-2">
             <Lightbulb className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${insight.color}`} />
@@ -175,9 +181,15 @@ function InsightsTab() {
 
 export default function AgentCards() {
   const [activeTab, setActiveTab] = useState<Tab>("agents");
+  const [agents, setAgents] = useState<Agent[]>(AGENTS);
 
   return (
-    <div className="glass-panel neon-border p-4 h-full overflow-hidden flex flex-col">
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="glass-panel neon-border p-4 h-full overflow-hidden flex flex-col"
+    >
       {/* Tab bar */}
       <div className="flex gap-1 mb-3 p-0.5 bg-muted/30 rounded-lg">
         {tabs.map((tab) => (
@@ -206,12 +218,12 @@ export default function AgentCards() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === "agents" && <AgentsTab />}
+            {activeTab === "agents" && <AgentsTab agents={agents} onReorder={setAgents} />}
             {activeTab === "backlog" && <BacklogTab />}
             {activeTab === "insights" && <InsightsTab />}
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }
