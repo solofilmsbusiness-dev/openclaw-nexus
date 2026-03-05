@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power } from "lucide-react";
+import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 
