@@ -134,20 +134,19 @@ const Index = () => {
 
         {/* Right panel */}
         <div
-          data-tour="event-timeline"
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
             rightCollapsed ? "w-0 lg:w-0" : "w-full lg:w-[280px]"
           }`}
         >
           <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden" data-tour="event-timeline">
               <EventTimeline
                 events={events}
                 selectedAgentId={selectedAgentId}
                 onSelectAgent={setSelectedAgentId}
               />
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden" data-tour="terminal-log">
               <TerminalLog events={events} />
             </div>
           </div>
