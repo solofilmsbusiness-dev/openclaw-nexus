@@ -39,7 +39,8 @@ function getNodePositions(agents: Agent[]) {
 }
 
 // Solar system particle effects
-function OrbitalParticles() {
+function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+  const scale = viewBox.w / DEFAULT_VIEWBOX.w;
   const particles = useMemo(() => {
     const colors = [
       "hsl(215, 80%, 60%)",
@@ -49,40 +50,43 @@ function OrbitalParticles() {
       "hsl(195, 60%, 65%)",
     ];
     return Array.from({ length: 25 }, (_, i) => {
-      const radius = 80 + ((i * 37) % 270);
+      const baseRadius = 80 + ((i * 37) % 270);
       const size = 1 + ((i * 7) % 3);
       const dur = 12 + ((i * 13) % 48);
       const reverse = i % 3 === 0;
       const opacity = 0.12 + ((i * 11) % 28) / 100;
       const color = colors[i % colors.length];
       const useGlow = size >= 2.5;
-      return { radius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
+      return { baseRadius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
     });
   }, []);
 
   return (
     <g style={{ pointerEvents: "none" }}>
-      {particles.map((p, i) => (
-        <circle
-          key={`orbit-${i}`}
-          cx={CORE_X + p.radius}
-          cy={CORE_Y}
-          r={p.size}
-          fill={p.color}
-          opacity={p.opacity}
-          filter={p.useGlow ? "url(#particleGlow)" : undefined}
-        >
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from={`${p.startAngle} ${CORE_X} ${CORE_Y}`}
-            to={`${p.startAngle + (p.reverse ? -360 : 360)} ${CORE_X} ${CORE_Y}`}
-            dur={`${p.dur}s`}
-            repeatCount="indefinite"
-          />
-          <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
-        </circle>
-      ))}
+      {particles.map((p, i) => {
+        const radius = p.baseRadius * scale;
+        return (
+          <circle
+            key={`orbit-${i}`}
+            cx={CORE_X + radius}
+            cy={CORE_Y}
+            r={p.size * Math.max(1, scale * 0.6)}
+            fill={p.color}
+            opacity={p.opacity}
+            filter={p.useGlow ? "url(#particleGlow)" : undefined}
+          >
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from={`${p.startAngle} ${CORE_X} ${CORE_Y}`}
+              to={`${p.startAngle + (p.reverse ? -360 : 360)} ${CORE_X} ${CORE_Y}`}
+              dur={`${p.dur}s`}
+              repeatCount="indefinite"
+            />
+            <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
+          </circle>
+        );
+      })}
     </g>
   );
 }
