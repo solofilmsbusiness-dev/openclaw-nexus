@@ -971,16 +971,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         onWheel={handleWheel}
         style={{ cursor: panRef.current ? 'grabbing' : 'default' }}
       >
-        {/* Kill switch red overlay — animated */}
-        <rect
-          x={viewBox.x}
-          y={viewBox.y}
-          width={viewBox.w}
-          height={viewBox.h}
-          fill="hsl(0, 70%, 40%)"
-          opacity={killProgress * 0.15}
-          style={{ pointerEvents: "none", transition: "none" }}
-        />
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity={killSwitchActive ? "0.5" : "0.3"} />
@@ -1096,6 +1086,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           );
         })}
       </svg>
+
+      {/* Kill switch red overlay — full container HTML div */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] rounded-xl"
+        style={{
+          background: "radial-gradient(ellipse at center, hsl(0 70% 40% / 0.25), hsl(0 70% 30% / 0.12))",
+          opacity: killProgress,
+          transition: "none",
+        }}
+      />
 
       {displayAgent && !connectMode && (
         <motion.div
