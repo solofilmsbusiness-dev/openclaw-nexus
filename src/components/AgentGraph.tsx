@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 
@@ -540,6 +540,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const [connectSource, setConnectSource] = useState<string | null>(null);
   const [pendingEdge, setPendingEdge] = useState<{ from: string; to: string } | null>(null);
   const [selectedKind, setSelectedKind] = useState<string>("data");
+  const [locked, setLocked] = useState(false);
 
   const positions = useMemo(() => {
     const merged: Record<string, { x: number; y: number }> = {};
@@ -592,6 +593,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   // Zoom with mouse wheel
   const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
+    if (locked) return;
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
@@ -659,7 +661,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   }, [getSvgPoint, positions]);
 
   const handleDragStart = useCallback((agentId: string, e: React.MouseEvent | React.TouchEvent) => {
-    if (connectMode) return;
+    if (connectMode || locked) return;
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
     const pt = getSvgPoint(clientX, clientY);
@@ -685,6 +687,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   // Background mouse down → start panning
   const handleBgMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (locked) return;
     // Only pan if clicking directly on SVG background (not on a node)
     if (e.target === svgRef.current || (e.target as SVGElement).tagName === 'rect') {
       panRef.current = {
@@ -692,7 +695,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         startViewBox: { ...viewBox },
       };
     }
-  }, [viewBox]);
+  }, [viewBox, locked]);
 
   const isDragging = dragRef.current !== null;
 
@@ -859,7 +862,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
         <button
           onClick={zoomIn}
-          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          disabled={locked}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="Zoom in"
         >
           <ZoomIn className="w-3.5 h-3.5" />
@@ -869,17 +873,30 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         </div>
         <button
           onClick={zoomOut}
-          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          disabled={locked}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="Zoom out"
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={resetView}
-          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          disabled={locked}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="Reset view"
         >
           <Maximize className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => setLocked((l) => !l)}
+          className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
+            locked
+              ? "border-primary/60 bg-primary/20 text-primary hover:bg-primary/30"
+              : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+          }`}
+          title={locked ? "Unlock view" : "Lock view"}
+        >
+          {locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
         </button>
       </div>
 
