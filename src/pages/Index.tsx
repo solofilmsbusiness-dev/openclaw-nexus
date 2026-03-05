@@ -8,13 +8,14 @@ import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSimulation } from "@/hooks/useSimulation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AGENTS, SAMPLE_EVENTS, createAgent, type Agent, type AgentEvent, type AgentStatus } from "@/data/agents";
+import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 
 const Index = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
+  const [edges, setEdges] = useState<Edge[]>(EDGES);
   const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
@@ -39,8 +40,21 @@ const Index = () => {
 
   const handleDeleteAgent = useCallback((id: string) => {
     setAgents((prev) => prev.filter((a) => a.id !== id));
+    setEdges((prev) => prev.filter((e) => e.from !== id && e.to !== id));
     setEvents((prev) => prev.filter((e) => e.agentId !== id));
     setSelectedAgentId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const handleAddEdge = useCallback((from: string, to: string, kind: string) => {
+    setEdges((prev) => {
+      const exists = prev.some((e) => (e.from === from && e.to === to) || (e.from === to && e.to === from));
+      if (exists) return prev;
+      return [...prev, createEdge(from, to, kind)];
+    });
+  }, []);
+
+  const handleDeleteEdge = useCallback((edgeId: string) => {
+    setEdges((prev) => prev.filter((e) => e.id !== edgeId));
   }, []);
 
   useSimulation(agents, handleAgentsChange, handleNewEvent);
@@ -95,8 +109,11 @@ const Index = () => {
         <div className="flex-1 min-h-0 overflow-hidden">
           <AgentGraph
             agents={agents}
+            edges={edges}
             selectedAgentId={selectedAgentId}
             onSelectAgent={setSelectedAgentId}
+            onAddEdge={handleAddEdge}
+            onDeleteEdge={handleDeleteEdge}
           />
         </div>
 

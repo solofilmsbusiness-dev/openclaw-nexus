@@ -114,3 +114,13 @@ export function createAgent(overrides: Partial<Agent> = {}): Agent {
     ...overrides,
   };
 }
+
+export function createEdge(from: string, to: string, kind: string = "data"): Edge {
+  return {
+    id: `edge-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    from,
+    to,
+    kind,
+    weight: 0.7,
+  };
+}

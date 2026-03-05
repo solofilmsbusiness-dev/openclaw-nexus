@@ -1,10 +1,13 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { EDGES, statusColor, type Agent } from "@/data/agents";
+import { statusColor, type Agent, type Edge } from "@/data/agents";
+import { Link, X } from "lucide-react";
 
 const CORE_X = 400;
 const CORE_Y = 300;
 const RADIUS = 250;
+
+const EDGE_KINDS = ["control", "data", "comms", "handoff"] as const;
 
 const CORE_TAGLINES = [
   "12 agents synced",
@@ -74,7 +77,7 @@ function ProgressArc({ cx, cy, r, progress, color }: { cx: number; cy: number; r
 }
 
 function AgentNode({
-  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging,
+  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging, connectSource,
 }: {
   agent: Agent; x: number; y: number;
   onHover: (a: Agent | null) => void;
@@ -87,27 +90,36 @@ function AgentNode({
   onDrag: (e: React.MouseEvent | React.TouchEvent) => void;
   onDragEnd: () => void;
   isDragging: boolean;
+  connectSource: string | null;
 }) {
   const color = statusColor(agent.status);
   const size = 20 + agent.backlogCount * 1.5;
   const active = isHovered || isSelected;
-  const scale = active ? 1.1 : 1;
+  const isConnectSource = connectSource === agent.id;
+  const scale = active || isConnectSource ? 1.1 : 1;
   const anyFocused = hoveredId || selectedId;
-  const dimmed = anyFocused && !active ? 0.35 : 1;
+  const dimmed = anyFocused && !active && !isConnectSource ? 0.35 : 1;
 
   return (
     <motion.g
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: dimmed, scale }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      style={{ cursor: isDragging ? "grabbing" : "grab", transformOrigin: `${x}px ${y}px` }}
+      style={{ cursor: isDragging ? "grabbing" : connectSource ? "crosshair" : "grab", transformOrigin: `${x}px ${y}px` }}
       onMouseEnter={() => { if (!isDragging) onHover(agent); }}
       onMouseLeave={() => { if (!isDragging) onHover(null); }}
-      onMouseDown={(e) => { e.stopPropagation(); onDragStart(agent.id, e); }}
-      onClick={(e) => { if (!isDragging) onClick(agent); }}
+      onMouseDown={(e) => { if (!connectSource) { e.stopPropagation(); onDragStart(agent.id, e); } }}
+      onClick={(e) => { e.stopPropagation(); if (!isDragging) onClick(agent); }}
     >
+      {/* Connect source pulsing ring */}
+      {isConnectSource && (
+        <circle cx={x} cy={y} r={size + 20} fill="none" stroke="hsl(215, 80%, 60%)" strokeWidth={2} opacity={0.7}>
+          <animate attributeName="r" values={`${size + 16};${size + 24};${size + 16}`} dur="1.2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.2s" repeatCount="indefinite" />
+        </circle>
+      )}
       {/* Selection ring */}
-      {isSelected && (
+      {isSelected && !isConnectSource && (
         <circle cx={x} cy={y} r={size + 16} fill="none" stroke={color.bg} strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6}>
           <animate attributeName="stroke-dashoffset" values="0;-18" dur="2s" repeatCount="indefinite" />
         </circle>
@@ -119,7 +131,7 @@ function AgentNode({
       {/* Progress arc */}
       <ProgressArc cx={x} cy={y} r={size + 4} progress={agent.progress} color={color.bg} />
       {/* Main circle */}
-      <circle cx={x} cy={y} r={size} fill={`${color.bg}15`} stroke={color.bg} strokeWidth={active ? 2 : 1.5} opacity={0.9} />
+      <circle cx={x} cy={y} r={size} fill={`${color.bg}15`} stroke={isConnectSource ? "hsl(215, 80%, 60%)" : color.bg} strokeWidth={active || isConnectSource ? 2 : 1.5} opacity={0.9} />
       {/* Icon */}
       <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fontSize="16">
         {agent.icon}
@@ -145,18 +157,35 @@ function AgentNode({
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted, pathId, kind,
+  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId,
 }: {
   x1: number; y1: number; x2: number; y2: number;
   color: string; weight: number; highlighted: boolean; pathId: string; kind: string;
+  onDelete?: (edgeId: string) => void; edgeId: string;
 }) {
+  const [hovered, setHovered] = useState(false);
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 15), [x1, x2, y1]);
   const midY = useMemo(() => (y1 + y2) / 2 + (Math.cos(x2 + y2) * 15), [y1, y2, x2]);
   const path = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
   const dur = highlighted ? 3 + weight : 5 + weight;
 
+  // Calculate actual midpoint on the quadratic bezier
+  const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
+  const actualMidY = 0.25 * y1 + 0.5 * midY + 0.25 * y2;
+
   return (
-    <g>
+    <g
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Invisible wider hit area */}
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={12}
+        style={{ cursor: "pointer" }}
+      />
       <path
         id={pathId}
         d={path}
@@ -181,6 +210,17 @@ function AnimatedEdge({
         </animateMotion>
         <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
       </circle>
+      {/* Delete button at midpoint */}
+      {hovered && onDelete && (
+        <g
+          style={{ cursor: "pointer" }}
+          onClick={(e) => { e.stopPropagation(); onDelete(edgeId); }}
+        >
+          <circle cx={actualMidX} cy={actualMidY} r={8} fill="hsl(0, 60%, 45%)" opacity={0.9} />
+          <line x1={actualMidX - 3} y1={actualMidY - 3} x2={actualMidX + 3} y2={actualMidY + 3} stroke="white" strokeWidth={1.5} />
+          <line x1={actualMidX + 3} y1={actualMidY - 3} x2={actualMidX - 3} y2={actualMidY + 3} stroke="white" strokeWidth={1.5} />
+        </g>
+      )}
     </g>
   );
 }
@@ -208,17 +248,26 @@ function RotatingCoreText() {
 
 interface AgentGraphProps {
   agents: Agent[];
+  edges: Edge[];
   selectedAgentId: string | null;
   onSelectAgent: (id: string | null) => void;
+  onAddEdge: (from: string, to: string, kind: string) => void;
+  onDeleteEdge: (edgeId: string) => void;
 }
 
-export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGraphProps) {
+export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge }: AgentGraphProps) {
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
   const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<Agent | null>(null);
   const [mouse, setMouse] = useState({ x: 400, y: 300 });
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ agentId: string; startMouse: { x: number; y: number }; startPos: { x: number; y: number }; moved: boolean } | null>(null);
+
+  // Connect mode state
+  const [connectMode, setConnectMode] = useState(false);
+  const [connectSource, setConnectSource] = useState<string | null>(null);
+  const [pendingEdge, setPendingEdge] = useState<{ from: string; to: string } | null>(null);
+  const [selectedKind, setSelectedKind] = useState<string>("data");
 
   const positions = useMemo(() => {
     const merged: Record<string, { x: number; y: number }> = {};
@@ -240,6 +289,19 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
     };
   }, []);
 
+  // ESC to cancel connect mode
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setConnectMode(false);
+        setConnectSource(null);
+        setPendingEdge(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getSvgPoint(e.clientX, e.clientY);
     setMouse(pt);
@@ -257,12 +319,13 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
   }, [getSvgPoint]);
 
   const handleDragStart = useCallback((agentId: string, e: React.MouseEvent | React.TouchEvent) => {
+    if (connectMode) return;
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
     const pt = getSvgPoint(clientX, clientY);
     const currentOffset = dragOffsets[agentId] || { x: 0, y: 0 };
     dragRef.current = { agentId, startMouse: pt, startPos: currentOffset, moved: false };
-  }, [getSvgPoint, dragOffsets]);
+  }, [getSvgPoint, dragOffsets, connectMode]);
 
   const handleDragEnd = useCallback(() => {
     dragRef.current = null;
@@ -272,13 +335,42 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
 
   const handleNodeClick = useCallback((agent: Agent) => {
     if (dragRef.current?.moved) return;
+
+    if (connectMode) {
+      if (!connectSource) {
+        setConnectSource(agent.id);
+      } else if (connectSource !== agent.id) {
+        // Show kind selector
+        setPendingEdge({ from: connectSource, to: agent.id });
+        setConnectSource(null);
+      }
+      return;
+    }
+
     onSelectAgent(selectedAgentId === agent.id ? null : agent.id);
-  }, [selectedAgentId, onSelectAgent]);
+  }, [selectedAgentId, onSelectAgent, connectMode, connectSource]);
+
+  const handleConfirmEdge = useCallback(() => {
+    if (pendingEdge) {
+      onAddEdge(pendingEdge.from, pendingEdge.to, selectedKind);
+      setPendingEdge(null);
+      setSelectedKind("data");
+    }
+  }, [pendingEdge, selectedKind, onAddEdge]);
+
+  const handleCancelEdge = useCallback(() => {
+    setPendingEdge(null);
+    setSelectedKind("data");
+  }, []);
 
   const handleBgClick = useCallback(() => {
     if (dragRef.current?.moved) return;
+    if (connectMode) {
+      setConnectSource(null);
+      return;
+    }
     if (selectedAgentId) onSelectAgent(null);
-  }, [selectedAgentId, onSelectAgent]);
+  }, [selectedAgentId, onSelectAgent, connectMode]);
 
   const handleMouseUp = useCallback(() => {
     handleDragEnd();
@@ -292,12 +384,12 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
   const connectedIds = useMemo(() => {
     if (!focusId) return new Set<string>();
     const ids = new Set<string>();
-    EDGES.forEach((e) => {
+    edges.forEach((e) => {
       if (e.from === focusId) ids.add(e.to);
       if (e.to === focusId) ids.add(e.from);
     });
     return ids;
-  }, [focusId]);
+  }, [focusId, edges]);
 
   const onlineCount = agents.filter((a) => a.status !== "down").length;
   const displayAgent = hovered || (selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null);
@@ -305,6 +397,72 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden">
+      {/* Connect mode toggle */}
+      <button
+        onClick={() => {
+          setConnectMode(!connectMode);
+          setConnectSource(null);
+          setPendingEdge(null);
+        }}
+        className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono tracking-wider transition-all ${
+          connectMode
+            ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_hsl(215,80%,60%,0.3)]"
+            : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+        }`}
+        title={connectMode ? "Exit connect mode (ESC)" : "Connect nodes"}
+      >
+        <Link className="w-3 h-3" />
+        {connectMode ? "CONNECTING…" : "CONNECT"}
+      </button>
+
+      {/* Connect mode instructions */}
+      {connectMode && !connectSource && !pendingEdge && (
+        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
+          Click source node
+        </div>
+      )}
+      {connectMode && connectSource && !pendingEdge && (
+        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
+          Click target node
+        </div>
+      )}
+
+      {/* Kind selector popup */}
+      {pendingEdge && (
+        <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48">
+          <div className="text-[10px] font-mono text-muted-foreground mb-2">CONNECTION TYPE</div>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {EDGE_KINDS.map((kind) => (
+              <button
+                key={kind}
+                onClick={() => setSelectedKind(kind)}
+                className={`px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-all ${
+                  selectedKind === kind
+                    ? "bg-primary/20 text-primary border border-primary/50"
+                    : "bg-secondary/30 text-muted-foreground border border-border/30 hover:border-border/50"
+                }`}
+              >
+                {kind}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleConfirmEdge}
+              className="flex-1 px-2 py-1 rounded text-[10px] font-mono bg-primary/20 text-primary border border-primary/50 hover:bg-primary/30 transition-colors"
+            >
+              CONFIRM
+            </button>
+            <button
+              onClick={handleCancelEdge}
+              className="px-2 py-1 rounded text-[10px] font-mono bg-secondary/30 text-muted-foreground border border-border/30 hover:border-border/50 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full" onMouseMove={handleMouseMove} onClick={handleBgClick} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
@@ -331,7 +489,7 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
         </g>
         <rect width="800" height="600" fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
 
-        {EDGES.map((edge) => {
+        {edges.map((edge) => {
           const from = positions[edge.from];
           const to = positions[edge.to];
           if (!from || !to) return null;
@@ -339,7 +497,20 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
           const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)";
           const highlighted = focusId ? (edge.from === focusId || edge.to === focusId) : false;
           return (
-            <AnimatedEdge pathId={`edge-${edge.id}`} key={edge.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} color={color} weight={edge.weight} highlighted={highlighted} kind={edge.kind} />
+            <AnimatedEdge
+              pathId={`edge-${edge.id}`}
+              key={edge.id}
+              edgeId={edge.id}
+              x1={from.x}
+              y1={from.y}
+              x2={to.x}
+              y2={to.y}
+              color={color}
+              weight={edge.weight}
+              highlighted={highlighted}
+              kind={edge.kind}
+              onDelete={onDeleteEdge}
+            />
           );
         })}
 
@@ -386,13 +557,14 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
                 onDrag={() => {}}
                 onDragEnd={handleDragEnd}
                 isDragging={isNodeDragging}
+                connectSource={connectMode ? connectSource : null}
               />
             </FloatingGroup>
           );
         })}
       </svg>
 
-      {displayAgent && (
+      {displayAgent && !connectMode && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
