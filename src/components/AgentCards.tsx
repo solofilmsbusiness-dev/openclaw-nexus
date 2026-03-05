@@ -3,7 +3,8 @@ import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { AGENTS, SAMPLE_EVENTS, statusColor, Agent, AgentStatus } from "@/data/agents";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity, Search, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity, Search, X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
@@ -115,13 +116,14 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
 }
 
 function AgentsTab({
-  agents, onReorder, onStatusChange, selectedAgentId, onSelectAgent,
+  agents, onReorder, onStatusChange, selectedAgentId, onSelectAgent, onDeleteAgent,
 }: {
   agents: Agent[];
   onReorder: (newOrder: Agent[]) => void;
   onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void;
   selectedAgentId: string | null;
   onSelectAgent: (id: string | null) => void;
+  onDeleteAgent: (id: string) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -173,6 +175,17 @@ function AgentsTab({
                   <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteAgent(agent.id);
+                      toast.success(`${agent.name} removed`);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20"
+                    title="Delete agent"
+                  >
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </button>
                   <span
                     className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded"
                     style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
@@ -309,11 +322,17 @@ interface AgentCardsProps {
   onAgentsChange: (agents: Agent[]) => void;
   selectedAgentId: string | null;
   onSelectAgent: (id: string | null) => void;
+  onAddAgent: (overrides: Partial<Agent>) => void;
+  onDeleteAgent: (id: string) => void;
 }
 
-export default function AgentCards({ agents, onAgentsChange, selectedAgentId, onSelectAgent }: AgentCardsProps) {
+const AGENT_TYPES = ["orchestrator", "intelligence", "operations", "design", "content", "web", "comms", "commerce", "media", "analytics", "education"];
+
+export default function AgentCards({ agents, onAgentsChange, selectedAgentId, onSelectAgent, onAddAgent, onDeleteAgent }: AgentCardsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("agents");
   const [search, setSearch] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [newAgent, setNewAgent] = useState({ name: "", subtitle: "", icon: "🤖", type: "operations" });
 
   const handleStatusChange = useCallback((id: string, status: AgentStatus, update?: Partial<Agent>) => {
     onAgentsChange(agents.map(a => a.id === id ? { ...a, ...update, status } : a));
