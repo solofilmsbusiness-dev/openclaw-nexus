@@ -9,7 +9,7 @@ import AgentCards from "@/components/AgentCards";
 import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAgents } from "@/contexts/AgentContext";
-import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
