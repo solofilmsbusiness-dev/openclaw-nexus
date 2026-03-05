@@ -16,6 +16,21 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login", { replace: true });
+      } else {
+        setAuthChecked(true);
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
+  if (!authChecked) return null;
 
   const {
     agents, edges, events, selectedAgentId, setSelectedAgentId,
