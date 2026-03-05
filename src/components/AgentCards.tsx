@@ -250,20 +250,23 @@ function AgentsTab({
                   <span className={`font-display font-semibold text-xs ${isDead ? "text-muted-foreground" : "text-foreground"}`}>{agent.name}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {/* Kill button on hover */}
-                  {!isDead && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
+                  {/* Kill/Revive toggle button on hover */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isDead) {
+                        onStatusChange(agent.id, "active", { currentTask: "Resuming operations", progress: 50 });
+                        toast.success(`${agent.name} revived`);
+                      } else {
                         onStatusChange(agent.id, "down", { currentTask: "KILLED", progress: 0 });
                         toast.error(`${agent.name} killed`);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20"
-                      title="Kill agent"
-                    >
-                      <Power className="w-3 h-3 text-destructive" />
-                    </button>
-                  )}
+                      }
+                    }}
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded ${isDead ? "hover:bg-emerald-500/20" : "hover:bg-destructive/20"}`}
+                    title={isDead ? "Revive agent" : "Kill agent"}
+                  >
+                    {isDead ? <Zap className="w-3 h-3 text-emerald-400" /> : <Power className="w-3 h-3 text-destructive" />}
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
