@@ -7,6 +7,7 @@ interface AgentContextValue {
   edges: Edge[];
   events: AgentEvent[];
   selectedAgentId: string | null;
+  killSwitchActive: boolean;
   setSelectedAgentId: (id: string | null) => void;
   setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
@@ -29,6 +30,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [edges, setEdges] = useState<Edge[]>(EDGES);
   const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [killSwitchActive, setKillSwitchActive] = useState(false);
 
   const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
   const handleNewEvent = useCallback((event: AgentEvent) => {
@@ -69,6 +71,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const killAll = useCallback(() => {
+    setKillSwitchActive(true);
     setAgents((prev) =>
       prev.map((a) => ({ ...a, status: "down" as AgentStatus, progress: 0, currentTask: "KILLED" }))
     );
@@ -84,6 +87,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reviveAll = useCallback(() => {
+    setKillSwitchActive(false);
     setAgents((prev) =>
       prev.map((a) => ({ ...a, status: "healthy" as AgentStatus, progress: 50, currentTask: "Resuming operations" }))
     );
@@ -102,12 +106,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, name } : a)));
   }, []);
 
-  useSimulation(agents, handleAgentsChange, handleNewEvent);
+  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive);
 
   return (
     <AgentContext.Provider
       value={{
-        agents, edges, events, selectedAgentId, setSelectedAgentId,
+        agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
         setAgents, setEdges, setEvents,
         handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
         handleAddEdge, handleDeleteEdge, killAll, reviveAll, renameAgent,

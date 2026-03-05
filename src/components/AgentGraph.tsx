@@ -39,41 +39,50 @@ function getNodePositions(agents: Agent[]) {
 }
 
 // Solar system particle effects
-function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+function OrbitalParticles({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const scale = viewBox.w / DEFAULT_VIEWBOX.w;
   const particles = useMemo(() => {
-    const colors = [
-      "hsl(215, 80%, 60%)",
-      "hsl(195, 60%, 55%)",
-      "hsl(270, 50%, 60%)",
-      "hsl(215, 80%, 70%)",
-      "hsl(195, 60%, 65%)",
-    ];
     return Array.from({ length: 25 }, (_, i) => {
       const baseRadius = 80 + ((i * 37) % 270);
       const size = 1 + ((i * 7) % 3);
       const dur = 12 + ((i * 13) % 48);
       const reverse = i % 3 === 0;
       const opacity = 0.12 + ((i * 11) % 28) / 100;
-      const color = colors[i % colors.length];
       const useGlow = size >= 2.5;
-      return { baseRadius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
+      return { baseRadius, size, dur, reverse, opacity, useGlow, startAngle: (i * 47) % 360 };
     });
   }, []);
+
+  const killColors = [
+    "hsl(0, 70%, 50%)",
+    "hsl(0, 60%, 45%)",
+    "hsl(10, 70%, 48%)",
+    "hsl(0, 80%, 55%)",
+    "hsl(350, 65%, 50%)",
+  ];
+  const normalColors = [
+    "hsl(215, 80%, 60%)",
+    "hsl(195, 60%, 55%)",
+    "hsl(270, 50%, 60%)",
+    "hsl(215, 80%, 70%)",
+    "hsl(195, 60%, 65%)",
+  ];
+  const colors = killSwitchActive ? killColors : normalColors;
 
   return (
     <g style={{ pointerEvents: "none" }}>
       {particles.map((p, i) => {
         const radius = p.baseRadius * scale;
+        const color = colors[i % colors.length];
         return (
           <circle
             key={`orbit-${i}`}
             cx={CORE_X + radius}
             cy={CORE_Y}
             r={p.size * Math.max(1, scale * 0.6)}
-            fill={p.color}
-            opacity={p.opacity}
-            filter={p.useGlow ? "url(#particleGlow)" : undefined}
+            fill={color}
+            opacity={killSwitchActive ? p.opacity * 2.5 : p.opacity}
+            filter={p.useGlow || killSwitchActive ? (killSwitchActive ? "url(#killGlow)" : "url(#particleGlow)") : undefined}
           >
             <animateTransform
               attributeName="transform"
@@ -83,7 +92,7 @@ function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: num
               dur={`${p.dur}s`}
               repeatCount="indefinite"
             />
-            <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`${killSwitchActive ? p.opacity * 2 : p.opacity};${killSwitchActive ? p.opacity * 3.5 : p.opacity * 2};${killSwitchActive ? p.opacity * 2 : p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
           </circle>
         );
       })}
@@ -91,10 +100,9 @@ function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: num
   );
 }
 
-function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+function Stardust({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const stars = useMemo(() => {
     return Array.from({ length: 40 }, (_, i) => {
-      // Deterministic scatter using index
       const fx = ((i * 173 + 29) % 100) / 100;
       const fy = ((i * 241 + 53) % 100) / 100;
       const size = 0.5 + ((i * 7) % 10) / 10;
@@ -112,12 +120,13 @@ function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: 
           cx={viewBox.x + s.fx * viewBox.w}
           cy={viewBox.y + s.fy * viewBox.h}
           r={s.size}
-          fill="hsl(215, 60%, 75%)"
+          fill={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 60%, 75%)"}
           opacity={0}
+          filter={killSwitchActive ? "url(#killGlow)" : undefined}
         >
           <animate
             attributeName="opacity"
-            values="0.05;0.35;0.05"
+            values={killSwitchActive ? "0.1;0.6;0.1" : "0.05;0.35;0.05"}
             dur={`${s.dur}s`}
             begin={`${s.delay}s`}
             repeatCount="indefinite"
@@ -128,7 +137,7 @@ function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: 
   );
 }
 
-function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+function CoreEnergyRings({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const scale = viewBox.w / DEFAULT_VIEWBOX.w;
   const maxR = Math.round(220 * scale);
   const rings = [
@@ -136,6 +145,7 @@ function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: numb
     { delay: "2s", dur: "6s" },
     { delay: "4s", dur: "6s" },
   ];
+  const strokeColor = killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)";
 
   return (
     <g style={{ pointerEvents: "none" }}>
@@ -146,13 +156,13 @@ function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: numb
           cy={CORE_Y}
           r={30}
           fill="none"
-          stroke="hsl(215, 80%, 60%)"
-          strokeWidth={1}
+          stroke={strokeColor}
+          strokeWidth={killSwitchActive ? 1.5 : 1}
           opacity={0}
         >
           <animate attributeName="r" from="30" to={`${maxR}`} dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.15;0.08;0" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
-          <animate attributeName="stroke-width" from="1.5" to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="opacity" values={killSwitchActive ? "0.3;0.15;0" : "0.15;0.08;0"} dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="stroke-width" from={killSwitchActive ? "2" : "1.5"} to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
         </circle>
       ))}
     </g>
@@ -293,11 +303,11 @@ function AgentNode({
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId,
+  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive,
 }: {
   x1: number; y1: number; x2: number; y2: number;
   color: string; weight: number; highlighted: boolean; pathId: string; kind: string;
-  onDelete?: (edgeId: string) => void; edgeId: string;
+  onDelete?: (edgeId: string) => void; edgeId: string; killSwitchActive?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 15), [x1, x2, y1]);
@@ -331,26 +341,30 @@ function AnimatedEdge({
           </textPath>
         </text>
       )}
-      <circle r={highlighted ? 2.5 : 1.5} fill={color} opacity="0">
-        <animateMotion dur={`${dur}s`} repeatCount="indefinite">
-          <mpath href={`#${pathId}`} />
-        </animateMotion>
-        <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
-      </circle>
-      {/* Reverse particle */}
-      <circle r={highlighted ? 2 : 1.2} fill={color} opacity="0">
-        <animateMotion dur={`${dur * 1.3}s`} repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
-          <mpath href={`#${pathId}`} />
-        </animateMotion>
-        <animate attributeName="opacity" values={`0;${highlighted ? 0.5 : 0.2};${highlighted ? 0.5 : 0.2};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.3}s`} repeatCount="indefinite" />
-      </circle>
-      {/* Comet trail (larger, more transparent particle behind main) */}
-      <circle r={highlighted ? 5 : 3} fill={color} opacity="0" filter="url(#particleGlow)">
-        <animateMotion dur={`${dur}s`} repeatCount="indefinite">
-          <mpath href={`#${pathId}`} />
-        </animateMotion>
-        <animate attributeName="opacity" values={`0;${highlighted ? 0.15 : 0.06};${highlighted ? 0.15 : 0.06};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
-      </circle>
+      {!killSwitchActive && (
+        <>
+          <circle r={highlighted ? 2.5 : 1.5} fill={color} opacity="0">
+            <animateMotion dur={`${dur}s`} repeatCount="indefinite">
+              <mpath href={`#${pathId}`} />
+            </animateMotion>
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+          </circle>
+          {/* Reverse particle */}
+          <circle r={highlighted ? 2 : 1.2} fill={color} opacity="0">
+            <animateMotion dur={`${dur * 1.3}s`} repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href={`#${pathId}`} />
+            </animateMotion>
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.5 : 0.2};${highlighted ? 0.5 : 0.2};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.3}s`} repeatCount="indefinite" />
+          </circle>
+          {/* Comet trail */}
+          <circle r={highlighted ? 5 : 3} fill={color} opacity="0" filter="url(#particleGlow)">
+            <animateMotion dur={`${dur}s`} repeatCount="indefinite">
+              <mpath href={`#${pathId}`} />
+            </animateMotion>
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.15 : 0.06};${highlighted ? 0.15 : 0.06};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+          </circle>
+        </>
+      )}
       {hovered && onDelete && (
         <g style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); onDelete(edgeId); }}>
           <circle cx={actualMidX} cy={actualMidY} r={8} fill="hsl(0, 60%, 45%)" opacity={0.9} />
@@ -517,9 +531,10 @@ interface AgentGraphProps {
   onAddEdge: (from: string, to: string, kind: string) => void;
   onDeleteEdge: (edgeId: string) => void;
   onDeleteAgent?: (id: string) => void;
+  killSwitchActive?: boolean;
 }
 
-export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent }: AgentGraphProps) {
+export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent, killSwitchActive = false }: AgentGraphProps) {
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
   const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<Agent | null>(null);
@@ -914,21 +929,25 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       >
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.3" />
-            <stop offset="50%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0" />
+            <stop offset="0%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity={killSwitchActive ? "0.5" : "0.3"} />
+            <stop offset="50%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity={killSwitchActive ? "0.15" : "0.08"} />
+            <stop offset="100%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity="0" />
           </radialGradient>
           <radialGradient id="cursorGlow" cx={(mouse.x - viewBox.x) / viewBox.w} cy={(mouse.y - viewBox.y) / viewBox.h} r="0.3">
-            <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.06" />
-            <stop offset="100%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0" />
+            <stop offset="0%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity="0.06" />
+            <stop offset="100%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity="0" />
           </radialGradient>
           <filter id="blur"><feGaussianBlur stdDeviation="4" /></filter>
           <filter id="particleGlow">
             <feGaussianBlur stdDeviation="1.5" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
+          <filter id="killGlow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(225, 10%, 14%)" strokeWidth="0.4" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke={killSwitchActive ? "hsl(0, 30%, 14%)" : "hsl(225, 10%, 14%)"} strokeWidth="0.4" />
           </pattern>
         </defs>
 
@@ -938,16 +957,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
 
         {/* Solar system effects */}
-        <Stardust viewBox={viewBox} />
-        <OrbitalParticles viewBox={viewBox} />
-        <CoreEnergyRings viewBox={viewBox} />
+        <Stardust viewBox={viewBox} killSwitchActive={killSwitchActive} />
+        <OrbitalParticles viewBox={viewBox} killSwitchActive={killSwitchActive} />
+        <CoreEnergyRings viewBox={viewBox} killSwitchActive={killSwitchActive} />
 
         {edges.map((edge) => {
           const from = positions[edge.from];
           const to = positions[edge.to];
           if (!from || !to) return null;
           const fromAgent = agents.find((a) => a.id === edge.from);
-          const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)";
+          const color = killSwitchActive ? "hsl(0, 70%, 50%)" : (fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)");
           const highlighted = focusId ? (edge.from === focusId || edge.to === focusId) : false;
           return (
             <AnimatedEdge
@@ -962,7 +981,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               weight={edge.weight}
               highlighted={highlighted}
               kind={edge.kind}
-              onDelete={onDeleteEdge}
+              onDelete={killSwitchActive ? undefined : onDeleteEdge}
+              killSwitchActive={killSwitchActive}
             />
           );
         })}
@@ -971,17 +991,22 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           <circle cx={CORE_X} cy={CORE_Y} r="65" fill="url(#coreGlow)" filter="url(#blur)">
             <animate attributeName="r" values="60;70;60" dur="5s" repeatCount="indefinite" />
           </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke="hsl(215, 80%, 60%)" strokeWidth="1.5" opacity="0.9">
+          <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} strokeWidth={killSwitchActive ? "2.5" : "1.5"} opacity="0.9">
             <animate attributeName="r" values="30;34;30" dur="5s" repeatCount="indefinite" />
           </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="6" fill="hsl(215, 80%, 65%)">
-            <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite" />
+          <circle cx={CORE_X} cy={CORE_Y} r="6" fill={killSwitchActive ? "hsl(0, 70%, 55%)" : "hsl(215, 80%, 65%)"}>
+            <animate attributeName="opacity" values={killSwitchActive ? "0.5;1;0.5" : "0.7;1;0.7"} dur={killSwitchActive ? "1.5s" : "3s"} repeatCount="indefinite" />
           </circle>
-          <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill="hsl(0, 0%, 75%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
-            SOLO OS CORE
+          <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 70%, 60%)" : "hsl(0, 0%, 75%)"} fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
+            {killSwitchActive ? "⚠ SYSTEM KILLED" : "SOLO OS CORE"}
           </text>
-          <RotatingCoreText />
-          <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill="hsl(152, 60%, 48%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
+          {!killSwitchActive && <RotatingCoreText />}
+          {killSwitchActive && (
+            <text x={CORE_X} y={CORE_Y + 62} textAnchor="middle" fontSize="8" fontFamily="JetBrains Mono" fill="hsl(0, 70%, 50%)" opacity="0.8">
+              all agents terminated
+            </text>
+          )}
+          <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 60%, 55%)" : "hsl(152, 60%, 48%)"} fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
             {onlineCount}/{agents.length} ONLINE
           </text>
         </FloatingGroup>
