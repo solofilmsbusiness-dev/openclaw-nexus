@@ -914,6 +914,22 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         >
           {locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
         </button>
+        {(() => {
+          const { killAll, reviveAll, killSwitchActive: ksActive } = useAgents();
+          return (
+            <button
+              onClick={() => ksActive ? reviveAll() : killAll()}
+              className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
+                ksActive
+                  ? "border-red-500/60 bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+              }`}
+              title={ksActive ? "Revive all agents" : "Kill all agents"}
+            >
+              <Power className="w-3.5 h-3.5" />
+            </button>
+          );
+        })()}
       </div>
 
       <svg
