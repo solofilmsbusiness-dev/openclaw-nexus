@@ -624,6 +624,34 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           </div>
         </motion.div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Agent</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {pendingDeleteAgent?.icon} <strong>{pendingDeleteAgent?.name}</strong>? This will also remove all connections and events for this agent.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteId && onDeleteAgent) {
+                  const name = pendingDeleteAgent?.name;
+                  onDeleteAgent(pendingDeleteId);
+                  toast({ title: "Agent deleted", description: `${name} has been removed.` });
+                  setPendingDeleteId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
