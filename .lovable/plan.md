@@ -1,9 +1,16 @@
-## Auto-confirm email signups
 
-Use the configure-auth tool to enable auto-confirm for email ([solofilmsbusiness@gmail.com](mailto:solofilmsbusiness@gmail.com)) removing the email verification requirement. This will allow the admin account ([solofilmsbusiness@gmail.com](mailto:solofilmsbusiness@gmail.com))  to sign in immediately after signing up.
 
-### Change
+## Plan: Fix admin login flow & restrict settings access
 
-- Enable `autoconfirm` for admin email signup in the auth configuration
+### Changes
 
-No code changes needed.
+1. **`src/pages/Login.tsx`** — After successful login, always navigate to `/` (dashboard) regardless of role. Remove the admin role check and `/admin` redirect from login.
+
+2. **`src/pages/Index.tsx`** — Settings button stays. It already navigates to `/admin` where the admin check happens.
+
+3. **`src/pages/Admin.tsx`** — Already has admin role protection. No changes needed.
+
+### Flow
+- Login → always go to `/` (dashboard)
+- Settings gear (top-right) → `/admin` → admin check on that page denies non-admins
+
