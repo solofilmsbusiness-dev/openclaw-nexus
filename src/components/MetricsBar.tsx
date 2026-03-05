@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Activity, CheckCircle, AlertTriangle, XCircle, Settings, Sun, Moon } from "lucide-react";
+import { Activity, CheckCircle, AlertTriangle, XCircle, Settings, Sun, Moon, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -62,6 +62,14 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
           ) : (
             <Moon className="w-4 h-4 transition-transform duration-300 group-hover:-rotate-12" />
           )}
+        </button>
+        <div className="h-4 w-px bg-border/30" />
+        <button
+          onClick={() => navigate("/trading")}
+          className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground hover:text-neon-green hover:bg-neon-green/10 transition-all duration-200 group"
+          title="Trading Analytics"
+        >
+          <BarChart3 className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
         </button>
         <div className="h-4 w-px bg-border/30" />
         <button
