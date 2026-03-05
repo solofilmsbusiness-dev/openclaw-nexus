@@ -147,6 +147,7 @@ function AgentsTab({
   };
 
   return (
+    <>
     <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
       {agents.map((agent, i) => {
         const color = statusColor(agent.status);
