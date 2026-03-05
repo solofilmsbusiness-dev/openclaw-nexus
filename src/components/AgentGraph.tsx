@@ -1,10 +1,19 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { EDGES, statusColor, type Agent } from "@/data/agents";
 
 const CORE_X = 400;
 const CORE_Y = 300;
 const RADIUS = 250;
+
+const CORE_TAGLINES = [
+  "12 agents synced",
+  "system nominal",
+  "v2.26 stable",
+  "neural mesh active",
+  "47 tasks processed",
+  "all channels open",
+];
 
 function getNodePositions(agents: Agent[]) {
   const positions: Record<string, { x: number; y: number }> = {
@@ -39,6 +48,28 @@ function FloatingGroup({ children, index, isHovered }: { children: React.ReactNo
       />
       {children}
     </g>
+  );
+}
+
+function ProgressArc({ cx, cy, r, progress, color }: { cx: number; cy: number; r: number; progress: number; color: string }) {
+  const circumference = 2 * Math.PI * r;
+  const strokeDash = circumference * (progress / 100);
+  const strokeGap = circumference - strokeDash;
+
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={r}
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+      strokeDasharray={`${strokeDash} ${strokeGap}`}
+      strokeDashoffset={circumference * 0.25}
+      strokeLinecap="round"
+      opacity={0.5}
+      style={{ transition: "stroke-dasharray 1s ease" }}
+    />
   );
 }
 
@@ -80,29 +111,39 @@ function AgentNode({
       <circle cx={x} cy={y} r={size + 12} fill={`${color.bg}`} opacity={active ? 0.08 : 0.04}>
         <animate attributeName="r" values={`${size + 8};${size + 14};${size + 8}`} dur="4s" repeatCount="indefinite" />
       </circle>
+      {/* Progress arc */}
+      <ProgressArc cx={x} cy={y} r={size + 4} progress={agent.progress} color={color.bg} />
       {/* Main circle */}
       <circle cx={x} cy={y} r={size} fill={`${color.bg}15`} stroke={color.bg} strokeWidth={active ? 2 : 1.5} opacity={0.9} />
       {/* Icon */}
       <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fontSize="16">
         {agent.icon}
       </text>
-      {/* Label */}
-      <text x={x} y={y + size + 16} textAnchor="middle" fill="hsl(0, 0%, 85%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="500">
+      {/* Agent name */}
+      <text x={x} y={y + size + 16} textAnchor="middle" fill="hsl(0, 0%, 85%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600">
         {agent.name}
       </text>
-      {/* Status badge */}
-      <text x={x} y={y + size + 28} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" opacity="0.6" style={{ textTransform: "uppercase" }}>
-        {agent.status.toUpperCase()}
+      {/* Subtitle */}
+      <text x={x} y={y + size + 27} textAnchor="middle" fill="hsl(0, 0%, 55%)" fontSize="7.5" fontFamily="-apple-system, Inter, sans-serif" fontStyle="italic" opacity="0.8">
+        {agent.subtitle}
+      </text>
+      {/* Current task */}
+      <text x={x} y={y + size + 38} textAnchor="middle" fill={color.bg} fontSize="7" fontFamily="JetBrains Mono" opacity="0.5">
+        {agent.currentTask}
+      </text>
+      {/* Progress readout */}
+      <text x={x} y={y - size - 8} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" fontWeight="600" opacity={active ? 0.9 : 0.4}>
+        {agent.progress}%
       </text>
     </motion.g>
   );
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted, pathId,
+  x1, y1, x2, y2, color, weight, highlighted, pathId, kind,
 }: {
   x1: number; y1: number; x2: number; y2: number;
-  color: string; weight: number; highlighted: boolean; pathId: string;
+  color: string; weight: number; highlighted: boolean; pathId: string; kind: string;
 }) {
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 15), [x1, x2, y1]);
   const midY = useMemo(() => (y1 + y2) / 2 + (Math.cos(x2 + y2) * 15), [y1, y2, x2]);
@@ -121,6 +162,14 @@ function AnimatedEdge({
         strokeLinecap="round"
         style={{ transition: "opacity 0.4s, stroke-width 0.4s" }}
       />
+      {/* Edge kind label on highlight */}
+      {highlighted && (
+        <text fontSize="7" fontFamily="JetBrains Mono" fill={color} opacity="0.7" letterSpacing="1">
+          <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
+            {kind.toUpperCase()}
+          </textPath>
+        </text>
+      )}
       <circle r={highlighted ? 2.5 : 1.5} fill={color} opacity="0">
         <animateMotion dur={`${dur}s`} repeatCount="indefinite">
           <mpath href={`#${pathId}`} />
@@ -128,6 +177,27 @@ function AnimatedEdge({
         <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
       </circle>
     </g>
+  );
+}
+
+function RotatingCoreText() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % CORE_TAGLINES.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <text x={CORE_X} y={CORE_Y + 62} textAnchor="middle" fontSize="8" fontFamily="JetBrains Mono" fill="hsl(215, 80%, 60%)">
+      {CORE_TAGLINES.map((line, i) => (
+        <tspan key={line} opacity={i === index ? 1 : 0} style={{ transition: "opacity 0.8s ease" }}>
+          {i === index ? line : ""}
+        </tspan>
+      ))}
+    </text>
   );
 }
 
@@ -175,6 +245,7 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
     return ids;
   }, [focusId]);
 
+  const onlineCount = agents.filter((a) => a.status !== "down").length;
   const displayAgent = hovered || (selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null);
 
   return (
@@ -213,7 +284,7 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
           const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)";
           const highlighted = focusId ? (edge.from === focusId || edge.to === focusId) : false;
           return (
-            <AnimatedEdge pathId={`edge-${edge.id}`} key={edge.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} color={color} weight={edge.weight} highlighted={highlighted} />
+            <AnimatedEdge pathId={`edge-${edge.id}`} key={edge.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} color={color} weight={edge.weight} highlighted={highlighted} kind={edge.kind} />
           );
         })}
 
@@ -227,11 +298,15 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
           <circle cx={CORE_X} cy={CORE_Y} r="6" fill="hsl(215, 80%, 65%)">
             <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite" />
           </circle>
+          {/* Core title */}
           <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill="hsl(0, 0%, 75%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
             SOLO OS CORE
           </text>
-          <text x={CORE_X} y={CORE_Y + 62} textAnchor="middle" fill="hsl(215, 80%, 60%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.5">
-            v2.26
+          {/* Rotating tagline */}
+          <RotatingCoreText />
+          {/* Online count */}
+          <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill="hsl(152, 60%, 48%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
+            {onlineCount}/{agents.length} ONLINE
           </text>
         </FloatingGroup>
 
@@ -263,18 +338,19 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
           animate={{ opacity: 1, scale: 1 }}
           className="absolute top-4 right-4 glass-panel neon-border p-4 w-64"
         >
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <span className="text-xl">{displayAgent.icon}</span>
             <div>
               <h3 className="font-display font-semibold text-sm text-foreground">{displayAgent.name}</h3>
-              <span className={`text-xs font-mono ${
-                displayAgent.status === 'healthy' ? 'status-healthy' :
-                displayAgent.status === 'degraded' ? 'status-degraded' :
-                displayAgent.status === 'down' ? 'status-down' : 'status-active'
-              }`}>{displayAgent.status.toUpperCase()}</span>
+              <span className="text-[10px] font-mono text-muted-foreground italic">{displayAgent.subtitle}</span>
             </div>
           </div>
-          <div className="space-y-1 text-xs font-mono text-muted-foreground">
+          <span className={`text-xs font-mono ${
+            displayAgent.status === 'healthy' ? 'status-healthy' :
+            displayAgent.status === 'degraded' ? 'status-degraded' :
+            displayAgent.status === 'down' ? 'status-down' : 'status-active'
+          }`}>{displayAgent.status.toUpperCase()}</span>
+          <div className="space-y-1 text-xs font-mono text-muted-foreground mt-2">
             <div className="flex justify-between"><span>Task:</span><span className="text-foreground">{displayAgent.currentTask}</span></div>
             <div className="flex justify-between"><span>Progress:</span><span className="text-foreground">{displayAgent.progress}%</span></div>
             <div className="flex justify-between"><span>Backlog:</span><span className="text-foreground">{displayAgent.backlogCount}</span></div>
