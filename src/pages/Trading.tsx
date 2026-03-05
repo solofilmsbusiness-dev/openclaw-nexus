@@ -45,8 +45,7 @@ const PIE_COLORS = [
   "hsl(var(--neon-red))",
 ];
 
-
-  const navigate = useNavigate();
+const Trading = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio } =
     useTradingSimulation();
