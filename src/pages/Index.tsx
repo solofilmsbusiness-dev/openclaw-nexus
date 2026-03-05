@@ -33,7 +33,7 @@ const Index = () => {
   if (!authChecked) return null;
 
   const {
-    agents, edges, events, selectedAgentId, setSelectedAgentId,
+    agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
     handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
     handleAddEdge, handleDeleteEdge,
   } = useAgents();
