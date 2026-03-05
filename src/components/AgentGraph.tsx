@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
 import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen } from "lucide-react";
 import { useAgents } from "@/contexts/AgentContext";
@@ -537,9 +537,12 @@ interface AgentGraphProps {
 }
 
 export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent, killSwitchActive = false }: AgentGraphProps) {
-  const { killAll, reviveAll } = useAgents();
+  const { killAll, reviveAll, dragOffsets: contextDragOffsets, nodeSizes: contextNodeSizes, setDragOffsets: contextSetDragOffsets, setNodeSizes: contextSetNodeSizes } = useAgents();
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
-  const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
+  const dragOffsets = contextDragOffsets;
+  const setDragOffsets = contextSetDragOffsets;
+  const nodeSizes = contextNodeSizes;
+  const setNodeSizes = contextSetNodeSizes;
   const [hovered, setHovered] = useState<Agent | null>(null);
   const [mouse, setMouse] = useState({ x: 400, y: 300 });
   const svgRef = useRef<SVGSVGElement>(null);
@@ -549,9 +552,28 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
   const panRef = useRef<{ startMouse: { x: number; y: number }; startViewBox: typeof DEFAULT_VIEWBOX } | null>(null);
 
-  // Node sizes state
-  const [nodeSizes, setNodeSizes] = useState<Record<string, number>>({});
+  // Resize ref
   const resizeRef = useRef<{ agentId: string; startDist: number; startSize: number } | null>(null);
+
+  // Kill switch animation state
+  const [killProgress, setKillProgress] = useState(killSwitchActive ? 1 : 0);
+  useEffect(() => {
+    let raf: number;
+    const start = performance.now();
+    const from = killProgress;
+    const to = killSwitchActive ? 1 : 0;
+    const duration = 1500;
+    if (from === to) return;
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      setKillProgress(from + (to - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [killSwitchActive]);
 
   // Connect mode state
   const [connectMode, setConnectMode] = useState(false);
@@ -949,6 +971,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         onWheel={handleWheel}
         style={{ cursor: panRef.current ? 'grabbing' : 'default' }}
       >
+        {/* Kill switch red overlay — animated */}
+        <rect
+          x={viewBox.x}
+          y={viewBox.y}
+          width={viewBox.w}
+          height={viewBox.h}
+          fill="hsl(0, 70%, 40%)"
+          opacity={killProgress * 0.15}
+          style={{ pointerEvents: "none", transition: "none" }}
+        />
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity={killSwitchActive ? "0.5" : "0.3"} />

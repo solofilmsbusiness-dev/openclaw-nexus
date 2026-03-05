@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 import { useSimulation } from "@/hooks/useSimulation";
+import { supabase } from "@/integrations/supabase/client";
+
+interface LayoutData {
+  dragOffsets: Record<string, { x: number; y: number }>;
+  nodeSizes: Record<string, number>;
+}
 
 interface AgentContextValue {
   agents: Agent[];
@@ -8,10 +14,14 @@ interface AgentContextValue {
   events: AgentEvent[];
   selectedAgentId: string | null;
   killSwitchActive: boolean;
+  dragOffsets: Record<string, { x: number; y: number }>;
+  nodeSizes: Record<string, number>;
   setSelectedAgentId: (id: string | null) => void;
   setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   setEvents: React.Dispatch<React.SetStateAction<AgentEvent[]>>;
+  setDragOffsets: React.Dispatch<React.SetStateAction<Record<string, { x: number; y: number }>>>;
+  setNodeSizes: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   handleAgentsChange: (newAgents: Agent[]) => void;
   handleStatusChange: (id: string, status: AgentStatus) => void;
   handleAddAgent: (overrides: Partial<Agent>) => void;
@@ -21,7 +31,8 @@ interface AgentContextValue {
   killAll: () => void;
   reviveAll: () => void;
   renameAgent: (id: string, name: string) => void;
-  loadConfig: (agents: Agent[], edges: Edge[]) => void;
+  loadConfig: (agents: Agent[], edges: Edge[], layout?: LayoutData) => void;
+  loadLastConfig: () => Promise<boolean>;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -32,6 +43,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [killSwitchActive, setKillSwitchActive] = useState(false);
+  const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
+  const [nodeSizes, setNodeSizes] = useState<Record<string, number>>({});
 
   const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
   const handleNewEvent = useCallback((event: AgentEvent) => {
@@ -107,22 +120,47 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, name } : a)));
   }, []);
 
-  const loadConfig = useCallback((newAgents: Agent[], newEdges: Edge[]) => {
+  const loadConfig = useCallback((newAgents: Agent[], newEdges: Edge[], layout?: LayoutData) => {
     setAgents(newAgents);
     setEdges(newEdges);
     setEvents([]);
     setKillSwitchActive(false);
+    setDragOffsets(layout?.dragOffsets || {});
+    setNodeSizes(layout?.nodeSizes || {});
   }, []);
+
+  const loadLastConfig = useCallback(async (): Promise<boolean> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data, error } = await supabase
+      .from("graph_configs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (error || !data || data.length === 0) return false;
+    const config = data[0];
+    const agentsData = config.agents_data as any;
+    const edgesData = config.edges_data as any;
+    // Support new wrapped format: { agents: [...], layout: {...} }
+    if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
+      loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout as LayoutData);
+    } else {
+      loadConfig(agentsData as Agent[], edgesData as Edge[]);
+    }
+    return true;
+  }, [loadConfig]);
 
   useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive);
 
   return (
     <AgentContext.Provider
       value={{
-        agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
-        setAgents, setEdges, setEvents,
+        agents, edges, events, selectedAgentId, killSwitchActive,
+        dragOffsets, nodeSizes, setDragOffsets, setNodeSizes,
+        setSelectedAgentId, setAgents, setEdges, setEvents,
         handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
-        handleAddEdge, handleDeleteEdge, killAll, reviveAll, renameAgent, loadConfig,
+        handleAddEdge, handleDeleteEdge, killAll, reviveAll, renameAgent, loadConfig, loadLastConfig,
       }}
     >
       {children}

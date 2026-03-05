@@ -18,6 +18,8 @@ const Index = () => {
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
+  const { loadLastConfig } = useAgents();
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -25,10 +27,12 @@ const Index = () => {
         navigate("/login", { replace: true });
       } else {
         setAuthChecked(true);
+        // Auto-load last saved config
+        await loadLastConfig();
       }
     };
     checkAuth();
-  }, [navigate]);
+  }, [navigate, loadLastConfig]);
 
   if (!authChecked) return null;
 
