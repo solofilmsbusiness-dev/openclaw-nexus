@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const Index = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { layout } = useSettings();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
