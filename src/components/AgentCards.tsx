@@ -349,22 +349,90 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="glass-panel neon-border p-4 h-full overflow-hidden flex flex-col"
     >
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search agents..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-8 pr-8 py-2 rounded-xl bg-muted/30 border border-border/30 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-            <X className="w-3 h-3 text-muted-foreground hover:text-foreground" />
-          </button>
-        )}
+      {/* Search + Add */}
+      <div className="flex gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search agents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-8 py-2 rounded-xl bg-muted/30 border border-border/30 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <X className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="shrink-0 w-8 h-8 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary/20 hover:border-primary/50 flex items-center justify-center transition-colors"
+          title="Add agent"
+        >
+          <Plus className="w-3.5 h-3.5 text-primary" />
+        </button>
       </div>
+
+      {/* Add Agent Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="glass-panel border-border/50 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm">Add New Agent</DialogTitle>
+            <DialogDescription className="text-[11px] text-muted-foreground">Configure a new agent to join the mesh.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newAgent.name.trim()) return;
+              onAddAgent(newAgent);
+              toast.success(`${newAgent.name} added to the mesh`);
+              setNewAgent({ name: "", subtitle: "", icon: "🤖", type: "operations" });
+              setAddOpen(false);
+            }}
+            className="space-y-3"
+          >
+            <div className="grid grid-cols-[48px_1fr] gap-2">
+              <input
+                value={newAgent.icon}
+                onChange={(e) => setNewAgent((p) => ({ ...p, icon: e.target.value }))}
+                className="w-12 h-10 text-center text-lg rounded-lg bg-muted/30 border border-border/30 focus:outline-none focus:border-primary/40"
+                maxLength={4}
+                title="Icon (emoji)"
+              />
+              <input
+                value={newAgent.name}
+                onChange={(e) => setNewAgent((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Agent name"
+                className="w-full px-3 py-2 rounded-lg bg-muted/30 border border-border/30 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40"
+                required
+              />
+            </div>
+            <input
+              value={newAgent.subtitle}
+              onChange={(e) => setNewAgent((p) => ({ ...p, subtitle: e.target.value }))}
+              placeholder="Subtitle (e.g. Data Wrangler)"
+              className="w-full px-3 py-2 rounded-lg bg-muted/30 border border-border/30 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40"
+            />
+            <select
+              value={newAgent.type}
+              onChange={(e) => setNewAgent((p) => ({ ...p, type: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg bg-muted/30 border border-border/30 text-[11px] text-foreground focus:outline-none focus:border-primary/40"
+            >
+              {AGENT_TYPES.map((t) => (
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-[11px] font-mono uppercase tracking-wider hover:bg-primary/90 transition-colors"
+            >
+              Deploy Agent
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Tab bar */}
       <div className="flex gap-1 mb-3 p-0.5 bg-muted/30 rounded-xl">
@@ -401,6 +469,7 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
                 onStatusChange={handleStatusChange}
                 selectedAgentId={selectedAgentId}
                 onSelectAgent={onSelectAgent}
+                onDeleteAgent={onDeleteAgent}
               />
             )}
             {activeTab === "backlog" && <BacklogTab agents={agents} />}
