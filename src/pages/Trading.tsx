@@ -60,6 +60,7 @@ const Trading = () => {
   const sim = useTradingSimulation();
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote } = sim;
   const layout = useTradingLayout();
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // New note form state
   const [showNoteForm, setShowNoteForm] = useState(false);
