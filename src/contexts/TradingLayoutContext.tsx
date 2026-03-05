@@ -102,6 +102,10 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     }));
   }, []);
 
+  const setColumnCount = useCallback((count: 1 | 2 | 3) => {
+    setState((s) => ({ ...s, columnCount: count }));
+  }, []);
+
   return (
     <TradingLayoutContext.Provider
       value={{
@@ -114,6 +118,8 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
         addCustomPanel,
         updateCustomPanel,
         deleteCustomPanel,
+        columnCount: state.columnCount,
+        setColumnCount,
       }}
     >
       {children}
