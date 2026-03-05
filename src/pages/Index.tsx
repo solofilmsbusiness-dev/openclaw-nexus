@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import MetricsBar from "@/components/MetricsBar";
 import AgentGraph from "@/components/AgentGraph";
 import EventTimeline from "@/components/EventTimeline";
@@ -7,9 +8,10 @@ import AgentCards from "@/components/AgentCards";
 import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAgents } from "@/contexts/AgentContext";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -116,6 +118,15 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Settings button */}
+      <button
+        onClick={() => navigate("/admin")}
+        className="fixed top-4 right-4 z-50 flex items-center justify-center p-2.5 rounded-xl glass-panel neon-border text-primary hover:text-primary-foreground hover:bg-primary/90 transition-all duration-300 group hover:shadow-[var(--glow-blue)]"
+        title="Admin Settings"
+      >
+        <Settings className="w-5 h-5 transition-transform duration-500 group-hover:rotate-90" />
+      </button>
 
       {/* Cmd+K hint */}
       <div className="fixed bottom-4 right-4 z-50">
