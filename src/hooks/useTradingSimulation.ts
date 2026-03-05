@@ -360,9 +360,10 @@ export function useTradingSimulation() {
     return () => clearInterval(interval);
   }, []);
 
-  // Executed trades every 10s
+  // Executed trades every 10s (persist to DB)
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!dbLoaded) return;
+    const interval = setInterval(async () => {
       const ticker = pickRandom(TICKERS_SEED);
       const action = pickRandom(["buy", "sell"] as const);
       const currentPrice = livePricesRef.current[ticker.symbol] || ticker.basePrice;
@@ -382,35 +383,54 @@ export function useTradingSimulation() {
       const hasExit = Math.random() > 0.4;
       const exitPrice = hasExit ? Math.round((price + rand(-8, 12)) * 100) / 100 : null;
       const pnl = exitPrice ? Math.round((exitPrice - price) * quantity * (action === "buy" ? 1 : -1) * 100) / 100 : null;
-      setTradeHistory((prev) =>
-        [
-          {
-            id: uid(),
-            type: action,
-            asset: ticker.symbol,
-            entryPrice: Math.round(price * 100) / 100,
-            exitPrice,
-            pnl,
-            timestamp: new Date(),
-          },
-          ...prev,
-        ].slice(0, 20)
-      );
+      const tradeEntry: TradeHistory = {
+        id: uid(),
+        type: action,
+        asset: ticker.symbol,
+        entryPrice: Math.round(price * 100) / 100,
+        exitPrice,
+        pnl,
+        timestamp: new Date(),
+      };
+      setTradeHistory((prev) => [tradeEntry, ...prev].slice(0, 50));
+
+      // Persist to DB
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        supabase.from("trade_history").insert({
+          user_id: session.user.id,
+          type: action,
+          asset: ticker.symbol,
+          entry_price: tradeEntry.entryPrice,
+          exit_price: exitPrice,
+          pnl,
+        }).then(() => {});
+      }
     }, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dbLoaded]);
 
-  // Learning notes every 15s
+  // Learning notes every 15s (persist to DB)
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!dbLoaded) return;
+    const interval = setInterval(async () => {
       const idx = noteIndexRef.current % LEARNING_TEMPLATES.length;
       noteIndexRef.current++;
-      setLearningNotes((prev) =>
-        [{ id: uid(), ...LEARNING_TEMPLATES[idx], timestamp: new Date() }, ...prev].slice(0, 10)
-      );
+      const note = { id: uid(), ...LEARNING_TEMPLATES[idx], timestamp: new Date() };
+      setLearningNotes((prev) => [note, ...prev].slice(0, 20));
+
+      // Persist to DB
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        supabase.from("learning_notes").insert({
+          user_id: session.user.id,
+          category: note.category,
+          content: note.content,
+        }).then(() => {});
+      }
     }, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dbLoaded]);
 
   // Portfolio computation
   const INITIAL_CASH = 100_000;
