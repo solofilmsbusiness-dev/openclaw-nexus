@@ -1169,7 +1169,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
                 if (pendingDeleteId && onDeleteAgent) {
                   const name = pendingDeleteAgent?.name;
                   onDeleteAgent(pendingDeleteId);
-                  toast({ title: "Agent deleted", description: `${name} has been removed.` });
+                  toast.success("Agent deleted", { description: `${name} has been removed.` });
                   setPendingDeleteId(null);
                 }
               }}

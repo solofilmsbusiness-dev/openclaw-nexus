@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAgents } from "@/contexts/AgentContext";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Save, FolderOpen, Trash2, Pencil, Loader2 } from "lucide-react";
 import type { Agent, Edge } from "@/data/agents";
 
