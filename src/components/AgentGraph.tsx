@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power } from "lucide-react";
+import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 
@@ -535,6 +536,7 @@ interface AgentGraphProps {
 }
 
 export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent, killSwitchActive = false }: AgentGraphProps) {
+  const { killAll, reviveAll } = useAgents();
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
   const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<Agent | null>(null);
@@ -912,6 +914,17 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           title={locked ? "Unlock view" : "Lock view"}
         >
           {locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+        </button>
+        <button
+          onClick={() => killSwitchActive ? reviveAll() : killAll()}
+          className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
+            killSwitchActive
+              ? "border-red-500/60 bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+          }`}
+          title={killSwitchActive ? "Revive all agents" : "Kill all agents"}
+        >
+          <Power className="w-3.5 h-3.5" />
         </button>
       </div>
 
