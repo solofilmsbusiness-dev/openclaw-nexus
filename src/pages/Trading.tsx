@@ -40,7 +40,7 @@ const categoryColor: Record<LearningNote["category"], string> = {
 const Trading = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
-  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats } =
+  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource } =
     useTradingSimulation();
 
   useEffect(() => {
@@ -96,8 +96,10 @@ const Trading = () => {
         </motion.div>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse-glow" />
-          <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">Live</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
+          <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
+            {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
+          </span>
         </div>
       </div>
 

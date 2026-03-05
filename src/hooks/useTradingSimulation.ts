@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // --- Types ---
 export interface MarketTicker {
@@ -9,6 +10,7 @@ export interface MarketTicker {
   changePercent: number;
   volume: number;
   history: number[];
+  isLive: boolean;
 }
 
 export interface AgentEvaluation {
@@ -53,7 +55,7 @@ export interface LearningNote {
   timestamp: Date;
 }
 
-// --- Initial data ---
+// --- Seed data ---
 const TICKERS_SEED: { symbol: string; name: string; basePrice: number }[] = [
   { symbol: "AAPL", name: "Apple Inc.", basePrice: 198.5 },
   { symbol: "TSLA", name: "Tesla Inc.", basePrice: 245.2 },
@@ -93,6 +95,9 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const TICKER_NAME_MAP: Record<string, string> = {};
+TICKERS_SEED.forEach((t) => { TICKER_NAME_MAP[t.symbol] = t.name; });
+
 export function useTradingSimulation() {
   const [tickers, setTickers] = useState<MarketTicker[]>(() =>
     TICKERS_SEED.map((t) => ({
@@ -103,6 +108,7 @@ export function useTradingSimulation() {
       changePercent: 0,
       volume: randInt(5_000_000, 80_000_000),
       history: Array.from({ length: 20 }, () => t.basePrice + rand(-5, 5)),
+      isLive: false,
     }))
   );
 
@@ -117,29 +123,89 @@ export function useTradingSimulation() {
       timestamp: new Date(Date.now() - (3 - i) * 600_000),
     }))
   );
+  const [dataSource, setDataSource] = useState<"loading" | "live" | "simulated">("loading");
 
   const noteIndexRef = useRef(3);
+  const livePricesRef = useRef<Record<string, number>>({});
 
-  // Update market prices every 2s
+  // Fetch real market data from edge function
+  const fetchMarketData = useCallback(async () => {
+    try {
+      const symbols = TICKERS_SEED.map((t) => t.symbol);
+      const { data, error } = await supabase.functions.invoke("market-data", {
+        body: { symbols },
+      });
+
+      if (error) {
+        console.warn("Market data fetch error, using simulation:", error);
+        setDataSource("simulated");
+        return false;
+      }
+
+      const marketData = data?.data;
+      if (!marketData) {
+        setDataSource("simulated");
+        return false;
+      }
+
+      let anyLive = false;
+      setTickers((prev) =>
+        prev.map((t) => {
+          const live = marketData[t.symbol];
+          if (!live || live.error || live.rateLimited) return t;
+
+          anyLive = true;
+          livePricesRef.current[t.symbol] = live.price;
+
+          return {
+            ...t,
+            price: live.price,
+            change: live.change,
+            changePercent: live.changePercent,
+            volume: live.volume,
+            history: [...t.history.slice(-19), live.price],
+            isLive: true,
+          };
+        })
+      );
+
+      setDataSource(anyLive ? "live" : "simulated");
+      return anyLive;
+    } catch (err) {
+      console.warn("Market data fetch failed, using simulation:", err);
+      setDataSource("simulated");
+      return false;
+    }
+  }, []);
+
+  // Initial fetch + refresh every 5 minutes (to stay within free tier)
+  useEffect(() => {
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchMarketData]);
+
+  // Small simulated fluctuations between real data refreshes (based on live price if available)
   useEffect(() => {
     const interval = setInterval(() => {
       setTickers((prev) =>
         prev.map((t) => {
-          const delta = rand(-2.5, 2.5);
+          const basePrice = livePricesRef.current[t.symbol] || TICKERS_SEED.find((s) => s.symbol === t.symbol)!.basePrice;
+          const delta = rand(-0.5, 0.5); // Small micro-fluctuation
           const newPrice = Math.max(1, t.price + delta);
-          const change = newPrice - TICKERS_SEED.find((s) => s.symbol === t.symbol)!.basePrice;
-          const changePercent = (change / TICKERS_SEED.find((s) => s.symbol === t.symbol)!.basePrice) * 100;
+          const change = newPrice - basePrice;
+          const changePercent = (change / basePrice) * 100;
           return {
             ...t,
             price: Math.round(newPrice * 100) / 100,
             change: Math.round(change * 100) / 100,
             changePercent: Math.round(changePercent * 100) / 100,
-            volume: t.volume + randInt(-200_000, 500_000),
+            volume: t.volume + randInt(-50_000, 100_000),
             history: [...t.history.slice(-19), newPrice],
           };
         })
       );
-    }, 2000);
+    }, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -200,7 +266,8 @@ export function useTradingSimulation() {
     const interval = setInterval(() => {
       const ticker = pickRandom(TICKERS_SEED);
       const action = pickRandom(["buy", "sell"] as const);
-      const price = ticker.basePrice + rand(-10, 10);
+      const currentPrice = livePricesRef.current[ticker.symbol] || ticker.basePrice;
+      const price = currentPrice + rand(-3, 3);
       const quantity = randInt(5, 100);
 
       const executed: ExecutedTrade = {
@@ -213,7 +280,6 @@ export function useTradingSimulation() {
       };
       setExecutedTrades((prev) => [executed, ...prev].slice(0, 10));
 
-      // Also add to trade history
       const hasExit = Math.random() > 0.4;
       const exitPrice = hasExit ? Math.round((price + rand(-8, 12)) * 100) / 100 : null;
       const pnl = exitPrice ? Math.round((exitPrice - price) * quantity * (action === "buy" ? 1 : -1) * 100) / 100 : null;
@@ -260,6 +326,7 @@ export function useTradingSimulation() {
     executedTrades,
     tradeHistory,
     learningNotes,
+    dataSource,
     stats: { totalPnl: Math.round(totalPnl * 100) / 100, totalTrades, winRate },
   };
 }
