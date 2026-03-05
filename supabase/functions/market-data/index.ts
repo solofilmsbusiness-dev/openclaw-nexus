@@ -23,8 +23,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { symbols } = await req.json();
-    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+    const { symbols, cryptoSymbols } = await req.json();
+    const allSymbols = (symbols || []).concat(cryptoSymbols || []);
+    if (!allSymbols || !Array.isArray(allSymbols) || allSymbols.length === 0) {
       return new Response(JSON.stringify({ error: 'symbols array required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -36,8 +37,10 @@ Deno.serve(async (req) => {
 
     // Futures symbols that need =F suffix for Alpha Vantage
     const FUTURES_SYMBOLS = new Set(["ES", "NQ", "YM", "RTY", "CL", "GC", "SI", "NG", "ZB", "6E"]);
+    // Crypto symbols map to Alpha Vantage format (BTC -> BTCUSD, ETH -> ETHUSD, etc.)
+    const CRYPTO_SYMBOLS = new Set(["BTC", "ETH", "SOL"]);
 
-    for (const symbol of symbols) {
+    for (const symbol of allSymbols) {
       const sym = String(symbol).toUpperCase();
 
       // Check cache
@@ -46,8 +49,14 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // For futures, append =F for Alpha Vantage query
-      const querySym = FUTURES_SYMBOLS.has(sym) ? `${sym}=F` : sym;
+      // Determine query symbol format
+      let querySym = sym;
+      if (FUTURES_SYMBOLS.has(sym)) {
+        querySym = `${sym}=F`;
+      } else if (CRYPTO_SYMBOLS.has(sym)) {
+        // Map crypto to Alpha Vantage format: BTC -> BTCUSD, ETH -> ETHUSD, etc.
+        querySym = `${sym}USD`;
+      }
 
       // Fetch GLOBAL_QUOTE for current price data
       const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${querySym}&apikey=${API_KEY}`;
