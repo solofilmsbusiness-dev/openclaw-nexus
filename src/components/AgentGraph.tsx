@@ -124,7 +124,9 @@ function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: 
   );
 }
 
-function CoreEnergyRings() {
+function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+  const scale = viewBox.w / DEFAULT_VIEWBOX.w;
+  const maxR = Math.round(220 * scale);
   const rings = [
     { delay: "0s", dur: "6s" },
     { delay: "2s", dur: "6s" },
@@ -144,7 +146,7 @@ function CoreEnergyRings() {
           strokeWidth={1}
           opacity={0}
         >
-          <animate attributeName="r" from="30" to="220" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="r" from="30" to={`${maxR}`} dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.15;0.08;0" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
           <animate attributeName="stroke-width" from="1.5" to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
         </circle>
@@ -271,10 +273,6 @@ function AgentNode({
       {/* Current task */}
       <text x={x} y={y + size + 38} textAnchor="middle" fill={color.bg} fontSize="7" fontFamily="JetBrains Mono" opacity="0.5">
         {agent.currentTask}
-      </text>
-      {/* Progress readout */}
-      <text x={x} y={y - size - 8} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" fontWeight="600" opacity={active ? 0.9 : 0.4}>
-        {agent.progress}%
       </text>
       {/* Resize handle - visible on hover/selection */}
       {(active || isSelected) && (
@@ -920,8 +918,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
         {/* Solar system effects */}
         <Stardust viewBox={viewBox} />
-        <OrbitalParticles />
-        <CoreEnergyRings />
+        <OrbitalParticles viewBox={viewBox} />
+        <CoreEnergyRings viewBox={viewBox} />
 
         {edges.map((edge) => {
           const from = positions[edge.from];
