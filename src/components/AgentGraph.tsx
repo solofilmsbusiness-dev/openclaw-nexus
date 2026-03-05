@@ -77,11 +77,12 @@ function ProgressArc({ cx, cy, r, progress, color }: { cx: number; cy: number; r
 }
 
 function AgentNode({
-  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging, connectSource,
+  agent, x, y, onHover, onClick, onDoubleClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging, connectSource,
 }: {
   agent: Agent; x: number; y: number;
   onHover: (a: Agent | null) => void;
   onClick: (a: Agent) => void;
+  onDoubleClick: (a: Agent) => void;
   isHovered: boolean;
   isSelected: boolean;
   hoveredId: string | null;
@@ -110,6 +111,7 @@ function AgentNode({
       onMouseLeave={() => { if (!isDragging) onHover(null); }}
       onMouseDown={(e) => { if (!connectSource) { e.stopPropagation(); onDragStart(agent.id, e); } }}
       onClick={(e) => { e.stopPropagation(); if (!isDragging) onClick(agent); }}
+      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick(agent); }}
     >
       {/* Connect source pulsing ring */}
       {isConnectSource && (
@@ -340,7 +342,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       if (!connectSource) {
         setConnectSource(agent.id);
       } else if (connectSource !== agent.id) {
-        // Show kind selector
         setPendingEdge({ from: connectSource, to: agent.id });
         setConnectSource(null);
       }
@@ -349,6 +350,12 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
     onSelectAgent(selectedAgentId === agent.id ? null : agent.id);
   }, [selectedAgentId, onSelectAgent, connectMode, connectSource]);
+
+  const handleNodeDoubleClick = useCallback((agent: Agent) => {
+    if (dragRef.current?.moved) return;
+    setConnectMode(true);
+    setConnectSource(agent.id);
+  }, []);
 
   const handleConfirmEdge = useCallback(() => {
     if (pendingEdge) {
@@ -549,6 +556,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
                 y={pos.y}
                 onHover={setHovered}
                 onClick={handleNodeClick}
+                onDoubleClick={handleNodeDoubleClick}
                 isHovered={isHovered}
                 isSelected={isSelected}
                 hoveredId={hoveredId}
