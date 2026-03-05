@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, PieChart as PieChartIcon, Trash2, Plus, LayoutGrid,
+  Settings2, Check,
 } from "lucide-react";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -13,10 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTradingSimulation } from "@/hooks/useTradingSimulation";
-import type { LearningNote } from "@/hooks/useTradingSimulation";
+import { useTradingSimulation, ALL_INSTRUMENTS } from "@/hooks/useTradingSimulation";
+import type { LearningNote, InstrumentInfo } from "@/hooks/useTradingSimulation";
 import { useTradingLayout, type PanelItem } from "@/contexts/TradingLayoutContext";
 import Watchlist from "@/components/trading/Watchlist";
 import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
@@ -58,7 +61,7 @@ const Trading = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const sim = useTradingSimulation();
-  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote } = sim;
+  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote, activeSymbols, setActiveSymbols, allInstruments } = sim;
   const layout = useTradingLayout();
   const gridRef = useRef<HTMLDivElement>(null);
 
