@@ -36,7 +36,7 @@ const Index = () => {
   useSimulation(agents, handleAgentsChange, handleNewEvent);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <MetricsBar agents={agents} />
 
       <CommandPalette
@@ -45,14 +45,14 @@ const Index = () => {
         onStatusChange={handleStatusChange}
       />
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-hidden">
         {/* Left sidebar */}
         <div
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
             collapsed ? "w-0 lg:w-0" : "w-full lg:w-[320px]"
           }`}
         >
-          <div className="w-full lg:w-[320px] h-full min-h-[300px] lg:min-h-0">
+          <div className="w-full lg:w-[320px] h-full overflow-hidden">
             <AgentCards
               agents={agents}
               onAgentsChange={handleAgentsChange}
@@ -80,7 +80,7 @@ const Index = () => {
         </button>
 
         {/* Graph */}
-        <div className="flex-1 min-h-[400px] lg:min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <AgentGraph
             agents={agents}
             selectedAgentId={selectedAgentId}
@@ -111,15 +111,15 @@ const Index = () => {
             rightCollapsed ? "w-0 lg:w-0" : "w-full lg:w-[280px]"
           }`}
         >
-          <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0">
-            <div className="min-h-[250px] lg:flex-1 lg:min-h-0">
+          <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">
               <EventTimeline
                 events={events}
                 selectedAgentId={selectedAgentId}
                 onSelectAgent={setSelectedAgentId}
               />
             </div>
-            <div className="min-h-[200px] lg:flex-1 lg:min-h-0">
+            <div className="flex-1 min-h-0 overflow-hidden">
               <TerminalLog events={events} />
             </div>
           </div>
