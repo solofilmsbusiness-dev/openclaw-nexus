@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import MetricsBar from "@/components/MetricsBar";
 import AgentGraph from "@/components/AgentGraph";
 import EventTimeline from "@/components/EventTimeline";
@@ -33,7 +33,6 @@ const Index = () => {
     );
   }, []);
 
-  // Real-time simulation
   useSimulation(agents, handleAgentsChange, handleNewEvent);
 
   return (
@@ -66,7 +65,7 @@ const Index = () => {
         {/* Toggle button */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-md border border-border/30 hover:border-border/60 bg-secondary/50 hover:bg-secondary transition-colors self-center h-16"
+          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-lg border border-border/30 hover:border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-colors self-center h-16"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />}
@@ -75,12 +74,12 @@ const Index = () => {
         {/* Mobile toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md border border-border/30 bg-secondary/50 text-[10px] font-mono uppercase tracking-wider text-muted-foreground self-start"
+          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-border/30 bg-secondary/30 text-[10px] font-mono tracking-wider text-muted-foreground self-start"
         >
           {collapsed ? <><ChevronRight className="w-3 h-3" /> Show Agents</> : <><ChevronLeft className="w-3 h-3" /> Hide Agents</>}
         </button>
 
-        {/* Graph - main focus */}
+        {/* Graph */}
         <div className="flex-1 min-h-[400px] lg:min-h-0">
           <AgentGraph
             agents={agents}
@@ -89,19 +88,19 @@ const Index = () => {
           />
         </div>
 
-        {/* Right toggle button (desktop) */}
+        {/* Right toggle */}
         <button
           onClick={() => setRightCollapsed(!rightCollapsed)}
-          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-md border border-border/30 hover:border-border/60 bg-secondary/50 hover:bg-secondary transition-colors self-center h-16"
+          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-lg border border-border/30 hover:border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-colors self-center h-16"
           title={rightCollapsed ? "Expand panels" : "Collapse panels"}
         >
           {rightCollapsed ? <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
         </button>
 
-        {/* Right mobile toggle */}
+        {/* Mobile right toggle */}
         <button
           onClick={() => setRightCollapsed(!rightCollapsed)}
-          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md border border-border/30 bg-secondary/50 text-[10px] font-mono uppercase tracking-wider text-muted-foreground self-start"
+          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-border/30 bg-secondary/30 text-[10px] font-mono tracking-wider text-muted-foreground self-start"
         >
           {rightCollapsed ? <><ChevronLeft className="w-3 h-3" /> Show Panels</> : <><ChevronRight className="w-3 h-3" /> Hide Panels</>}
         </button>
@@ -131,7 +130,7 @@ const Index = () => {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-panel neon-border text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel neon-border text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
         >
           <span>⌘K</span>
         </button>

@@ -85,9 +85,9 @@ export const SAMPLE_EVENTS: AgentEvent[] = [
 
 export const statusColor = (status: AgentStatus) => {
   switch (status) {
-    case "healthy": return { bg: "hsl(160, 100%, 45%)", glow: "0 0 20px hsl(160 100% 45% / 0.5)" };
-    case "degraded": return { bg: "hsl(35, 100%, 55%)", glow: "0 0 20px hsl(35 100% 55% / 0.5)" };
-    case "down": return { bg: "hsl(0, 80%, 55%)", glow: "0 0 20px hsl(0 80% 55% / 0.5)" };
-    case "active": return { bg: "hsl(210, 100%, 60%)", glow: "0 0 20px hsl(210 100% 60% / 0.5)" };
+    case "healthy": return { bg: "hsl(152, 60%, 48%)", glow: "0 2px 12px hsl(152 60% 48% / 0.25)" };
+    case "degraded": return { bg: "hsl(38, 70%, 55%)", glow: "0 2px 12px hsl(38 70% 55% / 0.25)" };
+    case "down": return { bg: "hsl(0, 60%, 55%)", glow: "0 2px 12px hsl(0 60% 55% / 0.25)" };
+    case "active": return { bg: "hsl(215, 80%, 60%)", glow: "0 2px 12px hsl(215 80% 60% / 0.25)" };
   }
 };
