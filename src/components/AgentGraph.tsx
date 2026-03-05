@@ -38,6 +38,121 @@ function getNodePositions(agents: Agent[]) {
   return positions;
 }
 
+// Solar system particle effects
+function OrbitalParticles() {
+  const particles = useMemo(() => {
+    const colors = [
+      "hsl(215, 80%, 60%)",
+      "hsl(195, 60%, 55%)",
+      "hsl(270, 50%, 60%)",
+      "hsl(215, 80%, 70%)",
+      "hsl(195, 60%, 65%)",
+    ];
+    return Array.from({ length: 25 }, (_, i) => {
+      const radius = 80 + ((i * 37) % 270);
+      const size = 1 + ((i * 7) % 3);
+      const dur = 12 + ((i * 13) % 48);
+      const reverse = i % 3 === 0;
+      const opacity = 0.12 + ((i * 11) % 28) / 100;
+      const color = colors[i % colors.length];
+      const useGlow = size >= 2.5;
+      return { radius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
+    });
+  }, []);
+
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {particles.map((p, i) => (
+        <circle
+          key={`orbit-${i}`}
+          cx={CORE_X + p.radius}
+          cy={CORE_Y}
+          r={p.size}
+          fill={p.color}
+          opacity={p.opacity}
+          filter={p.useGlow ? "url(#particleGlow)" : undefined}
+        >
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from={`${p.startAngle} ${CORE_X} ${CORE_Y}`}
+            to={`${p.startAngle + (p.reverse ? -360 : 360)} ${CORE_X} ${CORE_Y}`}
+            dur={`${p.dur}s`}
+            repeatCount="indefinite"
+          />
+          <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
+    </g>
+  );
+}
+
+function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+  const stars = useMemo(() => {
+    return Array.from({ length: 40 }, (_, i) => {
+      // Deterministic scatter using index
+      const fx = ((i * 173 + 29) % 100) / 100;
+      const fy = ((i * 241 + 53) % 100) / 100;
+      const size = 0.5 + ((i * 7) % 10) / 10;
+      const dur = 2 + ((i * 13) % 60) / 10;
+      const delay = ((i * 31) % 40) / 10;
+      return { fx, fy, size, dur, delay };
+    });
+  }, []);
+
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {stars.map((s, i) => (
+        <circle
+          key={`star-${i}`}
+          cx={viewBox.x + s.fx * viewBox.w}
+          cy={viewBox.y + s.fy * viewBox.h}
+          r={s.size}
+          fill="hsl(215, 60%, 75%)"
+          opacity={0}
+        >
+          <animate
+            attributeName="opacity"
+            values="0.05;0.35;0.05"
+            dur={`${s.dur}s`}
+            begin={`${s.delay}s`}
+            repeatCount="indefinite"
+          />
+        </circle>
+      ))}
+    </g>
+  );
+}
+
+function CoreEnergyRings() {
+  const rings = [
+    { delay: "0s", dur: "6s" },
+    { delay: "2s", dur: "6s" },
+    { delay: "4s", dur: "6s" },
+  ];
+
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {rings.map((ring, i) => (
+        <circle
+          key={`ring-${i}`}
+          cx={CORE_X}
+          cy={CORE_Y}
+          r={30}
+          fill="none"
+          stroke="hsl(215, 80%, 60%)"
+          strokeWidth={1}
+          opacity={0}
+        >
+          <animate attributeName="r" from="30" to="220" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.15;0.08;0" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="stroke-width" from="1.5" to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+        </circle>
+      ))}
+    </g>
+  );
+}
+
 function FloatingGroup({ children, index, isHovered }: { children: React.ReactNode; index: number; isHovered?: boolean }) {
   const dur = 8 + (index % 4) * 1.5;
   const dx = 2 + (index % 3);
