@@ -3,6 +3,7 @@ export type AgentStatus = "healthy" | "degraded" | "down" | "active";
 export interface Agent {
   id: string;
   name: string;
+  subtitle: string;
   type: string;
   status: AgentStatus;
   icon: string;
