@@ -26,6 +26,8 @@ interface TradingLayoutContextType {
   addCustomPanel: (panel: CustomPanelDef) => void;
   updateCustomPanel: (id: string, content: string) => void;
   deleteCustomPanel: (id: string) => void;
+  columnCount: 1 | 2 | 3;
+  setColumnCount: (count: 1 | 2 | 3) => void;
 }
 
 const STORAGE_KEY = "trading-layout-v1";
