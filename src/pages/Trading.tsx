@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTradingSimulation } from "@/hooks/useTradingSimulation";
 import type { LearningNote } from "@/hooks/useTradingSimulation";
+import Watchlist from "@/components/trading/Watchlist";
 
 function formatTime(d: Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -447,6 +448,9 @@ const Trading = () => {
             </Table>
           </ScrollArea>
         </motion.div>
+
+        {/* Watchlist Panel */}
+        <Watchlist tickers={tickers} />
       </div>
     </div>
   );
