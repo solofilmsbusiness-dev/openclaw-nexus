@@ -252,6 +252,132 @@ function RotatingCoreText() {
   );
 }
 
+function Minimap({
+  agents,
+  edges,
+  positions,
+  viewBox,
+  setViewBox,
+  getNodeSize,
+}: {
+  agents: Agent[];
+  edges: Edge[];
+  positions: Record<string, { x: number; y: number }>;
+  viewBox: { x: number; y: number; w: number; h: number };
+  setViewBox: React.Dispatch<React.SetStateAction<{ x: number; y: number; w: number; h: number }>>;
+  getNodeSize: (agent: Agent) => number;
+}) {
+  const MINIMAP_W = 160;
+  const MINIMAP_H = 120;
+
+  // Compute bounding box of all positions
+  const bounds = useMemo(() => {
+    const allPos = Object.values(positions);
+    if (allPos.length === 0) return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
+    const pad = 60;
+    return {
+      minX: Math.min(...allPos.map((p) => p.x)) - pad,
+      minY: Math.min(...allPos.map((p) => p.y)) - pad,
+      maxX: Math.max(...allPos.map((p) => p.x)) + pad,
+      maxY: Math.max(...allPos.map((p) => p.y)) + pad,
+    };
+  }, [positions]);
+
+  const bw = bounds.maxX - bounds.minX;
+  const bh = bounds.maxY - bounds.minY;
+  const minimapVB = `${bounds.minX} ${bounds.minY} ${bw} ${bh}`;
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const svg = e.currentTarget;
+      const rect = svg.getBoundingClientRect();
+      const fx = (e.clientX - rect.left) / rect.width;
+      const fy = (e.clientY - rect.top) / rect.height;
+      const graphX = bounds.minX + fx * bw;
+      const graphY = bounds.minY + fy * bh;
+      setViewBox((prev) => ({
+        ...prev,
+        x: graphX - prev.w / 2,
+        y: graphY - prev.h / 2,
+      }));
+    },
+    [bounds, bw, bh, setViewBox]
+  );
+
+  // Viewport rect mapped to minimap coords
+  const vpX = viewBox.x;
+  const vpY = viewBox.y;
+  const vpW = viewBox.w;
+  const vpH = viewBox.h;
+
+  return (
+    <div className="absolute bottom-3 left-3 z-10 glass-panel neon-border overflow-hidden" style={{ width: MINIMAP_W, height: MINIMAP_H, opacity: 0.85 }}>
+      <svg
+        viewBox={minimapVB}
+        width={MINIMAP_W}
+        height={MINIMAP_H}
+        style={{ display: "block", cursor: "crosshair" }}
+        onClick={handleClick}
+      >
+        {/* Edges */}
+        {edges.map((edge) => {
+          const from = positions[edge.from];
+          const to = positions[edge.to];
+          if (!from || !to) return null;
+          return (
+            <line
+              key={edge.id}
+              x1={from.x}
+              y1={from.y}
+              x2={to.x}
+              y2={to.y}
+              stroke="hsl(215, 80%, 60%)"
+              strokeWidth={1}
+              opacity={0.15}
+            />
+          );
+        })}
+
+        {/* Core */}
+        {positions.core && (
+          <circle cx={positions.core.x} cy={positions.core.y} r={5} fill="hsl(215, 80%, 60%)" opacity={0.6} />
+        )}
+
+        {/* Nodes */}
+        {agents.map((agent) => {
+          const pos = positions[agent.id];
+          if (!pos) return null;
+          const color = statusColor(agent.status);
+          return (
+            <circle
+              key={agent.id}
+              cx={pos.x}
+              cy={pos.y}
+              r={3}
+              fill={color.bg}
+              opacity={0.8}
+            />
+          );
+        })}
+
+        {/* Viewport rectangle */}
+        <rect
+          x={vpX}
+          y={vpY}
+          width={vpW}
+          height={vpH}
+          fill="hsl(215, 80%, 60%)"
+          fillOpacity={0.08}
+          stroke="hsl(215, 80%, 60%)"
+          strokeWidth={2}
+          strokeOpacity={0.5}
+          rx={2}
+        />
+      </svg>
+    </div>
+  );
+}
+
 interface AgentGraphProps {
   agents: Agent[];
   edges: Edge[];
@@ -777,6 +903,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           </div>
         </motion.div>
       )}
+
+      {/* Minimap */}
+      <Minimap
+        agents={agents}
+        edges={edges}
+        positions={positions}
+        viewBox={viewBox}
+        setViewBox={setViewBox}
+        getNodeSize={getNodeSize}
+      />
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
