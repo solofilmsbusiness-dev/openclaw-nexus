@@ -21,6 +21,7 @@ interface AgentContextValue {
   killAll: () => void;
   reviveAll: () => void;
   renameAgent: (id: string, name: string) => void;
+  loadConfig: (agents: Agent[], edges: Edge[]) => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -106,6 +107,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, name } : a)));
   }, []);
 
+  const loadConfig = useCallback((newAgents: Agent[], newEdges: Edge[]) => {
+    setAgents(newAgents);
+    setEdges(newEdges);
+    setEvents([]);
+    setKillSwitchActive(false);
+  }, []);
+
   useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive);
 
   return (
@@ -114,7 +122,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
         setAgents, setEdges, setEvents,
         handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
-        handleAddEdge, handleDeleteEdge, killAll, reviveAll, renameAgent,
+        handleAddEdge, handleDeleteEdge, killAll, reviveAll, renameAgent, loadConfig,
       }}
     >
       {children}

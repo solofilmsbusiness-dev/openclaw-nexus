@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen } from "lucide-react";
 import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
+import { ConfigManager } from "@/components/ConfigManager";
 
 const CORE_X = 400;
 const CORE_Y = 300;
@@ -558,6 +559,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const [pendingEdge, setPendingEdge] = useState<{ from: string; to: string } | null>(null);
   const [selectedKind, setSelectedKind] = useState<string>("data");
   const [locked, setLocked] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
   const positions = useMemo(() => {
     const merged: Record<string, { x: number; y: number }> = {};
@@ -926,6 +928,13 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         >
           <Power className="w-3.5 h-3.5" />
         </button>
+        <button
+          onClick={() => setConfigOpen(true)}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          title="Save/Load configurations"
+        >
+          <FolderOpen className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       <svg
@@ -1132,6 +1141,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ConfigManager open={configOpen} onOpenChange={setConfigOpen} />
     </div>
   );
 }
