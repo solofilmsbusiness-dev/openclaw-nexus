@@ -4,6 +4,7 @@ import { AGENTS, SAMPLE_EVENTS, statusColor, Agent, AgentStatus } from "@/data/a
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity, Search, X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -126,6 +127,8 @@ function AgentsTab({
   onDeleteAgent: (id: string) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingAgent = pendingDeleteId ? agents.find(a => a.id === pendingDeleteId) : null;
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Auto-expand and scroll to selected agent
@@ -144,6 +147,7 @@ function AgentsTab({
   };
 
   return (
+    <>
     <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
       {agents.map((agent, i) => {
         const color = statusColor(agent.status);
@@ -178,8 +182,7 @@ function AgentsTab({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteAgent(agent.id);
-                      toast.success(`${agent.name} removed`);
+                      setPendingDeleteId(agent.id);
                     }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20"
                     title="Delete agent"
@@ -229,6 +232,33 @@ function AgentsTab({
         );
       })}
     </Reorder.Group>
+
+    <AlertDialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {pendingAgent?.name ?? "agent"}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove {pendingAgent?.name ?? "this agent"} and all its connections. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              if (pendingDeleteId) {
+                onDeleteAgent(pendingDeleteId);
+                toast.success(`${pendingAgent?.name ?? "Agent"} removed`);
+              }
+              setPendingDeleteId(null);
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
