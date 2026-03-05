@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
 import { Link, X } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 const CORE_X = 400;
 const CORE_Y = 300;
@@ -255,9 +257,10 @@ interface AgentGraphProps {
   onSelectAgent: (id: string | null) => void;
   onAddEdge: (from: string, to: string, kind: string) => void;
   onDeleteEdge: (edgeId: string) => void;
+  onDeleteAgent?: (id: string) => void;
 }
 
-export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge }: AgentGraphProps) {
+export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent }: AgentGraphProps) {
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
   const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<Agent | null>(null);
@@ -291,7 +294,11 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     };
   }, []);
 
-  // ESC to cancel connect mode
+  // Delete confirmation state
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteAgent = pendingDeleteId ? agents.find((a) => a.id === pendingDeleteId) : null;
+
+  // ESC to cancel connect mode, Delete/Backspace to delete selected node
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -299,10 +306,17 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         setConnectSource(null);
         setPendingEdge(null);
       }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedAgentId && !connectMode && onDeleteAgent) {
+        // Don't trigger if user is typing in an input
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        e.preventDefault();
+        setPendingDeleteId(selectedAgentId);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [selectedAgentId, connectMode, onDeleteAgent]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getSvgPoint(e.clientX, e.clientY);

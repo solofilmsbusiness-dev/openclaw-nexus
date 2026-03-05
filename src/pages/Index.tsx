@@ -114,6 +114,7 @@ const Index = () => {
             onSelectAgent={setSelectedAgentId}
             onAddEdge={handleAddEdge}
             onDeleteEdge={handleDeleteEdge}
+            onDeleteAgent={handleDeleteAgent}
           />
         </div>
 
