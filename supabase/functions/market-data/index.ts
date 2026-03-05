@@ -34,6 +34,9 @@ Deno.serve(async (req) => {
     const results: Record<string, unknown> = {};
     const now = Date.now();
 
+    // Futures symbols that need =F suffix for Alpha Vantage
+    const FUTURES_SYMBOLS = new Set(["ES", "NQ", "YM", "RTY", "CL", "GC", "SI", "NG", "ZB", "6E"]);
+
     for (const symbol of symbols) {
       const sym = String(symbol).toUpperCase();
 
@@ -43,8 +46,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // For futures, append =F for Alpha Vantage query
+      const querySym = FUTURES_SYMBOLS.has(sym) ? `${sym}=F` : sym;
+
       // Fetch GLOBAL_QUOTE for current price data
-      const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${sym}&apikey=${API_KEY}`;
+      const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${querySym}&apikey=${API_KEY}`;
       const quoteRes = await fetch(quoteUrl);
       const quoteJson = await quoteRes.json();
 

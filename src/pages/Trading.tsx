@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, PieChart as PieChartIcon, Trash2, Plus, LayoutGrid,
+  Settings2, Check,
 } from "lucide-react";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -13,10 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTradingSimulation } from "@/hooks/useTradingSimulation";
-import type { LearningNote } from "@/hooks/useTradingSimulation";
+import { useTradingSimulation, ALL_INSTRUMENTS } from "@/hooks/useTradingSimulation";
+import type { LearningNote, InstrumentInfo } from "@/hooks/useTradingSimulation";
 import { useTradingLayout, type PanelItem } from "@/contexts/TradingLayoutContext";
 import Watchlist from "@/components/trading/Watchlist";
 import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
@@ -58,7 +61,7 @@ const Trading = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const sim = useTradingSimulation();
-  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote } = sim;
+  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote, activeSymbols, setActiveSymbols, allInstruments } = sim;
   const layout = useTradingLayout();
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -94,7 +97,7 @@ const Trading = () => {
 
     switch (panelItem.id) {
       case "market":
-        return <MarketPanel tickers={tickers} />;
+        return <MarketPanel tickers={tickers} activeSymbols={activeSymbols} setActiveSymbols={setActiveSymbols} />;
       case "agent":
         return <AgentPanel evaluations={evaluations} considerations={considerations} executedTrades={executedTrades} />;
       case "history":
@@ -116,7 +119,7 @@ const Trading = () => {
       case "portfolio":
         return <PortfolioPanel portfolio={portfolio} />;
       case "watchlist":
-        return <WatchlistInner tickers={tickers} />;
+        return <WatchlistInner tickers={tickers} activeSymbols={activeSymbols} />;
       case "analytics":
         return <AnalyticsInner stats={stats} tradeHistory={tradeHistory} />;
       default:
@@ -213,12 +216,71 @@ const Trading = () => {
 
 // ─── Extracted panel components ───
 
-function MarketPanel({ tickers }: { tickers: ReturnType<typeof useTradingSimulation>["tickers"] }) {
+function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
+  tickers: ReturnType<typeof useTradingSimulation>["tickers"];
+  activeSymbols: string[];
+  setActiveSymbols: (syms: string[]) => void;
+}) {
+  const stocks = ALL_INSTRUMENTS.filter((i) => i.type === "stock");
+  const futures = ALL_INSTRUMENTS.filter((i) => i.type === "futures");
+
+  const toggleSymbol = (sym: string) => {
+    if (activeSymbols.includes(sym)) {
+      if (activeSymbols.length <= 1) return; // Keep at least one
+      setActiveSymbols(activeSymbols.filter((s) => s !== sym));
+    } else {
+      setActiveSymbols([...activeSymbols, sym]);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-neon-green" />
         <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Live Market Data</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="ml-auto p-1 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="end">
+            <div className="p-3 border-b border-border/30">
+              <p className="font-display font-semibold text-xs text-foreground">Manage Instruments</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Toggle tickers to show in the market panel</p>
+            </div>
+            <ScrollArea className="max-h-[300px]">
+              <div className="p-2">
+                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1">Stocks</p>
+                {stocks.map((inst) => (
+                  <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
+                    <Checkbox
+                      checked={activeSymbols.includes(inst.symbol)}
+                      onCheckedChange={() => toggleSymbol(inst.symbol)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="font-mono text-xs font-semibold text-foreground w-12">{inst.symbol}</span>
+                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
+                    <Badge className="text-[8px] bg-neon-green/10 text-neon-green border-neon-green/30 px-1.5 py-0">STK</Badge>
+                  </label>
+                ))}
+                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1 mt-2">Futures</p>
+                {futures.map((inst) => (
+                  <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
+                    <Checkbox
+                      checked={activeSymbols.includes(inst.symbol)}
+                      onCheckedChange={() => toggleSymbol(inst.symbol)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="font-mono text-xs font-semibold text-foreground w-12">{inst.symbol}</span>
+                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
+                    <Badge className="text-[8px] bg-neon-orange/10 text-neon-orange border-neon-orange/30 px-1.5 py-0">FUT</Badge>
+                  </label>
+                ))}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
       <ScrollArea className="flex-1">
         <Table>
@@ -235,7 +297,14 @@ function MarketPanel({ tickers }: { tickers: ReturnType<typeof useTradingSimulat
           <TableBody>
             {tickers.map((t) => (
               <TableRow key={t.symbol} className="border-border/20 hover:bg-secondary/30">
-                <TableCell className="py-2"><span className="font-mono font-semibold text-xs text-foreground">{t.symbol}</span></TableCell>
+                <TableCell className="py-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-semibold text-xs text-foreground">{t.symbol}</span>
+                    <Badge className={`text-[7px] px-1 py-0 leading-tight ${t.type === "futures" ? "bg-neon-orange/10 text-neon-orange border-neon-orange/30" : "bg-neon-green/10 text-neon-green border-neon-green/30"}`}>
+                      {t.type === "futures" ? "FUT" : "STK"}
+                    </Badge>
+                  </div>
+                </TableCell>
                 <TableCell className="py-2 text-right font-mono text-xs text-foreground">${t.price.toFixed(2)}</TableCell>
                 <TableCell className={`py-2 text-right font-mono text-xs ${t.change >= 0 ? "text-neon-green" : "text-neon-red"}`}>
                   {t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}
@@ -586,8 +655,8 @@ function PortfolioPanel({ portfolio }: { portfolio: ReturnType<typeof useTrading
   );
 }
 
-function WatchlistInner({ tickers }: { tickers: ReturnType<typeof useTradingSimulation>["tickers"] }) {
-  return <Watchlist tickers={tickers} />;
+function WatchlistInner({ tickers, activeSymbols }: { tickers: ReturnType<typeof useTradingSimulation>["tickers"]; activeSymbols: string[] }) {
+  return <Watchlist tickers={tickers} availableSymbols={activeSymbols} />;
 }
 
 function AnalyticsInner({ stats, tradeHistory }: { stats: ReturnType<typeof useTradingSimulation>["stats"]; tradeHistory: ReturnType<typeof useTradingSimulation>["tradeHistory"] }) {

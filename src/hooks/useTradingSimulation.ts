@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // --- Types ---
+export interface InstrumentInfo {
+  symbol: string;
+  name: string;
+  basePrice: number;
+  type: "stock" | "futures";
+  tickSize?: number;
+  contractMonth?: string;
+}
+
 export interface MarketTicker {
   symbol: string;
   name: string;
@@ -11,6 +20,7 @@ export interface MarketTicker {
   volume: number;
   history: number[];
   isLive: boolean;
+  type: "stock" | "futures";
 }
 
 export interface AgentEvaluation {
@@ -76,18 +86,36 @@ export interface PortfolioSummary {
   holdings: PortfolioHolding[];
 }
 
-// --- Seed data ---
-const TICKERS_SEED: { symbol: string; name: string; basePrice: number }[] = [
-  { symbol: "AAPL", name: "Apple Inc.", basePrice: 198.5 },
-  { symbol: "TSLA", name: "Tesla Inc.", basePrice: 245.2 },
-  { symbol: "NVDA", name: "NVIDIA Corp.", basePrice: 875.3 },
-  { symbol: "MSFT", name: "Microsoft Corp.", basePrice: 415.8 },
-  { symbol: "AMZN", name: "Amazon.com", basePrice: 185.6 },
-  { symbol: "GOOGL", name: "Alphabet Inc.", basePrice: 155.4 },
-  { symbol: "META", name: "Meta Platforms", basePrice: 505.1 },
-  { symbol: "AMD", name: "AMD Inc.", basePrice: 162.7 },
+// --- All instruments ---
+export const ALL_INSTRUMENTS: InstrumentInfo[] = [
+  // Stocks
+  { symbol: "AAPL", name: "Apple Inc.", basePrice: 198.5, type: "stock" },
+  { symbol: "TSLA", name: "Tesla Inc.", basePrice: 245.2, type: "stock" },
+  { symbol: "NVDA", name: "NVIDIA Corp.", basePrice: 875.3, type: "stock" },
+  { symbol: "MSFT", name: "Microsoft Corp.", basePrice: 415.8, type: "stock" },
+  { symbol: "AMZN", name: "Amazon.com", basePrice: 185.6, type: "stock" },
+  { symbol: "GOOGL", name: "Alphabet Inc.", basePrice: 155.4, type: "stock" },
+  { symbol: "META", name: "Meta Platforms", basePrice: 505.1, type: "stock" },
+  { symbol: "AMD", name: "AMD Inc.", basePrice: 162.7, type: "stock" },
+  // Stock Index Futures
+  { symbol: "ES", name: "S&P 500 E-mini", basePrice: 5420.0, type: "futures", tickSize: 0.25, contractMonth: "Mar 26" },
+  { symbol: "NQ", name: "Nasdaq E-mini", basePrice: 18950.0, type: "futures", tickSize: 0.25, contractMonth: "Mar 26" },
+  { symbol: "YM", name: "Dow E-mini", basePrice: 39800.0, type: "futures", tickSize: 1.0, contractMonth: "Mar 26" },
+  { symbol: "RTY", name: "Russell 2000 E-mini", basePrice: 2080.0, type: "futures", tickSize: 0.1, contractMonth: "Mar 26" },
+  // Commodity Futures
+  { symbol: "CL", name: "Crude Oil", basePrice: 78.5, type: "futures", tickSize: 0.01, contractMonth: "Apr 26" },
+  { symbol: "GC", name: "Gold", basePrice: 2340.0, type: "futures", tickSize: 0.1, contractMonth: "Jun 26" },
+  { symbol: "SI", name: "Silver", basePrice: 27.8, type: "futures", tickSize: 0.005, contractMonth: "May 26" },
+  { symbol: "NG", name: "Natural Gas", basePrice: 2.15, type: "futures", tickSize: 0.001, contractMonth: "Apr 26" },
+  // Other Futures
+  { symbol: "ZB", name: "Treasury Bonds", basePrice: 118.5, type: "futures", tickSize: 0.03125, contractMonth: "Jun 26" },
+  { symbol: "6E", name: "Euro FX", basePrice: 1.085, type: "futures", tickSize: 0.00005, contractMonth: "Jun 26" },
 ];
 
+const DEFAULT_ACTIVE = ["AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "AMD"];
+const LS_KEY = "trading-active-instruments";
+
+// --- Seed data ---
 const LEARNING_TEMPLATES: { category: LearningNote["category"]; content: string }[] = [
   { category: "Mistake", content: "Entered TSLA position too early — RSI hadn't confirmed oversold. Wait for confirmation next time." },
   { category: "Insight", content: "NVDA consistently shows momentum continuation after breaking previous day high in first 30 min." },
@@ -116,12 +144,28 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-const TICKER_NAME_MAP: Record<string, string> = {};
-TICKERS_SEED.forEach((t) => { TICKER_NAME_MAP[t.symbol] = t.name; });
-
 export function useTradingSimulation() {
+  // Active symbols state
+  const [activeSymbols, setActiveSymbols] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_ACTIVE;
+  });
+
+  // Persist active symbols
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(activeSymbols));
+  }, [activeSymbols]);
+
+  const activeInstruments = ALL_INSTRUMENTS.filter((i) => activeSymbols.includes(i.symbol));
+
   const [tickers, setTickers] = useState<MarketTicker[]>(() =>
-    TICKERS_SEED.map((t) => ({
+    activeInstruments.map((t) => ({
       symbol: t.symbol,
       name: t.name,
       price: t.basePrice,
@@ -130,6 +174,7 @@ export function useTradingSimulation() {
       volume: randInt(5_000_000, 80_000_000),
       history: Array.from({ length: 20 }, () => t.basePrice + rand(-5, 5)),
       isLive: false,
+      type: t.type,
     }))
   );
 
@@ -144,12 +189,32 @@ export function useTradingSimulation() {
   const noteIndexRef = useRef(0);
   const livePricesRef = useRef<Record<string, number>>({});
 
+  // Sync tickers when activeSymbols change
+  useEffect(() => {
+    setTickers((prev) => {
+      const existing = new Map(prev.map((t) => [t.symbol, t]));
+      return activeInstruments.map((inst) => {
+        if (existing.has(inst.symbol)) return existing.get(inst.symbol)!;
+        return {
+          symbol: inst.symbol,
+          name: inst.name,
+          price: inst.basePrice,
+          change: 0,
+          changePercent: 0,
+          volume: randInt(5_000_000, 80_000_000),
+          history: Array.from({ length: 20 }, () => inst.basePrice + rand(-5, 5)),
+          isLive: false,
+          type: inst.type,
+        };
+      });
+    });
+  }, [activeSymbols]);
+
   // Load persisted data from database on mount
   useEffect(() => {
     const loadPersistedData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // No session — seed with templates
         setLearningNotes(
           LEARNING_TEMPLATES.slice(0, 3).map((n, i) => ({
             id: uid(),
@@ -162,7 +227,6 @@ export function useTradingSimulation() {
         return;
       }
 
-      // Load trade history
       const { data: trades } = await supabase
         .from("trade_history")
         .select("*")
@@ -183,7 +247,6 @@ export function useTradingSimulation() {
         );
       }
 
-      // Load learning notes
       const { data: notes } = await supabase
         .from("learning_notes")
         .select("*")
@@ -201,7 +264,6 @@ export function useTradingSimulation() {
         );
         noteIndexRef.current = 3;
       } else {
-        // Seed with templates if no notes exist
         const seedNotes = LEARNING_TEMPLATES.slice(0, 3).map((n, i) => ({
           id: uid(),
           ...n,
@@ -210,7 +272,6 @@ export function useTradingSimulation() {
         setLearningNotes(seedNotes);
         noteIndexRef.current = 3;
 
-        // Persist seed notes
         for (const note of seedNotes) {
           await supabase.from("learning_notes").insert({
             id: note.id,
@@ -227,12 +288,17 @@ export function useTradingSimulation() {
     loadPersistedData();
   }, []);
 
-  // Fetch real market data from edge function
+  // Fetch real market data
   const fetchMarketData = useCallback(async () => {
     try {
-      const symbols = TICKERS_SEED.map((t) => t.symbol);
+      const stockSymbols = activeInstruments.filter((i) => i.type === "stock").map((t) => t.symbol);
+      if (stockSymbols.length === 0) {
+        setDataSource("simulated");
+        return false;
+      }
+
       const { data, error } = await supabase.functions.invoke("market-data", {
-        body: { symbols },
+        body: { symbols: stockSymbols },
       });
 
       if (error) {
@@ -275,23 +341,26 @@ export function useTradingSimulation() {
       setDataSource("simulated");
       return false;
     }
-  }, []);
+  }, [activeSymbols]);
 
-  // Initial fetch + refresh every 5 minutes (to stay within free tier)
   useEffect(() => {
     fetchMarketData();
     const interval = setInterval(fetchMarketData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchMarketData]);
 
-  // Small simulated fluctuations between real data refreshes (based on live price if available)
+  // Small simulated fluctuations
   useEffect(() => {
     const interval = setInterval(() => {
       setTickers((prev) =>
         prev.map((t) => {
-          const basePrice = livePricesRef.current[t.symbol] || TICKERS_SEED.find((s) => s.symbol === t.symbol)!.basePrice;
-          const delta = rand(-0.5, 0.5); // Small micro-fluctuation
-          const newPrice = Math.max(1, t.price + delta);
+          const inst = ALL_INSTRUMENTS.find((s) => s.symbol === t.symbol);
+          if (!inst) return t;
+          const basePrice = livePricesRef.current[t.symbol] || inst.basePrice;
+          // Scale fluctuation to price magnitude
+          const scale = basePrice * 0.001;
+          const delta = rand(-scale, scale);
+          const newPrice = Math.max(0.01, t.price + delta);
           const change = newPrice - basePrice;
           const changePercent = (change / basePrice) * 100;
           return {
@@ -299,7 +368,7 @@ export function useTradingSimulation() {
             price: Math.round(newPrice * 100) / 100,
             change: Math.round(change * 100) / 100,
             changePercent: Math.round(changePercent * 100) / 100,
-            volume: t.volume + randInt(-50_000, 100_000),
+            volume: Math.max(0, t.volume + randInt(-50_000, 100_000)),
             history: [...t.history.slice(-19), newPrice],
           };
         })
@@ -311,7 +380,8 @@ export function useTradingSimulation() {
   // Agent evaluations every 5s
   useEffect(() => {
     const interval = setInterval(() => {
-      const ticker = pickRandom(TICKERS_SEED);
+      if (activeInstruments.length === 0) return;
+      const inst = pickRandom(activeInstruments);
       const numIndicators = randInt(2, 5);
       const indicators = Array.from({ length: numIndicators }, () => {
         const name = pickRandom(INDICATOR_NAMES);
@@ -326,15 +396,16 @@ export function useTradingSimulation() {
             : `$${rand(100, 900).toFixed(2)}`;
         return { name, value, signal };
       });
-      setEvaluations((prev) => [{ id: uid(), symbol: ticker.symbol, indicators, timestamp: new Date() }, ...prev].slice(0, 8));
+      setEvaluations((prev) => [{ id: uid(), symbol: inst.symbol, indicators, timestamp: new Date() }, ...prev].slice(0, 8));
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeSymbols]);
 
   // Agent considerations every 7s
   useEffect(() => {
     const interval = setInterval(() => {
-      const ticker = pickRandom(TICKERS_SEED);
+      if (activeInstruments.length === 0) return;
+      const inst = pickRandom(activeInstruments);
       const reasons = [
         "RSI oversold + VWAP support",
         "Momentum breakout above resistance",
@@ -347,7 +418,7 @@ export function useTradingSimulation() {
         [
           {
             id: uid(),
-            symbol: ticker.symbol,
+            symbol: inst.symbol,
             action: pickRandom(["buy", "sell"] as const),
             confidence: randInt(55, 95),
             reason: pickRandom(reasons),
@@ -358,21 +429,23 @@ export function useTradingSimulation() {
       );
     }, 7000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeSymbols]);
 
-  // Executed trades every 10s (persist to DB)
+  // Executed trades every 10s
   useEffect(() => {
     if (!dbLoaded) return;
     const interval = setInterval(async () => {
-      const ticker = pickRandom(TICKERS_SEED);
+      if (activeInstruments.length === 0) return;
+      const inst = pickRandom(activeInstruments);
       const action = pickRandom(["buy", "sell"] as const);
-      const currentPrice = livePricesRef.current[ticker.symbol] || ticker.basePrice;
-      const price = currentPrice + rand(-3, 3);
-      const quantity = randInt(5, 100);
+      const currentPrice = livePricesRef.current[inst.symbol] || inst.basePrice;
+      const scale = currentPrice * 0.01;
+      const price = currentPrice + rand(-scale, scale);
+      const quantity = inst.type === "futures" ? randInt(1, 10) : randInt(5, 100);
 
       const executed: ExecutedTrade = {
         id: uid(),
-        symbol: ticker.symbol,
+        symbol: inst.symbol,
         action,
         price: Math.round(price * 100) / 100,
         quantity,
@@ -381,12 +454,12 @@ export function useTradingSimulation() {
       setExecutedTrades((prev) => [executed, ...prev].slice(0, 10));
 
       const hasExit = Math.random() > 0.4;
-      const exitPrice = hasExit ? Math.round((price + rand(-8, 12)) * 100) / 100 : null;
+      const exitPrice = hasExit ? Math.round((price + rand(-scale * 2, scale * 3)) * 100) / 100 : null;
       const pnl = exitPrice ? Math.round((exitPrice - price) * quantity * (action === "buy" ? 1 : -1) * 100) / 100 : null;
       const tradeEntry: TradeHistory = {
         id: uid(),
         type: action,
-        asset: ticker.symbol,
+        asset: inst.symbol,
         entryPrice: Math.round(price * 100) / 100,
         exitPrice,
         pnl,
@@ -394,13 +467,12 @@ export function useTradingSimulation() {
       };
       setTradeHistory((prev) => [tradeEntry, ...prev].slice(0, 50));
 
-      // Persist to DB
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         supabase.from("trade_history").insert({
           user_id: session.user.id,
           type: action,
-          asset: ticker.symbol,
+          asset: inst.symbol,
           entry_price: tradeEntry.entryPrice,
           exit_price: exitPrice,
           pnl,
@@ -408,9 +480,9 @@ export function useTradingSimulation() {
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [dbLoaded]);
+  }, [dbLoaded, activeSymbols]);
 
-  // Learning notes every 15s (persist to DB)
+  // Learning notes every 15s
   useEffect(() => {
     if (!dbLoaded) return;
     const interval = setInterval(async () => {
@@ -419,7 +491,6 @@ export function useTradingSimulation() {
       const note = { id: uid(), ...LEARNING_TEMPLATES[idx], timestamp: new Date() };
       setLearningNotes((prev) => [note, ...prev].slice(0, 20));
 
-      // Persist to DB
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         supabase.from("learning_notes").insert({
@@ -434,22 +505,22 @@ export function useTradingSimulation() {
 
   // Portfolio computation
   const INITIAL_CASH = 100_000;
+  const TICKER_NAME_MAP: Record<string, string> = {};
+  ALL_INSTRUMENTS.forEach((t) => { TICKER_NAME_MAP[t.symbol] = t.name; });
+
   const portfolio: PortfolioSummary = (() => {
-    // Simulated holdings based on tickers
-    const holdingSeed = [
-      { symbol: "AAPL", shares: 45 },
-      { symbol: "TSLA", shares: 20 },
-      { symbol: "NVDA", shares: 12 },
-      { symbol: "MSFT", shares: 30 },
-      { symbol: "AMZN", shares: 25 },
-      { symbol: "META", shares: 8 },
-    ];
+    // Only create holdings for active stocks
+    const stockTickers = tickers.filter((t) => t.type === "stock");
+    const holdingSeed = stockTickers.slice(0, 6).map((t) => ({
+      symbol: t.symbol,
+      shares: randInt(8, 50),
+    }));
 
     const holdings: PortfolioHolding[] = holdingSeed.map((h) => {
       const ticker = tickers.find((t) => t.symbol === h.symbol);
-      const seed = TICKERS_SEED.find((s) => s.symbol === h.symbol)!;
-      const currentPrice = ticker?.price ?? seed.basePrice;
-      const avgCost = seed.basePrice * (1 + rand(-0.05, 0.05)); // slightly off base
+      const inst = ALL_INSTRUMENTS.find((s) => s.symbol === h.symbol)!;
+      const currentPrice = ticker?.price ?? inst.basePrice;
+      const avgCost = inst.basePrice * (1 + rand(-0.05, 0.05));
       const value = currentPrice * h.shares;
       const costBasis = avgCost * h.shares;
       const pnl = value - costBasis;
@@ -471,7 +542,6 @@ export function useTradingSimulation() {
     const cashBalance = INITIAL_CASH - holdings.reduce((s, h) => s + h.avgCost * h.shares, 0);
     const totalValue = investedValue + cashBalance;
 
-    // Compute allocation %
     holdings.forEach((h) => {
       h.allocation = Math.round((h.value / totalValue) * 1000) / 10;
     });
@@ -498,12 +568,10 @@ export function useTradingSimulation() {
   const losses = closedTrades.filter((t) => t.pnl! <= 0).length;
   const winRate = closedTrades.length > 0 ? Math.round((wins / closedTrades.length) * 100) : 0;
 
-  // Win/Loss streaks
   let currentStreak = 0;
   let currentStreakType: "win" | "loss" | null = null;
   let maxWinStreak = 0;
   let maxLossStreak = 0;
-  // Iterate oldest-first for streak calculation
   const chronological = [...closedTrades].reverse();
   for (const t of chronological) {
     const isWin = t.pnl! > 0;
@@ -517,7 +585,6 @@ export function useTradingSimulation() {
     else maxLossStreak = Math.max(maxLossStreak, currentStreak);
   }
 
-  // Average trade duration (simulate as time between sequential trades)
   let avgDurationMs = 0;
   if (chronological.length >= 2) {
     const durations: number[] = [];
@@ -528,7 +595,6 @@ export function useTradingSimulation() {
   }
   const avgDurationSec = Math.round(avgDurationMs / 1000);
 
-  // Sharpe ratio (annualized, using per-trade returns)
   let sharpeRatio = 0;
   if (closedTrades.length >= 2) {
     const returns = closedTrades.map((t) => t.pnl!);
@@ -536,16 +602,14 @@ export function useTradingSimulation() {
     const variance = returns.reduce((sum, r) => sum + (r - meanReturn) ** 2, 0) / (returns.length - 1);
     const stdDev = Math.sqrt(variance);
     if (stdDev > 0) {
-      sharpeRatio = Math.round((meanReturn / stdDev) * Math.sqrt(252) * 100) / 100; // annualized
+      sharpeRatio = Math.round((meanReturn / stdDev) * Math.sqrt(252) * 100) / 100;
     }
   }
 
-  // Profit factor
   const grossProfit = closedTrades.filter((t) => t.pnl! > 0).reduce((s, t) => s + t.pnl!, 0);
   const grossLoss = Math.abs(closedTrades.filter((t) => t.pnl! <= 0).reduce((s, t) => s + t.pnl!, 0));
   const profitFactor = grossLoss > 0 ? Math.round((grossProfit / grossLoss) * 100) / 100 : grossProfit > 0 ? Infinity : 0;
 
-  // Average win / average loss
   const avgWin = wins > 0 ? Math.round((grossProfit / wins) * 100) / 100 : 0;
   const avgLoss = losses > 0 ? Math.round((grossLoss / losses) * 100) / 100 : 0;
 
@@ -603,5 +667,8 @@ export function useTradingSimulation() {
     deleteTrade,
     deleteLearningNote,
     addLearningNote,
+    activeSymbols,
+    setActiveSymbols,
+    allInstruments: ALL_INSTRUMENTS,
   };
 }
