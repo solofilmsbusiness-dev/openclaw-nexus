@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 
@@ -10,6 +10,10 @@ const CORE_Y = 300;
 const RADIUS = 250;
 
 const EDGE_KINDS = ["control", "data", "comms", "handoff"] as const;
+
+const DEFAULT_VIEWBOX = { x: 0, y: 0, w: 800, h: 600 };
+const MIN_W = 200;
+const MAX_W = 2400;
 
 const CORE_TAGLINES = [
   "12 agents synced",
@@ -79,7 +83,7 @@ function ProgressArc({ cx, cy, r, progress, color }: { cx: number; cy: number; r
 }
 
 function AgentNode({
-  agent, x, y, onHover, onClick, onDoubleClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging, connectSource,
+  agent, x, y, onHover, onClick, onDoubleClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging, connectSource, size, onResizeStart,
 }: {
   agent: Agent; x: number; y: number;
   onHover: (a: Agent | null) => void;
@@ -94,9 +98,10 @@ function AgentNode({
   onDragEnd: () => void;
   isDragging: boolean;
   connectSource: string | null;
+  size: number;
+  onResizeStart: (agentId: string, e: React.MouseEvent) => void;
 }) {
   const color = statusColor(agent.status);
-  const size = 20 + agent.backlogCount * 1.5;
   const active = isHovered || isSelected;
   const isConnectSource = connectSource === agent.id;
   const scale = active || isConnectSource ? 1.1 : 1;
@@ -156,6 +161,16 @@ function AgentNode({
       <text x={x} y={y - size - 8} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" fontWeight="600" opacity={active ? 0.9 : 0.4}>
         {agent.progress}%
       </text>
+      {/* Resize handle - visible on hover/selection */}
+      {(active || isSelected) && (
+        <g
+          style={{ cursor: "nwse-resize" }}
+          onMouseDown={(e) => { e.stopPropagation(); onResizeStart(agent.id, e); }}
+        >
+          <circle cx={x + size * 0.7} cy={y + size * 0.7} r={4} fill="hsl(215, 80%, 60%)" opacity={0.7} stroke="hsl(225, 12%, 10%)" strokeWidth={1} />
+          <line x1={x + size * 0.7 - 2} y1={x + size * 0.7 + 2} x2={x + size * 0.7 + 2} y2={y + size * 0.7 - 2} stroke="white" strokeWidth={0.8} opacity={0.8} />
+        </g>
+      )}
     </motion.g>
   );
 }
@@ -173,7 +188,6 @@ function AnimatedEdge({
   const path = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
   const dur = highlighted ? 3 + weight : 5 + weight;
 
-  // Calculate actual midpoint on the quadratic bezier
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
   const actualMidY = 0.25 * y1 + 0.5 * midY + 0.25 * y2;
 
@@ -182,14 +196,7 @@ function AnimatedEdge({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Invisible wider hit area */}
-      <path
-        d={path}
-        fill="none"
-        stroke="transparent"
-        strokeWidth={12}
-        style={{ cursor: "pointer" }}
-      />
+      <path d={path} fill="none" stroke="transparent" strokeWidth={12} style={{ cursor: "pointer" }} />
       <path
         id={pathId}
         d={path}
@@ -200,7 +207,6 @@ function AnimatedEdge({
         strokeLinecap="round"
         style={{ transition: "opacity 0.4s, stroke-width 0.4s" }}
       />
-      {/* Edge kind label on highlight */}
       {highlighted && (
         <text fontSize="7" fontFamily="JetBrains Mono" fill={color} opacity="0.7" letterSpacing="1">
           <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
@@ -214,12 +220,8 @@ function AnimatedEdge({
         </animateMotion>
         <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
       </circle>
-      {/* Delete button at midpoint */}
       {hovered && onDelete && (
-        <g
-          style={{ cursor: "pointer" }}
-          onClick={(e) => { e.stopPropagation(); onDelete(edgeId); }}
-        >
+        <g style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); onDelete(edgeId); }}>
           <circle cx={actualMidX} cy={actualMidY} r={8} fill="hsl(0, 60%, 45%)" opacity={0.9} />
           <line x1={actualMidX - 3} y1={actualMidY - 3} x2={actualMidX + 3} y2={actualMidY + 3} stroke="white" strokeWidth={1.5} />
           <line x1={actualMidX + 3} y1={actualMidY - 3} x2={actualMidX - 3} y2={actualMidY + 3} stroke="white" strokeWidth={1.5} />
@@ -268,6 +270,14 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ agentId: string; startMouse: { x: number; y: number }; startPos: { x: number; y: number }; moved: boolean } | null>(null);
 
+  // Zoom & Pan state
+  const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
+  const panRef = useRef<{ startMouse: { x: number; y: number }; startViewBox: typeof DEFAULT_VIEWBOX } | null>(null);
+
+  // Node sizes state
+  const [nodeSizes, setNodeSizes] = useState<Record<string, number>>({});
+  const resizeRef = useRef<{ agentId: string; startDist: number; startSize: number } | null>(null);
+
   // Connect mode state
   const [connectMode, setConnectMode] = useState(false);
   const [connectSource, setConnectSource] = useState<string | null>(null);
@@ -289,10 +299,15 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     if (!svg) return { x: 0, y: 0 };
     const rect = svg.getBoundingClientRect();
     return {
-      x: ((clientX - rect.left) / rect.width) * 800,
-      y: ((clientY - rect.top) / rect.height) * 600,
+      x: viewBox.x + ((clientX - rect.left) / rect.width) * viewBox.w,
+      y: viewBox.y + ((clientY - rect.top) / rect.height) * viewBox.h,
     };
-  }, []);
+  }, [viewBox]);
+
+  // Get node size (custom or default)
+  const getNodeSize = useCallback((agent: Agent) => {
+    return nodeSizes[agent.id] ?? (20 + agent.backlogCount * 1.5);
+  }, [nodeSizes]);
 
   // Delete confirmation state
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -307,7 +322,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         setPendingEdge(null);
       }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedAgentId && !connectMode && onDeleteAgent) {
-        // Don't trigger if user is typing in an input
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         e.preventDefault();
@@ -318,10 +332,63 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     return () => window.removeEventListener("keydown", handler);
   }, [selectedAgentId, connectMode, onDeleteAgent]);
 
+  // Zoom with mouse wheel
+  const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    // Cursor position as fraction of SVG element
+    const fx = (e.clientX - rect.left) / rect.width;
+    const fy = (e.clientY - rect.top) / rect.height;
+
+    const zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
+
+    setViewBox((prev) => {
+      const newW = Math.min(MAX_W, Math.max(MIN_W, prev.w * zoomFactor));
+      const newH = newW * (600 / 800); // maintain aspect ratio
+      // Zoom centered on cursor
+      const newX = prev.x + (prev.w - newW) * fx;
+      const newY = prev.y + (prev.h - newH) * fy;
+      return { x: newX, y: newY, w: newW, h: newH };
+    });
+  }, []);
+
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getSvgPoint(e.clientX, e.clientY);
     setMouse(pt);
 
+    // Resize mode
+    if (resizeRef.current) {
+      const { agentId, startDist, startSize } = resizeRef.current;
+      const pos = positions[agentId];
+      if (pos) {
+        const dist = Math.sqrt((pt.x - pos.x) ** 2 + (pt.y - pos.y) ** 2);
+        const delta = dist - startDist;
+        const newSize = Math.min(60, Math.max(15, startSize + delta));
+        setNodeSizes((prev) => ({ ...prev, [agentId]: newSize }));
+      }
+      return;
+    }
+
+    // Pan mode
+    if (panRef.current) {
+      const svg = svgRef.current;
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      const { startMouse, startViewBox } = panRef.current;
+      // Use client coords for panning to avoid feedback loop
+      const dx = ((e.clientX - startMouse.x) / rect.width) * startViewBox.w;
+      const dy = ((e.clientY - startMouse.y) / rect.height) * startViewBox.h;
+      setViewBox({
+        ...startViewBox,
+        x: startViewBox.x - dx,
+        y: startViewBox.y - dy,
+      });
+      return;
+    }
+
+    // Node drag
     if (dragRef.current) {
       const { agentId, startMouse, startPos } = dragRef.current;
       const dx = pt.x - startMouse.x;
@@ -332,7 +399,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         [agentId]: { x: startPos.x + dx, y: startPos.y + dy },
       }));
     }
-  }, [getSvgPoint]);
+  }, [getSvgPoint, positions]);
 
   const handleDragStart = useCallback((agentId: string, e: React.MouseEvent | React.TouchEvent) => {
     if (connectMode) return;
@@ -343,9 +410,32 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     dragRef.current = { agentId, startMouse: pt, startPos: currentOffset, moved: false };
   }, [getSvgPoint, dragOffsets, connectMode]);
 
+  const handleResizeStart = useCallback((agentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const pt = getSvgPoint(e.clientX, e.clientY);
+    const pos = positions[agentId];
+    if (!pos) return;
+    const dist = Math.sqrt((pt.x - pos.x) ** 2 + (pt.y - pos.y) ** 2);
+    const agent = agents.find((a) => a.id === agentId);
+    const currentSize = agent ? getNodeSize(agent) : 20;
+    resizeRef.current = { agentId, startDist: dist, startSize: currentSize };
+  }, [getSvgPoint, positions, agents, getNodeSize]);
+
   const handleDragEnd = useCallback(() => {
     dragRef.current = null;
+    resizeRef.current = null;
   }, []);
+
+  // Background mouse down → start panning
+  const handleBgMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    // Only pan if clicking directly on SVG background (not on a node)
+    if (e.target === svgRef.current || (e.target as SVGElement).tagName === 'rect') {
+      panRef.current = {
+        startMouse: { x: e.clientX, y: e.clientY },
+        startViewBox: { ...viewBox },
+      };
+    }
+  }, [viewBox]);
 
   const isDragging = dragRef.current !== null;
 
@@ -385,7 +475,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   }, []);
 
   const handleBgClick = useCallback(() => {
-    if (dragRef.current?.moved) return;
+    if (dragRef.current?.moved || panRef.current) return;
     if (connectMode) {
       setConnectSource(null);
       return;
@@ -395,10 +485,32 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   const handleMouseUp = useCallback(() => {
     handleDragEnd();
+    panRef.current = null;
   }, [handleDragEnd]);
 
-  const parallaxX = (mouse.x - 400) * 0.01;
-  const parallaxY = (mouse.y - 300) * 0.01;
+  // Zoom controls
+  const zoomIn = useCallback(() => {
+    setViewBox((prev) => {
+      const newW = Math.max(MIN_W, prev.w * 0.8);
+      const newH = newW * (600 / 800);
+      return { x: prev.x + (prev.w - newW) * 0.5, y: prev.y + (prev.h - newH) * 0.5, w: newW, h: newH };
+    });
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setViewBox((prev) => {
+      const newW = Math.min(MAX_W, prev.w * 1.25);
+      const newH = newW * (600 / 800);
+      return { x: prev.x + (prev.w - newW) * 0.5, y: prev.y + (prev.h - newH) * 0.5, w: newW, h: newH };
+    });
+  }, []);
+
+  const resetView = useCallback(() => {
+    setViewBox(DEFAULT_VIEWBOX);
+  }, []);
+
+  const parallaxX = (mouse.x - (viewBox.x + viewBox.w / 2)) * 0.01;
+  const parallaxY = (mouse.y - (viewBox.y + viewBox.h / 2)) * 0.01;
 
   const hoveredId = hovered?.id ?? null;
   const focusId = hoveredId || selectedAgentId;
@@ -415,6 +527,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const onlineCount = agents.filter((a) => a.status !== "down").length;
   const displayAgent = hovered || (selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null);
   const draggingId = dragRef.current?.agentId ?? null;
+
+  const zoomPercent = Math.round((DEFAULT_VIEWBOX.w / viewBox.w) * 100);
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden">
@@ -484,14 +598,53 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         </div>
       )}
 
-      <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full" onMouseMove={handleMouseMove} onClick={handleBgClick} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+      {/* Zoom controls */}
+      <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
+        <button
+          onClick={zoomIn}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          title="Zoom in"
+        >
+          <ZoomIn className="w-3.5 h-3.5" />
+        </button>
+        <div className="flex items-center justify-center h-5 text-[9px] font-mono text-muted-foreground">
+          {zoomPercent}%
+        </div>
+        <button
+          onClick={zoomOut}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          title="Zoom out"
+        >
+          <ZoomOut className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={resetView}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          title="Reset view"
+        >
+          <Maximize className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <svg
+        ref={svgRef}
+        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+        className="w-full h-full"
+        onMouseMove={handleMouseMove}
+        onMouseDown={handleBgMouseDown}
+        onClick={handleBgClick}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+        style={{ cursor: panRef.current ? 'grabbing' : 'default' }}
+      >
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.3" />
             <stop offset="50%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.08" />
             <stop offset="100%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="cursorGlow" cx={mouse.x / 800} cy={mouse.y / 600} r="0.3">
+          <radialGradient id="cursorGlow" cx={(mouse.x - viewBox.x) / viewBox.w} cy={(mouse.y - viewBox.y) / viewBox.h} r="0.3">
             <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.06" />
             <stop offset="100%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0" />
           </radialGradient>
@@ -506,9 +659,9 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         </defs>
 
         <g style={{ transform: `translate(${parallaxX}px, ${parallaxY}px)` }}>
-          <rect width="800" height="600" fill="url(#grid)" />
+          <rect x={viewBox.x - viewBox.w} y={viewBox.y - viewBox.h} width={viewBox.w * 3} height={viewBox.h * 3} fill="url(#grid)" />
         </g>
-        <rect width="800" height="600" fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
+        <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
 
         {edges.map((edge) => {
           const from = positions[edge.from];
@@ -545,13 +698,10 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           <circle cx={CORE_X} cy={CORE_Y} r="6" fill="hsl(215, 80%, 65%)">
             <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite" />
           </circle>
-          {/* Core title */}
           <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill="hsl(0, 0%, 75%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
             SOLO OS CORE
           </text>
-          {/* Rotating tagline */}
           <RotatingCoreText />
-          {/* Online count */}
           <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill="hsl(152, 60%, 48%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
             {onlineCount}/{agents.length} ONLINE
           </text>
@@ -562,6 +712,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           const isHovered = hoveredId === agent.id;
           const isSelected = selectedAgentId === agent.id;
           const isNodeDragging = draggingId === agent.id;
+          const nodeSize = getNodeSize(agent);
           return (
             <FloatingGroup key={agent.id} index={i} isHovered={isHovered || isSelected || isNodeDragging}>
               <AgentNode
@@ -580,6 +731,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
                 onDragEnd={handleDragEnd}
                 isDragging={isNodeDragging}
                 connectSource={connectMode ? connectSource : null}
+                size={nodeSize}
+                onResizeStart={handleResizeStart}
               />
             </FloatingGroup>
           );
@@ -590,7 +743,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="absolute top-4 right-4 glass-panel neon-border p-4 w-64"
+          className="absolute top-14 right-3 glass-panel neon-border p-4 w-64"
         >
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xl">{displayAgent.icon}</span>
