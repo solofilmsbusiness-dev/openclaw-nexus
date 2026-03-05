@@ -778,6 +778,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         </motion.div>
       )}
 
+      {/* Minimap */}
+      <Minimap
+        agents={agents}
+        edges={edges}
+        positions={positions}
+        viewBox={viewBox}
+        setViewBox={setViewBox}
+        getNodeSize={getNodeSize}
+      />
+
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
         <AlertDialogContent>
