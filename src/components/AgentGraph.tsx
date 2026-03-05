@@ -1132,14 +1132,23 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="absolute top-14 right-3 glass-panel neon-border p-4 w-64"
+          className="absolute bottom-20 left-3 glass-panel neon-border p-3 w-56"
         >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xl">{displayAgent.icon}</span>
-            <div>
-              <h3 className="font-display font-semibold text-sm text-foreground">{displayAgent.name}</h3>
-              <span className="text-[10px] font-mono text-muted-foreground italic">{displayAgent.subtitle}</span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{displayAgent.icon}</span>
+              <div>
+                <h3 className="font-display font-semibold text-xs text-foreground">{displayAgent.name}</h3>
+                <span className="text-[9px] font-mono text-muted-foreground italic">{displayAgent.subtitle}</span>
+              </div>
             </div>
+            <button
+              onClick={() => onSelectAgent(null)}
+              className="p-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+              title="Close"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </button>
           </div>
           <span className={`text-xs font-mono ${
             displayAgent.status === 'healthy' ? 'status-healthy' :
