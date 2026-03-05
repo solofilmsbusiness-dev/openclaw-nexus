@@ -165,7 +165,19 @@ const Trading = () => {
           <span className="font-mono text-sm font-semibold text-neon-cyan">{stats.winRate}%</span>
         </motion.div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-secondary/50 rounded-md p-1">
+            {([1, 2, 3] as const).map((cols) => (
+              <button
+                key={cols}
+                onClick={() => layout.setColumnCount(cols)}
+                className={`p-1.5 rounded transition-colors ${layout.columnCount === cols ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                title={`${cols} column${cols > 1 ? "s" : ""}`}
+              >
+                <LayoutGrid className="w-4 h-4" style={{ opacity: cols === 1 ? 1 : 0.6 + cols * 0.2 }} />
+              </button>
+            ))}
+          </div>
           <AddPanelDialog />
           <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
           <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
