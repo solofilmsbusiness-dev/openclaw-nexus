@@ -154,9 +154,9 @@ function AgentsTab({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.03 }}
-            whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 18px ${color.bg}30` }}
+            whileHover={{ scale: 1.01, x: 3, boxShadow: `0 2px 12px ${color.bg}15` }}
             whileTap={{ scale: 0.98 }}
-            className={`p-3 rounded-lg border transition-colors cursor-grab active:cursor-grabbing group ${
+            className={`p-3 rounded-xl border transition-colors cursor-grab active:cursor-grabbing group ${
               isSelected ? "border-primary/50 bg-primary/5" : "border-border/30 hover:border-border/60"
             }`}
             style={{ borderLeftWidth: 3, borderLeftColor: color.bg }}
@@ -248,7 +248,7 @@ function BacklogTab({ agents }: { agents: Agent[] }) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.04 }}
-            whileHover={{ scale: 1.02, x: 4, boxShadow: `0 0 15px ${color.bg}30` }}
+            whileHover={{ scale: 1.01, x: 3, boxShadow: `0 2px 12px ${color.bg}15` }}
             whileTap={{ scale: 0.98 }}
             className="flex items-center gap-3 p-2 rounded-lg border border-border/20 hover:border-border/50 transition-colors cursor-pointer"
           >
@@ -286,7 +286,7 @@ function InsightsTab() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.06 }}
-          whileHover={{ scale: 1.02, x: 4, boxShadow: "0 0 15px hsl(160 100% 45% / 0.15)" }}
+          whileHover={{ scale: 1.01, x: 3, boxShadow: "0 2px 12px hsl(215 80% 60% / 0.1)" }}
           whileTap={{ scale: 0.98 }}
           className="p-3 rounded-lg border border-border/20 hover:border-border/50 transition-colors cursor-pointer"
         >
@@ -338,7 +338,7 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
           placeholder="Search agents..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-8 pr-8 py-1.5 rounded-md bg-muted/30 border border-border/30 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
+          className="w-full pl-8 pr-8 py-2 rounded-xl bg-muted/30 border border-border/30 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
         />
         {search && (
           <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -348,7 +348,7 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 mb-3 p-0.5 bg-muted/30 rounded-lg">
+      <div className="flex gap-1 mb-3 p-0.5 bg-muted/30 rounded-xl">
         {tabs.map((tab) => (
           <button
             key={tab.id}
