@@ -11,11 +11,13 @@ import AgentCards from "@/components/AgentCards";
 import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAgents } from "@/contexts/AgentContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { layout } = useSettings();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -52,11 +54,13 @@ const Index = () => {
   } = useAgents();
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className={`h-screen bg-background flex flex-col overflow-hidden ${layout.compactMode ? "text-[0.9em]" : ""}`}>
       <OnboardingTour />
-      <div data-tour="metrics-bar">
-        <MetricsBar agents={agents} />
-      </div>
+      {layout.showMetricsBar && (
+        <div data-tour="metrics-bar">
+          <MetricsBar agents={agents} />
+        </div>
+      )}
 
       <CommandPalette
         agents={agents}
@@ -64,15 +68,16 @@ const Index = () => {
         onStatusChange={handleStatusChange}
       />
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-hidden">
+      <div className={`flex-1 flex flex-col lg:flex-row ${layout.compactMode ? "gap-1.5 p-1.5" : "gap-3 p-3"} min-h-0 overflow-hidden`}>
         {/* Left sidebar */}
         <div
           data-tour="agent-cards"
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            collapsed ? "w-0 lg:w-0" : "w-full lg:w-[320px]"
+            collapsed ? "w-0 lg:w-0" : `w-full`
           }`}
+          style={!collapsed && !isMobile ? { width: layout.leftPanelWidth } : undefined}
         >
-          <div className="w-full lg:w-[320px] h-full overflow-hidden">
+          <div className="h-full overflow-hidden" style={!isMobile ? { width: layout.leftPanelWidth } : undefined}>
             <AgentCards
               agents={agents}
               onAgentsChange={handleAgentsChange}
@@ -135,10 +140,11 @@ const Index = () => {
         {/* Right panel */}
         <div
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            rightCollapsed ? "w-0 lg:w-0" : "w-full lg:w-[280px]"
+            rightCollapsed ? "w-0 lg:w-0" : "w-full"
           }`}
+          style={!rightCollapsed && !isMobile ? { width: layout.rightPanelWidth } : undefined}
         >
-          <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0 overflow-hidden">
+          <div className={`h-full flex flex-col ${layout.compactMode ? "gap-1.5" : "gap-3"} min-h-0 overflow-hidden`} style={!isMobile ? { width: layout.rightPanelWidth } : undefined}>
             <div className="flex-1 min-h-0 overflow-hidden" data-tour="event-timeline">
               <EventTimeline
                 events={events}
