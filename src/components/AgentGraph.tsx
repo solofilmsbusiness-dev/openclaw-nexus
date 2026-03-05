@@ -74,7 +74,7 @@ function ProgressArc({ cx, cy, r, progress, color }: { cx: number; cy: number; r
 }
 
 function AgentNode({
-  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId,
+  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging,
 }: {
   agent: Agent; x: number; y: number;
   onHover: (a: Agent | null) => void;
@@ -83,6 +83,10 @@ function AgentNode({
   isSelected: boolean;
   hoveredId: string | null;
   selectedId: string | null;
+  onDragStart: (agentId: string, e: React.MouseEvent | React.TouchEvent) => void;
+  onDrag: (e: React.MouseEvent | React.TouchEvent) => void;
+  onDragEnd: () => void;
+  isDragging: boolean;
 }) {
   const color = statusColor(agent.status);
   const size = 20 + agent.backlogCount * 1.5;
@@ -96,10 +100,11 @@ function AgentNode({
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: dimmed, scale }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      style={{ cursor: "pointer", transformOrigin: `${x}px ${y}px` }}
-      onMouseEnter={() => onHover(agent)}
-      onMouseLeave={() => onHover(null)}
-      onClick={() => onClick(agent)}
+      style={{ cursor: isDragging ? "grabbing" : "grab", transformOrigin: `${x}px ${y}px` }}
+      onMouseEnter={() => { if (!isDragging) onHover(agent); }}
+      onMouseLeave={() => { if (!isDragging) onHover(null); }}
+      onMouseDown={(e) => { e.stopPropagation(); onDragStart(agent.id, e); }}
+      onClick={(e) => { if (!isDragging) onClick(agent); }}
     >
       {/* Selection ring */}
       {isSelected && (
@@ -208,27 +213,76 @@ interface AgentGraphProps {
 }
 
 export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: AgentGraphProps) {
-  const positions = useMemo(() => getNodePositions(agents), [agents]);
+  const basePositions = useMemo(() => getNodePositions(agents), [agents]);
+  const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<Agent | null>(null);
   const [mouse, setMouse] = useState({ x: 400, y: 300 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const dragRef = useRef<{ agentId: string; startMouse: { x: number; y: number }; startPos: { x: number; y: number }; moved: boolean } | null>(null);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  const positions = useMemo(() => {
+    const merged: Record<string, { x: number; y: number }> = {};
+    for (const key in basePositions) {
+      const base = basePositions[key];
+      const offset = dragOffsets[key];
+      merged[key] = offset ? { x: base.x + offset.x, y: base.y + offset.y } : base;
+    }
+    return merged;
+  }, [basePositions, dragOffsets]);
+
+  const getSvgPoint = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) return { x: 0, y: 0 };
     const rect = svg.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 800;
-    const y = ((e.clientY - rect.top) / rect.height) * 600;
-    setMouse({ x, y });
+    return {
+      x: ((clientX - rect.left) / rect.width) * 800,
+      y: ((clientY - rect.top) / rect.height) * 600,
+    };
   }, []);
 
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const pt = getSvgPoint(e.clientX, e.clientY);
+    setMouse(pt);
+
+    if (dragRef.current) {
+      const { agentId, startMouse, startPos } = dragRef.current;
+      const dx = pt.x - startMouse.x;
+      const dy = pt.y - startMouse.y;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragRef.current.moved = true;
+      setDragOffsets((prev) => ({
+        ...prev,
+        [agentId]: { x: startPos.x + dx, y: startPos.y + dy },
+      }));
+    }
+  }, [getSvgPoint]);
+
+  const handleDragStart = useCallback((agentId: string, e: React.MouseEvent | React.TouchEvent) => {
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    const pt = getSvgPoint(clientX, clientY);
+    const currentOffset = dragOffsets[agentId] || { x: 0, y: 0 };
+    dragRef.current = { agentId, startMouse: pt, startPos: currentOffset, moved: false };
+  }, [getSvgPoint, dragOffsets]);
+
+  const handleDragEnd = useCallback(() => {
+    dragRef.current = null;
+  }, []);
+
+  const isDragging = dragRef.current !== null;
+
   const handleNodeClick = useCallback((agent: Agent) => {
+    if (dragRef.current?.moved) return;
     onSelectAgent(selectedAgentId === agent.id ? null : agent.id);
   }, [selectedAgentId, onSelectAgent]);
 
   const handleBgClick = useCallback(() => {
+    if (dragRef.current?.moved) return;
     if (selectedAgentId) onSelectAgent(null);
   }, [selectedAgentId, onSelectAgent]);
+
+  const handleMouseUp = useCallback(() => {
+    handleDragEnd();
+  }, [handleDragEnd]);
 
   const parallaxX = (mouse.x - 400) * 0.01;
   const parallaxY = (mouse.y - 300) * 0.01;
@@ -247,10 +301,11 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
 
   const onlineCount = agents.filter((a) => a.status !== "down").length;
   const displayAgent = hovered || (selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null);
+  const draggingId = dragRef.current?.agentId ?? null;
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden">
-      <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full" onMouseMove={handleMouseMove} onClick={handleBgClick}>
+      <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full" onMouseMove={handleMouseMove} onClick={handleBgClick} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.3" />
@@ -314,8 +369,9 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
           const pos = positions[agent.id];
           const isHovered = hoveredId === agent.id;
           const isSelected = selectedAgentId === agent.id;
+          const isNodeDragging = draggingId === agent.id;
           return (
-            <FloatingGroup key={agent.id} index={i} isHovered={isHovered || isSelected}>
+            <FloatingGroup key={agent.id} index={i} isHovered={isHovered || isSelected || isNodeDragging}>
               <AgentNode
                 agent={agent}
                 x={pos.x}
@@ -326,6 +382,10 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
                 isSelected={isSelected}
                 hoveredId={hoveredId}
                 selectedId={selectedAgentId}
+                onDragStart={handleDragStart}
+                onDrag={() => {}}
+                onDragEnd={handleDragEnd}
+                isDragging={isNodeDragging}
               />
             </FloatingGroup>
           );
