@@ -92,3 +92,25 @@ export const statusColor = (status: AgentStatus) => {
     case "active": return { bg: "hsl(215, 80%, 60%)", glow: "0 2px 12px hsl(215 80% 60% / 0.25)" };
   }
 };
+
+const randMetricsEmpty = (len = 20) => Array.from({ length: len }, () => 0);
+
+export function createAgent(overrides: Partial<Agent> = {}): Agent {
+  return {
+    id: `agent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: "New Agent",
+    subtitle: "Unassigned",
+    type: "operations",
+    status: "healthy",
+    icon: "🤖",
+    currentTask: "Awaiting orders",
+    progress: 0,
+    backlogCount: 0,
+    metrics: {
+      latency: randMetricsEmpty(),
+      successRate: randMetricsEmpty(),
+      activity: randMetricsEmpty(),
+    },
+    ...overrides,
+  };
+}

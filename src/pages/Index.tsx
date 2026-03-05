@@ -8,7 +8,7 @@ import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSimulation } from "@/hooks/useSimulation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AGENTS, SAMPLE_EVENTS, type Agent, type AgentEvent, type AgentStatus } from "@/data/agents";
+import { AGENTS, SAMPLE_EVENTS, createAgent, type Agent, type AgentEvent, type AgentStatus } from "@/data/agents";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -31,6 +31,16 @@ const Index = () => {
           : a
       )
     );
+  }, []);
+
+  const handleAddAgent = useCallback((overrides: Partial<Agent>) => {
+    setAgents((prev) => [...prev, createAgent(overrides)]);
+  }, []);
+
+  const handleDeleteAgent = useCallback((id: string) => {
+    setAgents((prev) => prev.filter((a) => a.id !== id));
+    setEvents((prev) => prev.filter((e) => e.agentId !== id));
+    setSelectedAgentId((prev) => (prev === id ? null : prev));
   }, []);
 
   useSimulation(agents, handleAgentsChange, handleNewEvent);
@@ -58,6 +68,8 @@ const Index = () => {
               onAgentsChange={handleAgentsChange}
               selectedAgentId={selectedAgentId}
               onSelectAgent={setSelectedAgentId}
+              onAddAgent={handleAddAgent}
+              onDeleteAgent={handleDeleteAgent}
             />
           </div>
         </div>
