@@ -68,15 +68,16 @@ const Index = () => {
         onStatusChange={handleStatusChange}
       />
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-hidden">
+      <div className={`flex-1 flex flex-col lg:flex-row ${layout.compactMode ? "gap-1.5 p-1.5" : "gap-3 p-3"} min-h-0 overflow-hidden`}>
         {/* Left sidebar */}
         <div
           data-tour="agent-cards"
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            collapsed ? "w-0 lg:w-0" : "w-full lg:w-[320px]"
+            collapsed ? "w-0 lg:w-0" : `w-full`
           }`}
+          style={!collapsed && !isMobile ? { width: layout.leftPanelWidth } : undefined}
         >
-          <div className="w-full lg:w-[320px] h-full overflow-hidden">
+          <div className="h-full overflow-hidden" style={!isMobile ? { width: layout.leftPanelWidth } : undefined}>
             <AgentCards
               agents={agents}
               onAgentsChange={handleAgentsChange}
