@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import MetricsBar from "@/components/MetricsBar";
 import AgentGraph from "@/components/AgentGraph";
 import EventTimeline from "@/components/EventTimeline";
@@ -6,58 +6,19 @@ import TerminalLog from "@/components/TerminalLog";
 import AgentCards from "@/components/AgentCards";
 import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSimulation } from "@/hooks/useSimulation";
+import { useAgents } from "@/contexts/AgentContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 
 const Index = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [agents, setAgents] = useState<Agent[]>(AGENTS);
-  const [edges, setEdges] = useState<Edge[]>(EDGES);
-  const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
-  const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
-  const handleNewEvent = useCallback((event: AgentEvent) => {
-    setEvents((prev) => [event, ...prev].slice(0, 50));
-  }, []);
-
-  const handleStatusChange = useCallback((id: string, status: AgentStatus) => {
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, status, progress: status === "down" ? 0 : a.progress, currentTask: status === "down" ? "Halted" : a.currentTask }
-          : a
-      )
-    );
-  }, []);
-
-  const handleAddAgent = useCallback((overrides: Partial<Agent>) => {
-    setAgents((prev) => [...prev, createAgent(overrides)]);
-  }, []);
-
-  const handleDeleteAgent = useCallback((id: string) => {
-    setAgents((prev) => prev.filter((a) => a.id !== id));
-    setEdges((prev) => prev.filter((e) => e.from !== id && e.to !== id));
-    setEvents((prev) => prev.filter((e) => e.agentId !== id));
-    setSelectedAgentId((prev) => (prev === id ? null : prev));
-  }, []);
-
-  const handleAddEdge = useCallback((from: string, to: string, kind: string) => {
-    setEdges((prev) => {
-      const exists = prev.some((e) => (e.from === from && e.to === to) || (e.from === to && e.to === from));
-      if (exists) return prev;
-      return [...prev, createEdge(from, to, kind)];
-    });
-  }, []);
-
-  const handleDeleteEdge = useCallback((edgeId: string) => {
-    setEdges((prev) => prev.filter((e) => e.id !== edgeId));
-  }, []);
-
-  useSimulation(agents, handleAgentsChange, handleNewEvent);
+  const {
+    agents, edges, events, selectedAgentId, setSelectedAgentId,
+    handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
+    handleAddEdge, handleDeleteEdge,
+  } = useAgents();
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
