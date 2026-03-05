@@ -109,6 +109,44 @@ export default function Admin() {
       </div>
 
       <div className="max-w-5xl mx-auto p-6 space-y-6">
+        {/* Settings Panel — Expanded with new tabs */}
+        <div className="glass-panel neon-border p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <Settings className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold text-base text-foreground">Settings</h2>
+          </div>
+
+          <Tabs defaultValue="theme" className="w-full">
+            <TabsList className="bg-secondary/30 border border-border/20 mb-5 flex-wrap h-auto gap-0.5 p-1">
+              <TabsTrigger value="profile" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <User className="w-3 h-3 mr-1" /> PROFILE
+              </TabsTrigger>
+              <TabsTrigger value="theme" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">THEME</TabsTrigger>
+              <TabsTrigger value="layout" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Layout className="w-3 h-3 mr-1" /> LAYOUT
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">ALERTS</TabsTrigger>
+              <TabsTrigger value="data" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Database className="w-3 h-3 mr-1" /> DATA
+              </TabsTrigger>
+              <TabsTrigger value="toolkit" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Wrench className="w-3 h-3 mr-1" /> TOOLKIT
+              </TabsTrigger>
+              <TabsTrigger value="users" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">USERS</TabsTrigger>
+              <TabsTrigger value="system" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">SYSTEM</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile"><ProfileSettings /></TabsContent>
+            <TabsContent value="theme"><ThemeSettings /></TabsContent>
+            <TabsContent value="layout"><LayoutSettings /></TabsContent>
+            <TabsContent value="notifications"><NotificationSettings /></TabsContent>
+            <TabsContent value="data"><DataManagement /></TabsContent>
+            <TabsContent value="toolkit"><CustomToolkit /></TabsContent>
+            <TabsContent value="users"><UserManagement /></TabsContent>
+            <TabsContent value="system"><SystemConfigSettings /></TabsContent>
+          </Tabs>
+        </div>
+
         {/* Kill Switch Section */}
         <div className="glass-panel neon-border p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -255,44 +293,6 @@ export default function Admin() {
               })}
             </AnimatePresence>
           </div>
-        </div>
-
-        {/* Settings Panel — Expanded with new tabs */}
-        <div className="glass-panel neon-border p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Settings className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-semibold text-base text-foreground">Settings</h2>
-          </div>
-
-          <Tabs defaultValue="theme" className="w-full">
-            <TabsList className="bg-secondary/30 border border-border/20 mb-5 flex-wrap h-auto gap-0.5 p-1">
-              <TabsTrigger value="profile" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <User className="w-3 h-3 mr-1" /> PROFILE
-              </TabsTrigger>
-              <TabsTrigger value="theme" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">THEME</TabsTrigger>
-              <TabsTrigger value="layout" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Layout className="w-3 h-3 mr-1" /> LAYOUT
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">ALERTS</TabsTrigger>
-              <TabsTrigger value="data" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Database className="w-3 h-3 mr-1" /> DATA
-              </TabsTrigger>
-              <TabsTrigger value="toolkit" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Wrench className="w-3 h-3 mr-1" /> TOOLKIT
-              </TabsTrigger>
-              <TabsTrigger value="users" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">USERS</TabsTrigger>
-              <TabsTrigger value="system" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">SYSTEM</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="profile"><ProfileSettings /></TabsContent>
-            <TabsContent value="theme"><ThemeSettings /></TabsContent>
-            <TabsContent value="layout"><LayoutSettings /></TabsContent>
-            <TabsContent value="notifications"><NotificationSettings /></TabsContent>
-            <TabsContent value="data"><DataManagement /></TabsContent>
-            <TabsContent value="toolkit"><CustomToolkit /></TabsContent>
-            <TabsContent value="users"><UserManagement /></TabsContent>
-            <TabsContent value="system"><SystemConfigSettings /></TabsContent>
-          </Tabs>
         </div>
       </div>
     </div>
