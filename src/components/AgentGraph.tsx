@@ -864,6 +864,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         <Tooltip open={connectMode ? false : undefined}>
           <TooltipTrigger asChild>
             <button
+              data-tour="graph-connect"
               onClick={() => {
                 setConnectMode(!connectMode);
                 setConnectSource(null);
@@ -938,7 +939,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       )}
 
       {/* Zoom controls */}
-      <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
+      <div data-tour="graph-tools" className="absolute top-3 right-3 z-10 flex flex-col gap-1">
         <button
           onClick={zoomIn}
           disabled={locked}
