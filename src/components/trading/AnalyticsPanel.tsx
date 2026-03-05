@@ -71,12 +71,7 @@ export default function AnalyticsPanel({ stats, tradeHistory }: AnalyticsPanelPr
   ];
 
   return (
-    <motion.div
-      className="glass-panel neon-border p-4 flex flex-col min-h-0"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.45 }}
-    >
+    <>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-neon-blue" />
         <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">
@@ -203,6 +198,6 @@ export default function AnalyticsPanel({ stats, tradeHistory }: AnalyticsPanelPr
           )}
         </div>
       </ScrollArea>
-    </motion.div>
+    </>
   );
 }

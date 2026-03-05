@@ -129,12 +129,7 @@ export default function Watchlist({ tickers }: WatchlistProps) {
   const availableToAdd = AVAILABLE_SYMBOLS.filter((s) => !watchedSymbols.has(s));
 
   return (
-    <motion.div
-      className="glass-panel neon-border p-4 flex flex-col min-h-0"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4 }}
-    >
+    <>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-neon-orange" />
         <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">
@@ -309,6 +304,7 @@ export default function Watchlist({ tickers }: WatchlistProps) {
           </AnimatePresence>
         </div>
       </ScrollArea>
-    </motion.div>
+    </>
+
   );
 }
