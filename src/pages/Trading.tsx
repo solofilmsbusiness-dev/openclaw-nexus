@@ -191,7 +191,9 @@ const Trading = () => {
         axis="y"
         values={layout.panels}
         onReorder={layout.reorderPanels}
-        className="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 p-3 min-h-0 overflow-auto auto-rows-min"
+        className={`flex-1 grid gap-3 p-3 min-h-0 overflow-auto auto-rows-min ${
+          layout.columnCount === 1 ? "grid-cols-1" : layout.columnCount === 2 ? "grid-cols-2" : "grid-cols-3"
+        }`}
         as="div"
       >
         <AnimatePresence>
