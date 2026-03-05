@@ -925,21 +925,25 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       >
         <defs>
           <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.3" />
-            <stop offset="50%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0" />
+            <stop offset="0%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity={killSwitchActive ? "0.5" : "0.3"} />
+            <stop offset="50%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity={killSwitchActive ? "0.15" : "0.08"} />
+            <stop offset="100%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity="0" />
           </radialGradient>
           <radialGradient id="cursorGlow" cx={(mouse.x - viewBox.x) / viewBox.w} cy={(mouse.y - viewBox.y) / viewBox.h} r="0.3">
-            <stop offset="0%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0.06" />
-            <stop offset="100%" stopColor="hsl(215, 80%, 60%)" stopOpacity="0" />
+            <stop offset="0%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity="0.06" />
+            <stop offset="100%" stopColor={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} stopOpacity="0" />
           </radialGradient>
           <filter id="blur"><feGaussianBlur stdDeviation="4" /></filter>
           <filter id="particleGlow">
             <feGaussianBlur stdDeviation="1.5" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
+          <filter id="killGlow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(225, 10%, 14%)" strokeWidth="0.4" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke={killSwitchActive ? "hsl(0, 30%, 14%)" : "hsl(225, 10%, 14%)"} strokeWidth="0.4" />
           </pattern>
         </defs>
 
@@ -949,16 +953,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
 
         {/* Solar system effects */}
-        <Stardust viewBox={viewBox} />
-        <OrbitalParticles viewBox={viewBox} />
-        <CoreEnergyRings viewBox={viewBox} />
+        <Stardust viewBox={viewBox} killSwitchActive={killSwitchActive} />
+        <OrbitalParticles viewBox={viewBox} killSwitchActive={killSwitchActive} />
+        <CoreEnergyRings viewBox={viewBox} killSwitchActive={killSwitchActive} />
 
         {edges.map((edge) => {
           const from = positions[edge.from];
           const to = positions[edge.to];
           if (!from || !to) return null;
           const fromAgent = agents.find((a) => a.id === edge.from);
-          const color = fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)";
+          const color = killSwitchActive ? "hsl(0, 70%, 50%)" : (fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)");
           const highlighted = focusId ? (edge.from === focusId || edge.to === focusId) : false;
           return (
             <AnimatedEdge
@@ -973,7 +977,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               weight={edge.weight}
               highlighted={highlighted}
               kind={edge.kind}
-              onDelete={onDeleteEdge}
+              onDelete={killSwitchActive ? undefined : onDeleteEdge}
+              killSwitchActive={killSwitchActive}
             />
           );
         })}
@@ -982,17 +987,22 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           <circle cx={CORE_X} cy={CORE_Y} r="65" fill="url(#coreGlow)" filter="url(#blur)">
             <animate attributeName="r" values="60;70;60" dur="5s" repeatCount="indefinite" />
           </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke="hsl(215, 80%, 60%)" strokeWidth="1.5" opacity="0.9">
+          <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} strokeWidth={killSwitchActive ? "2.5" : "1.5"} opacity="0.9">
             <animate attributeName="r" values="30;34;30" dur="5s" repeatCount="indefinite" />
           </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="6" fill="hsl(215, 80%, 65%)">
-            <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite" />
+          <circle cx={CORE_X} cy={CORE_Y} r="6" fill={killSwitchActive ? "hsl(0, 70%, 55%)" : "hsl(215, 80%, 65%)"}>
+            <animate attributeName="opacity" values={killSwitchActive ? "0.5;1;0.5" : "0.7;1;0.7"} dur={killSwitchActive ? "1.5s" : "3s"} repeatCount="indefinite" />
           </circle>
-          <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill="hsl(0, 0%, 75%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
-            SOLO OS CORE
+          <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 70%, 60%)" : "hsl(0, 0%, 75%)"} fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
+            {killSwitchActive ? "⚠ SYSTEM KILLED" : "SOLO OS CORE"}
           </text>
-          <RotatingCoreText />
-          <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill="hsl(152, 60%, 48%)" fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
+          {!killSwitchActive && <RotatingCoreText />}
+          {killSwitchActive && (
+            <text x={CORE_X} y={CORE_Y + 62} textAnchor="middle" fontSize="8" fontFamily="JetBrains Mono" fill="hsl(0, 70%, 50%)" opacity="0.8">
+              all agents terminated
+            </text>
+          )}
+          <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 60%, 55%)" : "hsl(152, 60%, 48%)"} fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
             {onlineCount}/{agents.length} ONLINE
           </text>
         </FloatingGroup>
