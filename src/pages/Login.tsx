@@ -102,19 +102,8 @@ export default function Login() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-
-        // Check admin role
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-          if (isAdmin) {
-            toast.success("Welcome back, Admin");
-            navigate("/admin");
-          } else {
-            toast.success("Logged in");
-            navigate("/");
-          }
-        }
+        toast.success("Logged in");
+        navigate("/");
       }
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
