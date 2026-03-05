@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      graph_configs: {
+        Row: {
+          agents_data: Json
+          created_at: string
+          edges_data: Json
+          id: string
+          name: string
+          project: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agents_data: Json
+          created_at?: string
+          edges_data: Json
+          id?: string
+          name: string
+          project?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agents_data?: Json
+          created_at?: string
+          edges_data?: Json
+          id?: string
+          name?: string
+          project?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
