@@ -1078,27 +1078,54 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         })}
 
         <FloatingGroup index={99} isHovered={false}>
-          <circle cx={CORE_X} cy={CORE_Y} r="65" fill="url(#coreGlow)" filter="url(#blur)">
-            <animate attributeName="r" values="60;70;60" dur="5s" repeatCount="indefinite" />
-          </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)"} strokeWidth={killSwitchActive ? "2.5" : "1.5"} opacity="0.9">
-            <animate attributeName="r" values="30;34;30" dur="5s" repeatCount="indefinite" />
-          </circle>
-          <circle cx={CORE_X} cy={CORE_Y} r="6" fill={killSwitchActive ? "hsl(0, 70%, 55%)" : "hsl(215, 80%, 65%)"}>
-            <animate attributeName="opacity" values={killSwitchActive ? "0.5;1;0.5" : "0.7;1;0.7"} dur={killSwitchActive ? "1.5s" : "3s"} repeatCount="indefinite" />
-          </circle>
-          <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 70%, 60%)" : "hsl(0, 0%, 75%)"} fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
-            {killSwitchActive ? "⚠ SYSTEM KILLED" : "SOLO OS CORE"}
-          </text>
-          {!killSwitchActive && <RotatingCoreText />}
-          {killSwitchActive && (
-            <text x={CORE_X} y={CORE_Y + 62} textAnchor="middle" fontSize="8" fontFamily="JetBrains Mono" fill="hsl(0, 70%, 50%)" opacity="0.8">
-              all agents terminated
+          <g
+            style={{ cursor: connectMode ? "crosshair" : "default" }}
+            onClick={(e) => {
+              if (!connectMode) return;
+              e.stopPropagation();
+              if (!connectSource) {
+                setConnectSource("core");
+              } else if (connectSource !== "core") {
+                setPendingEdge({ from: connectSource, to: "core" });
+                setConnectSource(null);
+              }
+            }}
+          >
+            {/* Connect source pulsing ring on core */}
+            {connectSource === "core" && (
+              <circle cx={CORE_X} cy={CORE_Y} r="50" fill="none" stroke="hsl(215, 80%, 60%)" strokeWidth={2} opacity={0.7}>
+                <animate attributeName="r" values="46;54;46" dur="1.2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.2s" repeatCount="indefinite" />
+              </circle>
+            )}
+            {/* Connect target highlight on core */}
+            {connectMode && connectSource && connectSource !== "core" && (
+              <circle cx={CORE_X} cy={CORE_Y} r="44" fill="none" stroke="hsl(215, 80%, 60%)" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.5}>
+                <animate attributeName="stroke-dashoffset" values="0;-18" dur="2s" repeatCount="indefinite" />
+              </circle>
+            )}
+            <circle cx={CORE_X} cy={CORE_Y} r="65" fill="url(#coreGlow)" filter="url(#blur)">
+              <animate attributeName="r" values="60;70;60" dur="5s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke={killSwitchActive ? "hsl(0, 70%, 50%)" : connectSource === "core" ? "hsl(215, 80%, 60%)" : "hsl(215, 80%, 60%)"} strokeWidth={killSwitchActive ? "2.5" : connectSource === "core" ? "2.5" : "1.5"} opacity="0.9">
+              <animate attributeName="r" values="30;34;30" dur="5s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={CORE_X} cy={CORE_Y} r="6" fill={killSwitchActive ? "hsl(0, 70%, 55%)" : "hsl(215, 80%, 65%)"}>
+              <animate attributeName="opacity" values={killSwitchActive ? "0.5;1;0.5" : "0.7;1;0.7"} dur={killSwitchActive ? "1.5s" : "3s"} repeatCount="indefinite" />
+            </circle>
+            <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 70%, 60%)" : "hsl(0, 0%, 75%)"} fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
+              {killSwitchActive ? "⚠ SYSTEM KILLED" : "SOLO OS CORE"}
             </text>
-          )}
-          <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 60%, 55%)" : "hsl(152, 60%, 48%)"} fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
-            {onlineCount}/{agents.length} ONLINE
-          </text>
+            {!killSwitchActive && <RotatingCoreText />}
+            {killSwitchActive && (
+              <text x={CORE_X} y={CORE_Y + 62} textAnchor="middle" fontSize="8" fontFamily="JetBrains Mono" fill="hsl(0, 70%, 50%)" opacity="0.8">
+                all agents terminated
+              </text>
+            )}
+            <text x={CORE_X} y={CORE_Y - 48} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 60%, 55%)" : "hsl(152, 60%, 48%)"} fontSize="8" fontFamily="JetBrains Mono" opacity="0.6">
+              {onlineCount}/{agents.length} ONLINE
+            </text>
+          </g>
         </FloatingGroup>
 
         {agents.map((agent, i) => {
