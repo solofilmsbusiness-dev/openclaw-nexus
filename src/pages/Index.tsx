@@ -140,10 +140,11 @@ const Index = () => {
         {/* Right panel */}
         <div
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            rightCollapsed ? "w-0 lg:w-0" : "w-full lg:w-[280px]"
+            rightCollapsed ? "w-0 lg:w-0" : "w-full"
           }`}
+          style={!rightCollapsed && !isMobile ? { width: layout.rightPanelWidth } : undefined}
         >
-          <div className="w-full lg:w-[280px] h-full flex flex-col gap-3 min-h-0 overflow-hidden">
+          <div className={`h-full flex flex-col ${layout.compactMode ? "gap-1.5" : "gap-3"} min-h-0 overflow-hidden`} style={!isMobile ? { width: layout.rightPanelWidth } : undefined}>
             <div className="flex-1 min-h-0 overflow-hidden" data-tour="event-timeline">
               <EventTimeline
                 events={events}
