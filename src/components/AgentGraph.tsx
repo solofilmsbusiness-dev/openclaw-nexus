@@ -168,7 +168,7 @@ function AgentNode({
           onMouseDown={(e) => { e.stopPropagation(); onResizeStart(agent.id, e); }}
         >
           <circle cx={x + size * 0.7} cy={y + size * 0.7} r={4} fill="hsl(215, 80%, 60%)" opacity={0.7} stroke="hsl(225, 12%, 10%)" strokeWidth={1} />
-          <line x1={x + size * 0.7 - 2} y1={x + size * 0.7 + 2} x2={x + size * 0.7 + 2} y2={y + size * 0.7 - 2} stroke="white" strokeWidth={0.8} opacity={0.8} />
+          <line x1={x + size * 0.7 - 2} y1={y + size * 0.7 + 2} x2={x + size * 0.7 + 2} y2={y + size * 0.7 - 2} stroke="white" strokeWidth={0.8} opacity={0.8} />
         </g>
       )}
     </motion.g>
