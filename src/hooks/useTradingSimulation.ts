@@ -55,6 +55,27 @@ export interface LearningNote {
   timestamp: Date;
 }
 
+export interface PortfolioHolding {
+  symbol: string;
+  name: string;
+  shares: number;
+  avgCost: number;
+  currentPrice: number;
+  value: number;
+  pnl: number;
+  pnlPercent: number;
+  allocation: number;
+}
+
+export interface PortfolioSummary {
+  totalValue: number;
+  cashBalance: number;
+  investedValue: number;
+  totalPnl: number;
+  totalPnlPercent: number;
+  holdings: PortfolioHolding[];
+}
+
 // --- Seed data ---
 const TICKERS_SEED: { symbol: string; name: string; basePrice: number }[] = [
   { symbol: "AAPL", name: "Apple Inc.", basePrice: 198.5 },
@@ -313,6 +334,64 @@ export function useTradingSimulation() {
     return () => clearInterval(interval);
   }, []);
 
+  // Portfolio computation
+  const INITIAL_CASH = 100_000;
+  const portfolio: PortfolioSummary = (() => {
+    // Simulated holdings based on tickers
+    const holdingSeed = [
+      { symbol: "AAPL", shares: 45 },
+      { symbol: "TSLA", shares: 20 },
+      { symbol: "NVDA", shares: 12 },
+      { symbol: "MSFT", shares: 30 },
+      { symbol: "AMZN", shares: 25 },
+      { symbol: "META", shares: 8 },
+    ];
+
+    const holdings: PortfolioHolding[] = holdingSeed.map((h) => {
+      const ticker = tickers.find((t) => t.symbol === h.symbol);
+      const seed = TICKERS_SEED.find((s) => s.symbol === h.symbol)!;
+      const currentPrice = ticker?.price ?? seed.basePrice;
+      const avgCost = seed.basePrice * (1 + rand(-0.05, 0.05)); // slightly off base
+      const value = currentPrice * h.shares;
+      const costBasis = avgCost * h.shares;
+      const pnl = value - costBasis;
+      const pnlPercent = (pnl / costBasis) * 100;
+      return {
+        symbol: h.symbol,
+        name: TICKER_NAME_MAP[h.symbol] || h.symbol,
+        shares: h.shares,
+        avgCost: Math.round(avgCost * 100) / 100,
+        currentPrice: Math.round(currentPrice * 100) / 100,
+        value: Math.round(value * 100) / 100,
+        pnl: Math.round(pnl * 100) / 100,
+        pnlPercent: Math.round(pnlPercent * 100) / 100,
+        allocation: 0,
+      };
+    });
+
+    const investedValue = holdings.reduce((s, h) => s + h.value, 0);
+    const cashBalance = INITIAL_CASH - holdings.reduce((s, h) => s + h.avgCost * h.shares, 0);
+    const totalValue = investedValue + cashBalance;
+
+    // Compute allocation %
+    holdings.forEach((h) => {
+      h.allocation = Math.round((h.value / totalValue) * 1000) / 10;
+    });
+
+    const totalCost = holdings.reduce((s, h) => s + h.avgCost * h.shares, 0);
+    const totalPnl = investedValue - totalCost;
+    const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+
+    return {
+      totalValue: Math.round(totalValue * 100) / 100,
+      cashBalance: Math.round(cashBalance * 100) / 100,
+      investedValue: Math.round(investedValue * 100) / 100,
+      totalPnl: Math.round(totalPnl * 100) / 100,
+      totalPnlPercent: Math.round(totalPnlPercent * 100) / 100,
+      holdings,
+    };
+  })();
+
   // Aggregate stats
   const totalPnl = tradeHistory.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
   const totalTrades = tradeHistory.length;
@@ -327,6 +406,7 @@ export function useTradingSimulation() {
     tradeHistory,
     learningNotes,
     dataSource,
+    portfolio,
     stats: { totalPnl: Math.round(totalPnl * 100) / 100, totalTrades, winRate },
   };
 }

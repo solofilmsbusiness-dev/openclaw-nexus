@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
-  Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye,
+  Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, PieChart as PieChartIcon,
 } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -36,11 +36,19 @@ const categoryColor: Record<LearningNote["category"], string> = {
   Adjustment: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
   Pattern: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
 };
+const PIE_COLORS = [
+  "hsl(var(--neon-green))",
+  "hsl(var(--neon-blue))",
+  "hsl(var(--neon-orange))",
+  "hsl(var(--neon-cyan))",
+  "hsl(var(--neon-purple))",
+  "hsl(var(--neon-red))",
+];
 
 const Trading = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
-  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource } =
+  const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio } =
     useTradingSimulation();
 
   useEffect(() => {
@@ -104,7 +112,7 @@ const Trading = () => {
       </div>
 
       {/* Main grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 min-h-0 overflow-auto">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 p-3 min-h-0 overflow-auto">
         {/* Market Data Panel */}
         <motion.div className="glass-panel neon-border p-4 flex flex-col min-h-0" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-2 mb-3">
@@ -329,6 +337,114 @@ const Trading = () => {
                 </motion.div>
               ))}
             </div>
+          </ScrollArea>
+        </motion.div>
+
+        {/* Portfolio Summary Panel */}
+        <motion.div className="glass-panel neon-border p-4 flex flex-col min-h-0 lg:col-span-2 xl:col-span-1" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan" />
+            <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Portfolio Summary</span>
+            <Wallet className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
+          </div>
+
+          {/* Balance cards */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
+              <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Total Value</p>
+              <p className="font-mono text-sm font-semibold text-foreground">${portfolio.totalValue.toLocaleString()}</p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
+              <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Cash</p>
+              <p className="font-mono text-sm font-semibold text-foreground">${portfolio.cashBalance.toLocaleString()}</p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
+              <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">P/L</p>
+              <p className={`font-mono text-sm font-semibold ${portfolio.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                {portfolio.totalPnl >= 0 ? "+" : ""}${portfolio.totalPnl.toLocaleString()}
+              </p>
+              <p className={`text-[9px] font-mono ${portfolio.totalPnlPercent >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                {portfolio.totalPnlPercent >= 0 ? "+" : ""}{portfolio.totalPnlPercent.toFixed(2)}%
+              </p>
+            </div>
+          </div>
+
+          {/* Pie chart */}
+          <div className="flex items-center gap-2 mb-2">
+            <PieChartIcon className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[10px] font-mono text-muted-foreground uppercase">Asset Allocation</span>
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-32 h-32 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      ...portfolio.holdings.map((h) => ({ name: h.symbol, value: h.value })),
+                      { name: "Cash", value: portfolio.cashBalance },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={28}
+                    outerRadius={55}
+                    paddingAngle={2}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {portfolio.holdings.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                    <Cell fill="hsl(var(--muted-foreground) / 0.3)" />
+                  </Pie>
+                  <ReTooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11, fontFamily: "monospace" }}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, ""]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-1">
+              {portfolio.holdings.map((h, i) => (
+                <div key={h.symbol} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                  <span className="font-mono text-[10px] text-foreground w-10">{h.symbol}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{h.allocation}%</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full shrink-0 bg-muted-foreground/30" />
+                <span className="font-mono text-[10px] text-foreground w-10">Cash</span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {Math.round((portfolio.cashBalance / portfolio.totalValue) * 1000) / 10}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Holdings table */}
+          <ScrollArea className="flex-1 max-h-[180px]">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/30">
+                  <TableHead className="text-[10px] font-mono text-muted-foreground">Asset</TableHead>
+                  <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Shares</TableHead>
+                  <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Value</TableHead>
+                  <TableHead className="text-[10px] font-mono text-muted-foreground text-right">P/L</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {portfolio.holdings.map((h) => (
+                  <TableRow key={h.symbol} className="border-border/20">
+                    <TableCell className="py-1.5 font-mono text-xs font-semibold text-foreground">{h.symbol}</TableCell>
+                    <TableCell className="py-1.5 text-right font-mono text-xs text-muted-foreground">{h.shares}</TableCell>
+                    <TableCell className="py-1.5 text-right font-mono text-xs text-foreground">${h.value.toLocaleString()}</TableCell>
+                    <TableCell className={`py-1.5 text-right font-mono text-xs font-semibold ${h.pnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                      {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </ScrollArea>
         </motion.div>
       </div>
