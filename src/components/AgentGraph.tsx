@@ -536,6 +536,7 @@ interface AgentGraphProps {
 }
 
 export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent, killSwitchActive = false }: AgentGraphProps) {
+  const { killAll, reviveAll } = useAgents();
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
   const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<Agent | null>(null);
