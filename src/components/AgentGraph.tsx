@@ -1087,6 +1087,16 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         })}
       </svg>
 
+      {/* Kill switch red overlay — full container HTML div */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] rounded-xl"
+        style={{
+          background: "radial-gradient(ellipse at center, hsl(0 70% 40% / 0.25), hsl(0 70% 30% / 0.12))",
+          opacity: killProgress,
+          transition: "none",
+        }}
+      />
+
       {displayAgent && !connectMode && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
