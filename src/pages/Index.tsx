@@ -61,7 +61,6 @@ const Index = () => {
           <MetricsBar agents={agents} />
         </div>
       )}
-      </div>
 
       <CommandPalette
         agents={agents}
