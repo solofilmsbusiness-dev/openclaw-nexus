@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import MetricsBar from "@/components/MetricsBar";
@@ -151,12 +152,19 @@ const Index = () => {
 
       {/* Cmd+K hint */}
       <div className="fixed bottom-4 right-4 z-50">
-        <button
-          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel neon-border text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <span>⌘K</span>
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel neon-border text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>⌘K</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="text-xs">
+            Command Palette
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );
