@@ -12,9 +12,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Space Grotesk", "sans-serif"],
-        body: ["Space Grotesk", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        display: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "Inter", "sans-serif"],
+        body: ["-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Inter", "sans-serif"],
+        mono: ["JetBrains Mono", "SF Mono", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -71,8 +71,8 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
       },
       keyframes: {
         "accordion-down": {
@@ -84,18 +84,18 @@ export default {
           to: { height: "0" },
         },
         "pulse-glow": {
-          "0%, 100%": { opacity: "0.6" },
+          "0%, 100%": { opacity: "0.5" },
           "50%": { opacity: "1" },
         },
         "drift": {
           "0%, 100%": { transform: "translate(0, 0)" },
-          "25%": { transform: "translate(3px, -2px)" },
-          "50%": { transform: "translate(-2px, 3px)" },
-          "75%": { transform: "translate(2px, 1px)" },
+          "25%": { transform: "translate(2px, -1.5px)" },
+          "50%": { transform: "translate(-1.5px, 2px)" },
+          "75%": { transform: "translate(1.5px, 0.5px)" },
         },
         "core-pulse": {
           "0%, 100%": { transform: "scale(1)", filter: "brightness(1)" },
-          "50%": { transform: "scale(1.05)", filter: "brightness(1.3)" },
+          "50%": { transform: "scale(1.03)", filter: "brightness(1.15)" },
         },
       },
       animation: {

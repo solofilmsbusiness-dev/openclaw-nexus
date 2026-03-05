@@ -15,14 +15,17 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-3 sm:px-6 py-3 glass-panel">
-      <div className="flex items-center gap-2 mr-2 sm:mr-4">
-        <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse-glow" />
-        <span className="font-display font-bold text-xs sm:text-sm tracking-widest uppercase text-foreground">
-          OpenClaw
+    <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-4 sm:px-6 py-3 glass-panel rounded-none border-x-0 border-t-0">
+      <div className="flex items-center gap-2.5 mr-2 sm:mr-4">
+        <div className="w-2 h-2 rounded-full bg-neon-green" />
+        <span className="font-display font-semibold text-xs sm:text-sm tracking-wide text-foreground">
+          Solo OS
+        </span>
+        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+          2.26
         </span>
       </div>
-      <div className="hidden sm:block h-6 w-px bg-border" />
+      <div className="hidden sm:block h-5 w-px bg-border/50" />
       {metrics.map((m) => (
         <motion.div
           key={m.label}
@@ -32,17 +35,16 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
           transition={{ delay: 0.1 }}
         >
           <m.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${m.colorClass}`} />
-          <span className="hidden sm:inline text-muted-foreground text-xs uppercase tracking-wider">{m.label}</span>
+          <span className="hidden sm:inline text-muted-foreground text-xs tracking-wide">{m.label}</span>
           <AnimatedCounter value={m.value} className={`metric-counter text-sm sm:text-base ${m.colorClass}`} />
-          {/* Red notification dot for down agents */}
           {m.label === "Down" && downCount > 0 && (
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-neon-red animate-pulse-glow" />
           )}
         </motion.div>
       ))}
       <div className="ml-auto flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse-glow" />
-        <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">ONLINE</span>
+        <div className="w-1.5 h-1.5 rounded-full bg-neon-green" />
+        <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">Online</span>
       </div>
     </div>
   );
