@@ -283,11 +283,12 @@ const Trading = () => {
                   <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Exit</TableHead>
                   <TableHead className="text-[10px] font-mono text-muted-foreground text-right">P/L</TableHead>
                   <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Time</TableHead>
+                  <TableHead className="text-[10px] font-mono text-muted-foreground w-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tradeHistory.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-xs text-muted-foreground font-mono py-4">No trades recorded yet…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-xs text-muted-foreground font-mono py-4">No trades recorded yet…</TableCell></TableRow>
                 )}
                 {tradeHistory.map((t) => (
                   <TableRow key={t.id} className="border-border/20">
@@ -303,6 +304,11 @@ const Trading = () => {
                       {t.pnl === null ? "Open" : `${t.pnl >= 0 ? "+" : ""}$${t.pnl.toFixed(2)}`}
                     </TableCell>
                     <TableCell className="py-2 text-right text-[9px] font-mono text-muted-foreground">{formatTime(t.timestamp)}</TableCell>
+                    <TableCell className="py-2 w-8">
+                      <button onClick={() => deleteTrade(t.id)} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground/40 hover:text-destructive transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -332,7 +338,12 @@ const Trading = () => {
                       {categoryIcon[note.category]}
                       {note.category}
                     </span>
-                    <span className="text-[9px] font-mono text-muted-foreground">{formatTime(note.timestamp)}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-muted-foreground">{formatTime(note.timestamp)}</span>
+                      <button onClick={() => deleteLearningNote(note.id)} className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground/40 hover:text-destructive transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-[11px] text-foreground/80 leading-relaxed">{note.content}</p>
                 </motion.div>
