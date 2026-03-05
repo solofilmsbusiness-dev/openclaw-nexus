@@ -106,7 +106,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, name } : a)));
   }, []);
 
-  useSimulation(agents, handleAgentsChange, handleNewEvent);
+  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive);
 
   return (
     <AgentContext.Provider

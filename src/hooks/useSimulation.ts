@@ -47,7 +47,8 @@ function pickRandom<T>(arr: T[]): T {
 export function useSimulation(
   agents: Agent[],
   onAgentsChange: (agents: Agent[]) => void,
-  onNewEvent: (event: AgentEvent) => void
+  onNewEvent: (event: AgentEvent) => void,
+  killSwitchActive: boolean = false
 ) {
   let simulationSpeed = 1500;
   let logRetention = 50;
@@ -65,6 +66,7 @@ export function useSimulation(
 
   // Progress ticking
   useEffect(() => {
+    if (killSwitchActive) return;
     const interval = setInterval(() => {
       const updated = agentsRef.current.map((a) => {
         if (a.status === "down") return a;
@@ -91,10 +93,11 @@ export function useSimulation(
       onAgentsChange(updated);
     }, simulationSpeed);
     return () => clearInterval(interval);
-  }, [onAgentsChange, simulationSpeed]);
+  }, [onAgentsChange, simulationSpeed, killSwitchActive]);
 
   // Status changes — every 8-15s
   useEffect(() => {
+    if (killSwitchActive) return;
     const scheduleNext = () => {
       const delay = 8000 + Math.random() * 7000;
       return setTimeout(() => {
@@ -103,7 +106,6 @@ export function useSimulation(
         const agent = current[idx];
         const oldStatus = agent.status;
         let newStatus: AgentStatus;
-        // Weight towards healthy/active
         const roll = Math.random();
         if (roll < 0.4) newStatus = "healthy";
         else if (roll < 0.7) newStatus = "active";
@@ -123,8 +125,7 @@ export function useSimulation(
           );
           onAgentsChange(updated);
 
-          // Toast notification
-        if (newStatus === "down") {
+          if (newStatus === "down") {
             toast.error(`${agent.name} went down`, { description: "Agent is offline" });
           } else if (oldStatus === "down") {
             toast.success(`${agent.name} is back online`, { description: `Status: ${newStatus}` });
@@ -137,10 +138,11 @@ export function useSimulation(
     };
     const timerRef = { current: scheduleNext() };
     return () => clearTimeout(timerRef.current);
-  }, [onAgentsChange]);
+  }, [onAgentsChange, killSwitchActive]);
 
   // Generate events — every 3-6s
   useEffect(() => {
+    if (killSwitchActive) return;
     const interval = setInterval(() => {
       const current = agentsRef.current;
       const agent = pickRandom(current);
@@ -155,5 +157,5 @@ export function useSimulation(
       onNewEvent(event);
     }, 3000 + Math.random() * 3000);
     return () => clearInterval(interval);
-  }, [onNewEvent]);
+  }, [onNewEvent, killSwitchActive]);
 }
