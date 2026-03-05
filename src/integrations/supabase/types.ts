@@ -47,6 +47,63 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_notes: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trade_history: {
+        Row: {
+          asset: string
+          created_at: string
+          entry_price: number
+          exit_price: number | null
+          id: string
+          pnl: number | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          asset: string
+          created_at?: string
+          entry_price: number
+          exit_price?: number | null
+          id?: string
+          pnl?: number | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          asset?: string
+          created_at?: string
+          entry_price?: number
+          exit_price?: number | null
+          id?: string
+          pnl?: number | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
