@@ -6,7 +6,7 @@ export interface InstrumentInfo {
   symbol: string;
   name: string;
   basePrice: number;
-  type: "stock" | "futures";
+  type: "stock" | "futures" | "crypto";
   tickSize?: number;
   contractMonth?: string;
 }
@@ -20,7 +20,7 @@ export interface MarketTicker {
   volume: number;
   history: number[];
   isLive: boolean;
-  type: "stock" | "futures";
+  type: "stock" | "futures" | "crypto";
 }
 
 export interface AgentEvaluation {
@@ -110,6 +110,10 @@ export const ALL_INSTRUMENTS: InstrumentInfo[] = [
   // Other Futures
   { symbol: "ZB", name: "Treasury Bonds", basePrice: 118.5, type: "futures", tickSize: 0.03125, contractMonth: "Jun 26" },
   { symbol: "6E", name: "Euro FX", basePrice: 1.085, type: "futures", tickSize: 0.00005, contractMonth: "Jun 26" },
+  // Cryptocurrencies
+  { symbol: "BTC", name: "Bitcoin", basePrice: 42350.0, type: "crypto" },
+  { symbol: "ETH", name: "Ethereum", basePrice: 2280.5, type: "crypto" },
+  { symbol: "SOL", name: "Solana", basePrice: 145.8, type: "crypto" },
 ];
 
 const DEFAULT_ACTIVE = ["AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "AMD"];
@@ -292,13 +296,14 @@ export function useTradingSimulation() {
   const fetchMarketData = useCallback(async () => {
     try {
       const stockSymbols = activeInstruments.filter((i) => i.type === "stock").map((t) => t.symbol);
-      if (stockSymbols.length === 0) {
+      const cryptoSymbols = activeInstruments.filter((i) => i.type === "crypto").map((t) => t.symbol);
+      if (stockSymbols.length === 0 && cryptoSymbols.length === 0) {
         setDataSource("simulated");
         return false;
       }
 
       const { data, error } = await supabase.functions.invoke("market-data", {
-        body: { symbols: stockSymbols },
+        body: { symbols: stockSymbols, cryptoSymbols },
       });
 
       if (error) {
@@ -341,7 +346,7 @@ export function useTradingSimulation() {
       setDataSource("simulated");
       return false;
     }
-  }, [activeSymbols]);
+  }, [activeInstruments]);
 
   useEffect(() => {
     fetchMarketData();
