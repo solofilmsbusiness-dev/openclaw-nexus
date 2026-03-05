@@ -264,19 +264,6 @@ function AgentsTab({
                       <Power className="w-3 h-3 text-destructive" />
                     </button>
                   )}
-                  {isDead && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange(agent.id, "healthy", { currentTask: "Resuming operations", progress: 50 });
-                        toast.success(`${agent.name} revived`);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-neon-green/20"
-                      title="Revive agent"
-                    >
-                      <Zap className="w-3 h-3 text-neon-green" />
-                    </button>
-                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
