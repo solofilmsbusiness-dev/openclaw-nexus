@@ -54,10 +54,13 @@ const Index = () => {
   } = useAgents();
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className={`h-screen bg-background flex flex-col overflow-hidden ${layout.compactMode ? "text-[0.9em]" : ""}`}>
       <OnboardingTour />
-      <div data-tour="metrics-bar">
-        <MetricsBar agents={agents} />
+      {layout.showMetricsBar && (
+        <div data-tour="metrics-bar">
+          <MetricsBar agents={agents} />
+        </div>
+      )}
       </div>
 
       <CommandPalette
