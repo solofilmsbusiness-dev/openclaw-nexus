@@ -39,41 +39,50 @@ function getNodePositions(agents: Agent[]) {
 }
 
 // Solar system particle effects
-function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+function OrbitalParticles({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const scale = viewBox.w / DEFAULT_VIEWBOX.w;
   const particles = useMemo(() => {
-    const colors = [
-      "hsl(215, 80%, 60%)",
-      "hsl(195, 60%, 55%)",
-      "hsl(270, 50%, 60%)",
-      "hsl(215, 80%, 70%)",
-      "hsl(195, 60%, 65%)",
-    ];
     return Array.from({ length: 25 }, (_, i) => {
       const baseRadius = 80 + ((i * 37) % 270);
       const size = 1 + ((i * 7) % 3);
       const dur = 12 + ((i * 13) % 48);
       const reverse = i % 3 === 0;
       const opacity = 0.12 + ((i * 11) % 28) / 100;
-      const color = colors[i % colors.length];
       const useGlow = size >= 2.5;
-      return { baseRadius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
+      return { baseRadius, size, dur, reverse, opacity, useGlow, startAngle: (i * 47) % 360 };
     });
   }, []);
+
+  const killColors = [
+    "hsl(0, 70%, 50%)",
+    "hsl(0, 60%, 45%)",
+    "hsl(10, 70%, 48%)",
+    "hsl(0, 80%, 55%)",
+    "hsl(350, 65%, 50%)",
+  ];
+  const normalColors = [
+    "hsl(215, 80%, 60%)",
+    "hsl(195, 60%, 55%)",
+    "hsl(270, 50%, 60%)",
+    "hsl(215, 80%, 70%)",
+    "hsl(195, 60%, 65%)",
+  ];
+  const colors = killSwitchActive ? killColors : normalColors;
 
   return (
     <g style={{ pointerEvents: "none" }}>
       {particles.map((p, i) => {
         const radius = p.baseRadius * scale;
+        const color = colors[i % colors.length];
         return (
           <circle
             key={`orbit-${i}`}
             cx={CORE_X + radius}
             cy={CORE_Y}
             r={p.size * Math.max(1, scale * 0.6)}
-            fill={p.color}
-            opacity={p.opacity}
-            filter={p.useGlow ? "url(#particleGlow)" : undefined}
+            fill={color}
+            opacity={killSwitchActive ? p.opacity * 2.5 : p.opacity}
+            filter={p.useGlow || killSwitchActive ? (killSwitchActive ? "url(#killGlow)" : "url(#particleGlow)") : undefined}
           >
             <animateTransform
               attributeName="transform"
@@ -83,7 +92,7 @@ function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: num
               dur={`${p.dur}s`}
               repeatCount="indefinite"
             />
-            <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`${killSwitchActive ? p.opacity * 2 : p.opacity};${killSwitchActive ? p.opacity * 3.5 : p.opacity * 2};${killSwitchActive ? p.opacity * 2 : p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
           </circle>
         );
       })}
@@ -91,10 +100,9 @@ function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: num
   );
 }
 
-function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+function Stardust({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const stars = useMemo(() => {
     return Array.from({ length: 40 }, (_, i) => {
-      // Deterministic scatter using index
       const fx = ((i * 173 + 29) % 100) / 100;
       const fy = ((i * 241 + 53) % 100) / 100;
       const size = 0.5 + ((i * 7) % 10) / 10;
@@ -112,12 +120,13 @@ function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: 
           cx={viewBox.x + s.fx * viewBox.w}
           cy={viewBox.y + s.fy * viewBox.h}
           r={s.size}
-          fill="hsl(215, 60%, 75%)"
+          fill={killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 60%, 75%)"}
           opacity={0}
+          filter={killSwitchActive ? "url(#killGlow)" : undefined}
         >
           <animate
             attributeName="opacity"
-            values="0.05;0.35;0.05"
+            values={killSwitchActive ? "0.1;0.6;0.1" : "0.05;0.35;0.05"}
             dur={`${s.dur}s`}
             begin={`${s.delay}s`}
             repeatCount="indefinite"
@@ -128,7 +137,7 @@ function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: 
   );
 }
 
-function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+function CoreEnergyRings({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const scale = viewBox.w / DEFAULT_VIEWBOX.w;
   const maxR = Math.round(220 * scale);
   const rings = [
@@ -136,6 +145,7 @@ function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: numb
     { delay: "2s", dur: "6s" },
     { delay: "4s", dur: "6s" },
   ];
+  const strokeColor = killSwitchActive ? "hsl(0, 70%, 50%)" : "hsl(215, 80%, 60%)";
 
   return (
     <g style={{ pointerEvents: "none" }}>
@@ -146,13 +156,13 @@ function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: numb
           cy={CORE_Y}
           r={30}
           fill="none"
-          stroke="hsl(215, 80%, 60%)"
-          strokeWidth={1}
+          stroke={strokeColor}
+          strokeWidth={killSwitchActive ? 1.5 : 1}
           opacity={0}
         >
           <animate attributeName="r" from="30" to={`${maxR}`} dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.15;0.08;0" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
-          <animate attributeName="stroke-width" from="1.5" to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="opacity" values={killSwitchActive ? "0.3;0.15;0" : "0.15;0.08;0"} dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="stroke-width" from={killSwitchActive ? "2" : "1.5"} to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
         </circle>
       ))}
     </g>
