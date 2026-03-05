@@ -39,7 +39,8 @@ function getNodePositions(agents: Agent[]) {
 }
 
 // Solar system particle effects
-function OrbitalParticles() {
+function OrbitalParticles({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+  const scale = viewBox.w / DEFAULT_VIEWBOX.w;
   const particles = useMemo(() => {
     const colors = [
       "hsl(215, 80%, 60%)",
@@ -49,40 +50,43 @@ function OrbitalParticles() {
       "hsl(195, 60%, 65%)",
     ];
     return Array.from({ length: 25 }, (_, i) => {
-      const radius = 80 + ((i * 37) % 270);
+      const baseRadius = 80 + ((i * 37) % 270);
       const size = 1 + ((i * 7) % 3);
       const dur = 12 + ((i * 13) % 48);
       const reverse = i % 3 === 0;
       const opacity = 0.12 + ((i * 11) % 28) / 100;
       const color = colors[i % colors.length];
       const useGlow = size >= 2.5;
-      return { radius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
+      return { baseRadius, size, dur, reverse, opacity, color, useGlow, startAngle: (i * 47) % 360 };
     });
   }, []);
 
   return (
     <g style={{ pointerEvents: "none" }}>
-      {particles.map((p, i) => (
-        <circle
-          key={`orbit-${i}`}
-          cx={CORE_X + p.radius}
-          cy={CORE_Y}
-          r={p.size}
-          fill={p.color}
-          opacity={p.opacity}
-          filter={p.useGlow ? "url(#particleGlow)" : undefined}
-        >
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from={`${p.startAngle} ${CORE_X} ${CORE_Y}`}
-            to={`${p.startAngle + (p.reverse ? -360 : 360)} ${CORE_X} ${CORE_Y}`}
-            dur={`${p.dur}s`}
-            repeatCount="indefinite"
-          />
-          <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
-        </circle>
-      ))}
+      {particles.map((p, i) => {
+        const radius = p.baseRadius * scale;
+        return (
+          <circle
+            key={`orbit-${i}`}
+            cx={CORE_X + radius}
+            cy={CORE_Y}
+            r={p.size * Math.max(1, scale * 0.6)}
+            fill={p.color}
+            opacity={p.opacity}
+            filter={p.useGlow ? "url(#particleGlow)" : undefined}
+          >
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from={`${p.startAngle} ${CORE_X} ${CORE_Y}`}
+              to={`${p.startAngle + (p.reverse ? -360 : 360)} ${CORE_X} ${CORE_Y}`}
+              dur={`${p.dur}s`}
+              repeatCount="indefinite"
+            />
+            <animate attributeName="opacity" values={`${p.opacity};${p.opacity * 2};${p.opacity}`} dur={`${p.dur / 2}s`} repeatCount="indefinite" />
+          </circle>
+        );
+      })}
     </g>
   );
 }
@@ -124,7 +128,9 @@ function Stardust({ viewBox }: { viewBox: { x: number; y: number; w: number; h: 
   );
 }
 
-function CoreEnergyRings() {
+function CoreEnergyRings({ viewBox }: { viewBox: { x: number; y: number; w: number; h: number } }) {
+  const scale = viewBox.w / DEFAULT_VIEWBOX.w;
+  const maxR = Math.round(220 * scale);
   const rings = [
     { delay: "0s", dur: "6s" },
     { delay: "2s", dur: "6s" },
@@ -144,7 +150,7 @@ function CoreEnergyRings() {
           strokeWidth={1}
           opacity={0}
         >
-          <animate attributeName="r" from="30" to="220" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
+          <animate attributeName="r" from="30" to={`${maxR}`} dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.15;0.08;0" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
           <animate attributeName="stroke-width" from="1.5" to="0.3" dur={ring.dur} begin={ring.delay} repeatCount="indefinite" />
         </circle>
@@ -271,10 +277,6 @@ function AgentNode({
       {/* Current task */}
       <text x={x} y={y + size + 38} textAnchor="middle" fill={color.bg} fontSize="7" fontFamily="JetBrains Mono" opacity="0.5">
         {agent.currentTask}
-      </text>
-      {/* Progress readout */}
-      <text x={x} y={y - size - 8} textAnchor="middle" fill={color.bg} fontSize="8" fontFamily="JetBrains Mono" fontWeight="600" opacity={active ? 0.9 : 0.4}>
-        {agent.progress}%
       </text>
       {/* Resize handle - visible on hover/selection */}
       {(active || isSelected) && (
@@ -920,8 +922,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
         {/* Solar system effects */}
         <Stardust viewBox={viewBox} />
-        <OrbitalParticles />
-        <CoreEnergyRings />
+        <OrbitalParticles viewBox={viewBox} />
+        <CoreEnergyRings viewBox={viewBox} />
 
         {edges.map((edge) => {
           const from = positions[edge.from];
