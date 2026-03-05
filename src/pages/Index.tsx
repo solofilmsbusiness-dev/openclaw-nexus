@@ -3,6 +3,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import MetricsBar from "@/components/MetricsBar";
+import OnboardingTour from "@/components/OnboardingTour";
 import AgentGraph from "@/components/AgentGraph";
 import EventTimeline from "@/components/EventTimeline";
 import TerminalLog from "@/components/TerminalLog";
@@ -52,7 +53,10 @@ const Index = () => {
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <MetricsBar agents={agents} />
+      <OnboardingTour />
+      <div data-tour="metrics-bar">
+        <MetricsBar agents={agents} />
+      </div>
 
       <CommandPalette
         agents={agents}
@@ -63,6 +67,7 @@ const Index = () => {
       <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-hidden">
         {/* Left sidebar */}
         <div
+          data-tour="agent-cards"
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
             collapsed ? "w-0 lg:w-0" : "w-full lg:w-[320px]"
           }`}
@@ -97,7 +102,7 @@ const Index = () => {
         </button>
 
         {/* Graph */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden" data-tour="agent-graph">
           <AgentGraph
             agents={agents}
             edges={edges}
@@ -129,6 +134,7 @@ const Index = () => {
 
         {/* Right panel */}
         <div
+          data-tour="event-timeline"
           className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
             rightCollapsed ? "w-0 lg:w-0" : "w-full lg:w-[280px]"
           }`}
@@ -151,7 +157,7 @@ const Index = () => {
       {/* Settings button removed — now in MetricsBar */}
 
       {/* Cmd+K hint */}
-      <div className="fixed bottom-4 right-4 z-50">
+      <div className="fixed bottom-4 right-4 z-50" data-tour="cmd-k">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
