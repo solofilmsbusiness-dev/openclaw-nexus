@@ -1,6 +1,7 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useContext } from "react";
 import type { Agent, AgentEvent, AgentStatus } from "@/data/agents";
 import { toast } from "sonner";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const STATUS_OPTIONS: AgentStatus[] = ["healthy", "active", "degraded", "down"];
 const TASKS: Record<string, string[]> = {
@@ -48,10 +49,21 @@ export function useSimulation(
   onAgentsChange: (agents: Agent[]) => void,
   onNewEvent: (event: AgentEvent) => void
 ) {
+  let simulationSpeed = 1500;
+  let logRetention = 50;
+  try {
+    const raw = localStorage.getItem("solo-os-settings");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.system?.simulationSpeed) simulationSpeed = parsed.system.simulationSpeed;
+      if (parsed.system?.logRetention) logRetention = parsed.system.logRetention;
+    }
+  } catch {}
+
   const agentsRef = useRef(agents);
   agentsRef.current = agents;
 
-  // Progress ticking — every 1.5s
+  // Progress ticking
   useEffect(() => {
     const interval = setInterval(() => {
       const updated = agentsRef.current.map((a) => {
@@ -64,7 +76,6 @@ export function useSimulation(
           const tasks = TASKS[a.id] || ["Processing"];
           newTask = pickRandom(tasks.filter((t) => t !== a.currentTask)) || tasks[0];
         }
-        // Shift sparkline data
         const shift = (arr: number[]) => [...arr.slice(1), Math.random()];
         return {
           ...a,
@@ -78,9 +89,9 @@ export function useSimulation(
         };
       });
       onAgentsChange(updated);
-    }, 1500);
+    }, simulationSpeed);
     return () => clearInterval(interval);
-  }, [onAgentsChange]);
+  }, [onAgentsChange, simulationSpeed]);
 
   // Status changes — every 8-15s
   useEffect(() => {

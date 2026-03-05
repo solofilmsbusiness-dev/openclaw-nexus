@@ -4,8 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAgents } from "@/contexts/AgentContext";
 import { statusColor } from "@/data/agents";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Skull, HeartPulse, Pencil, Check, X, LogOut, ArrowLeft, Zap } from "lucide-react";
+import { Shield, Skull, HeartPulse, Pencil, Check, X, LogOut, ArrowLeft, Zap, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ThemeSettings from "@/components/admin/ThemeSettings";
+import NotificationSettings from "@/components/admin/NotificationSettings";
+import UserManagement from "@/components/admin/UserManagement";
+import SystemConfigSettings from "@/components/admin/SystemConfigSettings";
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -126,18 +131,8 @@ export default function Admin() {
                 className="flex items-center gap-3"
               >
                 <span className="font-mono text-xs text-destructive animate-pulse">⚠️ CONFIRM KILL?</span>
-                <button
-                  onClick={handleKill}
-                  className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-mono text-xs tracking-wider uppercase hover:bg-destructive/90 transition-colors"
-                >
-                  CONFIRM
-                </button>
-                <button
-                  onClick={() => setKillConfirm(false)}
-                  className="px-4 py-2 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground font-mono text-xs tracking-wider uppercase hover:bg-secondary/50 transition-colors"
-                >
-                  CANCEL
-                </button>
+                <button onClick={handleKill} className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-mono text-xs tracking-wider uppercase hover:bg-destructive/90 transition-colors">CONFIRM</button>
+                <button onClick={() => setKillConfirm(false)} className="px-4 py-2 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground font-mono text-xs tracking-wider uppercase hover:bg-secondary/50 transition-colors">CANCEL</button>
               </motion.div>
             )}
 
@@ -164,14 +159,8 @@ export default function Admin() {
           </div>
 
           <div className="space-y-1">
-            {/* Header */}
             <div className="grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-2 text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
-              <span>Icon</span>
-              <span>Name</span>
-              <span>Status</span>
-              <span>Task</span>
-              <span>Progress</span>
-              <span>Edit</span>
+              <span>Icon</span><span>Name</span><span>Status</span><span>Task</span><span>Progress</span><span>Edit</span>
             </div>
 
             <AnimatePresence>
@@ -185,29 +174,16 @@ export default function Admin() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
                     className={`grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-3 rounded-lg border transition-all ${
-                      agent.status === "down"
-                        ? "border-destructive/30 bg-destructive/5"
-                        : "border-border/20 hover:border-border/40 hover:bg-secondary/20"
+                      agent.status === "down" ? "border-destructive/30 bg-destructive/5" : "border-border/20 hover:border-border/40 hover:bg-secondary/20"
                     }`}
                   >
                     <span className="text-lg flex items-center">{agent.icon}</span>
-
                     <div className="flex items-center gap-2 min-w-0">
                       {isEditing ? (
                         <div className="flex items-center gap-1.5 flex-1">
-                          <input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }}
-                            autoFocus
-                            className="flex-1 h-7 px-2 rounded border border-primary/50 bg-secondary/50 text-foreground font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          />
-                          <button onClick={handleSaveEdit} className="text-neon-green hover:scale-110 transition-transform">
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-destructive transition-colors">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                          <input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }} autoFocus className="flex-1 h-7 px-2 rounded border border-primary/50 bg-secondary/50 text-foreground font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                          <button onClick={handleSaveEdit} className="text-neon-green hover:scale-110 transition-transform"><Check className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-destructive transition-colors"><X className="w-3.5 h-3.5" /></button>
                         </div>
                       ) : (
                         <div className="truncate">
@@ -216,38 +192,21 @@ export default function Admin() {
                         </div>
                       )}
                     </div>
-
                     <div className="flex items-center">
-                      <span
-                        className="text-[9px] font-mono font-semibold px-2 py-1 rounded"
-                        style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
-                      >
+                      <span className="text-[9px] font-mono font-semibold px-2 py-1 rounded" style={{ color: color.bg, backgroundColor: `${color.bg}15` }}>
                         {agent.status === "down" && agent.currentTask === "KILLED" ? "KILLED" : agent.status.toUpperCase()}
                       </span>
                     </div>
-
-                    <span className="text-[10px] font-mono text-muted-foreground truncate flex items-center">
-                      {agent.currentTask}
-                    </span>
-
+                    <span className="text-[10px] font-mono text-muted-foreground truncate flex items-center">{agent.currentTask}</span>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-muted rounded-full">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: color.bg }}
-                          animate={{ width: `${agent.progress}%` }}
-                          transition={{ duration: 0.5 }}
-                        />
+                        <motion.div className="h-full rounded-full" style={{ backgroundColor: color.bg }} animate={{ width: `${agent.progress}%` }} transition={{ duration: 0.5 }} />
                       </div>
                       <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{agent.progress}%</span>
                     </div>
-
                     <div className="flex items-center justify-center">
                       {!isEditing && (
-                        <button
-                          onClick={() => handleStartEdit(agent.id, agent.name)}
-                          className="p-1.5 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-primary transition-colors"
-                        >
+                        <button onClick={() => handleStartEdit(agent.id, agent.name)} className="p-1.5 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-primary transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -257,6 +216,28 @@ export default function Admin() {
               })}
             </AnimatePresence>
           </div>
+        </div>
+
+        {/* Settings Panel */}
+        <div className="glass-panel neon-border p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <Settings className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold text-base text-foreground">Settings</h2>
+          </div>
+
+          <Tabs defaultValue="theme" className="w-full">
+            <TabsList className="bg-secondary/30 border border-border/20 mb-5">
+              <TabsTrigger value="theme" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">THEME</TabsTrigger>
+              <TabsTrigger value="notifications" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">NOTIFICATIONS</TabsTrigger>
+              <TabsTrigger value="users" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">USERS</TabsTrigger>
+              <TabsTrigger value="system" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">SYSTEM</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="theme"><ThemeSettings /></TabsContent>
+            <TabsContent value="notifications"><NotificationSettings /></TabsContent>
+            <TabsContent value="users"><UserManagement /></TabsContent>
+            <TabsContent value="system"><SystemConfigSettings /></TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
