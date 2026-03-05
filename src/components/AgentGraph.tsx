@@ -1087,11 +1087,11 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         })}
       </svg>
 
-      {/* Kill switch red overlay — full container HTML div */}
+      {/* Kill switch red overlay — full container HTML div with pulse */}
       <div
-        className="absolute inset-0 pointer-events-none z-[1] rounded-xl"
+        className={`absolute inset-0 pointer-events-none z-[1] rounded-xl ${killProgress >= 1 ? 'animate-[killPulse_3s_ease-in-out_infinite]' : ''}`}
         style={{
-          background: "radial-gradient(ellipse at center, hsl(0 70% 40% / 0.25), hsl(0 70% 30% / 0.12))",
+          background: "radial-gradient(ellipse at center, hsl(0 70% 40% / 0.3), hsl(0 70% 30% / 0.12))",
           opacity: killProgress,
           transition: "none",
         }}
