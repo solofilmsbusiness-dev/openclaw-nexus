@@ -335,6 +335,20 @@ function AnimatedEdge({
         </animateMotion>
         <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
       </circle>
+      {/* Reverse particle */}
+      <circle r={highlighted ? 2 : 1.2} fill={color} opacity="0">
+        <animateMotion dur={`${dur * 1.3}s`} repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+          <mpath href={`#${pathId}`} />
+        </animateMotion>
+        <animate attributeName="opacity" values={`0;${highlighted ? 0.5 : 0.2};${highlighted ? 0.5 : 0.2};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.3}s`} repeatCount="indefinite" />
+      </circle>
+      {/* Comet trail (larger, more transparent particle behind main) */}
+      <circle r={highlighted ? 5 : 3} fill={color} opacity="0" filter="url(#particleGlow)">
+        <animateMotion dur={`${dur}s`} repeatCount="indefinite">
+          <mpath href={`#${pathId}`} />
+        </animateMotion>
+        <animate attributeName="opacity" values={`0;${highlighted ? 0.15 : 0.06};${highlighted ? 0.15 : 0.06};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+      </circle>
       {hovered && onDelete && (
         <g style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); onDelete(edgeId); }}>
           <circle cx={actualMidX} cy={actualMidY} r={8} fill="hsl(0, 60%, 45%)" opacity={0.9} />
