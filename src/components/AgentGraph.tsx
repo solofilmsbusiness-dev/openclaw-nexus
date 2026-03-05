@@ -852,7 +852,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   }, [focusId, edges]);
 
   const onlineCount = agents.filter((a) => a.status !== "down").length;
-  const displayAgent = hovered || (selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null);
   const draggingId = dragRef.current?.agentId ?? null;
 
   const zoomPercent = Math.round((DEFAULT_VIEWBOX.w / viewBox.w) * 100);
@@ -1128,56 +1127,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         }}
       />
 
-      {displayAgent && !connectMode && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="absolute bottom-20 left-3 glass-panel neon-border p-3 w-56"
-        >
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{displayAgent.icon}</span>
-              <div>
-                <h3 className="font-display font-semibold text-xs text-foreground">{displayAgent.name}</h3>
-                <span className="text-[9px] font-mono text-muted-foreground italic">{displayAgent.subtitle}</span>
-              </div>
-            </div>
-            <button
-              onClick={() => onSelectAgent(null)}
-              className="p-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-              title="Close"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            </button>
-          </div>
-          <span className={`text-xs font-mono ${
-            displayAgent.status === 'healthy' ? 'status-healthy' :
-            displayAgent.status === 'degraded' ? 'status-degraded' :
-            displayAgent.status === 'down' ? 'status-down' : 'status-active'
-          }`}>{displayAgent.status.toUpperCase()}</span>
-          <div className="space-y-1 text-xs font-mono text-muted-foreground mt-2">
-            <div className="flex justify-between"><span>Task:</span><span className="text-foreground">{displayAgent.currentTask}</span></div>
-            <div className="flex justify-between"><span>Progress:</span><span className="text-foreground">{displayAgent.progress}%</span></div>
-            <div className="flex justify-between"><span>Backlog:</span><span className="text-foreground">{displayAgent.backlogCount}</span></div>
-          </div>
-          <div className="mt-3">
-            <svg viewBox="0 0 100 20" className="w-full h-5">
-              <polyline
-                fill="none"
-                stroke={getAgentColor(displayAgent)}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={displayAgent.status === "down"
-                  ? displayAgent.metrics.activity.map((_, i) => `${(i / 19) * 100},19`).join(" ")
-                  : displayAgent.metrics.activity.map((v, i) => `${(i / 19) * 100},${20 - v * 18}`).join(" ")
-                }
-              />
-            </svg>
-            <span className="text-[9px] text-muted-foreground font-mono">Activity</span>
-          </div>
-        </motion.div>
-      )}
 
       {/* Minimap */}
       <Minimap
