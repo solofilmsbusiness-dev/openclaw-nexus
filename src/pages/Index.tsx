@@ -11,6 +11,7 @@ import AgentCards from "@/components/AgentCards";
 import CommandPalette from "@/components/CommandPalette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAgents } from "@/contexts/AgentContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Index = () => {
