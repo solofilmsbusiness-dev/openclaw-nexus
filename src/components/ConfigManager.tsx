@@ -65,13 +65,14 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
       setSaving(false);
       return;
     }
-    const { error } = await supabase.from("graph_configs").insert({
+    const payload = {
       user_id: user.id,
       name: name.trim(),
       project: project.trim(),
-      agents_data: agents as unknown as Record<string, unknown>[],
-      edges_data: edges as unknown as Record<string, unknown>[],
-    });
+      agents_data: JSON.parse(JSON.stringify(agents)),
+      edges_data: JSON.parse(JSON.stringify(edges)),
+    };
+    const { error } = await supabase.from("graph_configs").insert(payload);
     if (error) {
       toast({ title: "Save failed", description: error.message, variant: "destructive" });
     } else {
