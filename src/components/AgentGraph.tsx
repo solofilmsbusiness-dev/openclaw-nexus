@@ -556,6 +556,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
                 y={pos.y}
                 onHover={setHovered}
                 onClick={handleNodeClick}
+                onDoubleClick={handleNodeDoubleClick}
                 isHovered={isHovered}
                 isSelected={isSelected}
                 hoveredId={hoveredId}
