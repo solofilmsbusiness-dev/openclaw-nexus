@@ -16,13 +16,15 @@ interface WatchlistItem {
   alertBelow: number | null;
 }
 
+// Props defined below with availableSymbols
+
 interface WatchlistProps {
   tickers: MarketTicker[];
+  availableSymbols?: string[];
 }
 
-const AVAILABLE_SYMBOLS = ["AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "AMD"];
-
-export default function Watchlist({ tickers }: WatchlistProps) {
+export default function Watchlist({ tickers, availableSymbols }: WatchlistProps) {
+  const AVAILABLE_SYMBOLS = availableSymbols ?? tickers.map((t) => t.symbol);
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editingAlert, setEditingAlert] = useState<string | null>(null);
