@@ -33,7 +33,7 @@ interface TradingLayoutContextType {
 const STORAGE_KEY = "trading-layout-v1";
 const ALL_BUILTINS: BuiltinPanelId[] = ["market", "agent", "history", "journal", "portfolio", "watchlist", "analytics"];
 
-function loadState(): { panels: PanelItem[]; customPanels: CustomPanelDef[]; hiddenBuiltins: string[] } {
+function loadState(): { panels: PanelItem[]; customPanels: CustomPanelDef[]; hiddenBuiltins: string[]; columnCount: 1 | 2 | 3 } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -42,6 +42,7 @@ function loadState(): { panels: PanelItem[]; customPanels: CustomPanelDef[]; hid
     panels: ALL_BUILTINS.map((id) => ({ id, isCustom: false })),
     customPanels: [],
     hiddenBuiltins: [],
+    columnCount: 2,
   };
 }
 
