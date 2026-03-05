@@ -186,15 +186,12 @@ const Trading = () => {
         </div>
       </div>
 
-      {/* Main grid - reorderable */}
-      <Reorder.Group
-        axis="y"
-        values={layout.panels}
-        onReorder={layout.reorderPanels}
+      {/* Main grid - drag-and-drop */}
+      <div
+        ref={gridRef}
         className={`flex-1 grid gap-3 p-3 min-h-0 overflow-auto auto-rows-min ${
           layout.columnCount === 1 ? "grid-cols-1" : layout.columnCount === 2 ? "grid-cols-2" : "grid-cols-3"
         }`}
-        as="div"
       >
         <AnimatePresence>
           {layout.panels.map((panelItem) => (
@@ -202,13 +199,13 @@ const Trading = () => {
               key={panelItem.id}
               item={panelItem}
               onRemove={panelItem.isCustom ? layout.deleteCustomPanel : layout.removePanel}
-              className={panelItem.id === "portfolio" ? "lg:col-span-2 xl:col-span-1" : ""}
+              gridRef={gridRef}
             >
               {renderPanel(panelItem)}
             </PanelWrapper>
           ))}
         </AnimatePresence>
-      </Reorder.Group>
+      </div>
     </div>
   );
 };
