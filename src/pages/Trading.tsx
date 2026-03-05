@@ -278,6 +278,19 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
                     <Badge className="text-[8px] bg-neon-orange/10 text-neon-orange border-neon-orange/30 px-1.5 py-0">FUT</Badge>
                   </label>
                 ))}
+                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1 mt-2">Crypto</p>
+                {crypto.map((inst) => (
+                  <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
+                    <Checkbox
+                      checked={activeSymbols.includes(inst.symbol)}
+                      onCheckedChange={() => toggleSymbol(inst.symbol)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="font-mono text-xs font-semibold text-foreground w-12">{inst.symbol}</span>
+                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
+                    <Badge className="text-[8px] bg-neon-purple/10 text-neon-purple border-neon-purple/30 px-1.5 py-0">CRY</Badge>
+                  </label>
+                ))}
               </div>
             </ScrollArea>
           </PopoverContent>
