@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AgentProvider } from "@/contexts/AgentContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { TradingLayoutProvider } from "@/contexts/TradingLayoutContext";
 import { AnimatePresence, motion } from "framer-motion";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -38,7 +39,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/trading" element={<Trading />} />
+          <Route path="/trading" element={<TradingLayoutProvider><Trading /></TradingLayoutProvider>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>

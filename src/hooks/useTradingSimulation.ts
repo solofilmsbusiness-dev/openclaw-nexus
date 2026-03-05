@@ -602,5 +602,6 @@ export function useTradingSimulation() {
     stats: advancedStats,
     deleteTrade,
     deleteLearningNote,
+    addLearningNote,
   };
 }
