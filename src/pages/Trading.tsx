@@ -36,8 +36,16 @@ const categoryColor: Record<LearningNote["category"], string> = {
   Adjustment: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
   Pattern: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
 };
+const PIE_COLORS = [
+  "hsl(var(--neon-green))",
+  "hsl(var(--neon-blue))",
+  "hsl(var(--neon-orange))",
+  "hsl(var(--neon-cyan))",
+  "hsl(var(--neon-purple))",
+  "hsl(var(--neon-red))",
+];
 
-const Trading = () => {
+
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio } =
