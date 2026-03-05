@@ -25,7 +25,7 @@ interface ConfigManagerProps {
 }
 
 export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
-  const { agents, edges, loadConfig } = useAgents();
+  const { agents, edges, dragOffsets, nodeSizes, loadConfig } = useAgents();
   const [configs, setConfigs] = useState<GraphConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -69,7 +69,7 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
       user_id: user.id,
       name: name.trim(),
       project: project.trim(),
-      agents_data: JSON.parse(JSON.stringify(agents)),
+      agents_data: JSON.parse(JSON.stringify({ agents, layout: { dragOffsets, nodeSizes } })),
       edges_data: JSON.parse(JSON.stringify(edges)),
     };
     const { error } = await supabase.from("graph_configs").insert(payload);
@@ -85,7 +85,13 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
   };
 
   const handleLoad = (config: GraphConfig) => {
-    loadConfig(config.agents_data, config.edges_data);
+    const agentsData = config.agents_data as any;
+    const edgesData = config.edges_data as any;
+    if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
+      loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout);
+    } else {
+      loadConfig(agentsData as Agent[], edgesData as Edge[]);
+    }
     toast({ title: `Loaded "${config.name}"` });
     onOpenChange(false);
   };
