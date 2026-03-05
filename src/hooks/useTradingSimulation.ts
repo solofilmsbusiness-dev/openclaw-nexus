@@ -496,6 +496,16 @@ export function useTradingSimulation() {
   const wins = tradeHistory.filter((t) => t.pnl !== null && t.pnl > 0).length;
   const winRate = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
 
+  const deleteTrade = useCallback(async (id: string) => {
+    setTradeHistory((prev) => prev.filter((t) => t.id !== id));
+    await supabase.from("trade_history").delete().eq("id", id);
+  }, []);
+
+  const deleteLearningNote = useCallback(async (id: string) => {
+    setLearningNotes((prev) => prev.filter((n) => n.id !== id));
+    await supabase.from("learning_notes").delete().eq("id", id);
+  }, []);
+
   return {
     tickers,
     evaluations,
@@ -506,5 +516,7 @@ export function useTradingSimulation() {
     dataSource,
     portfolio,
     stats: { totalPnl: Math.round(totalPnl * 100) / 100, totalTrades, winRate },
+    deleteTrade,
+    deleteLearningNote,
   };
 }
