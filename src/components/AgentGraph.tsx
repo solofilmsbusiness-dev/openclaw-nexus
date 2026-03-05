@@ -342,7 +342,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       if (!connectSource) {
         setConnectSource(agent.id);
       } else if (connectSource !== agent.id) {
-        // Show kind selector
         setPendingEdge({ from: connectSource, to: agent.id });
         setConnectSource(null);
       }
@@ -351,6 +350,12 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
     onSelectAgent(selectedAgentId === agent.id ? null : agent.id);
   }, [selectedAgentId, onSelectAgent, connectMode, connectSource]);
+
+  const handleNodeDoubleClick = useCallback((agent: Agent) => {
+    if (dragRef.current?.moved) return;
+    setConnectMode(true);
+    setConnectSource(agent.id);
+  }, []);
 
   const handleConfirmEdge = useCallback(() => {
     if (pendingEdge) {
