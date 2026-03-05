@@ -1089,7 +1089,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
       {/* Kill switch red overlay — full container HTML div with pulse */}
       <div
-        className={`absolute inset-0 pointer-events-none z-[1] rounded-xl ${killProgress >= 1 ? 'animate-[killPulse_3s_ease-in-out_infinite]' : ''}`}
+        className={`absolute inset-0 pointer-events-none z-[1] rounded-xl ${killProgress >= 1 ? 'animate-[killPulse_2s_steps(1,end)_infinite]' : ''}`}
         style={{
           background: "radial-gradient(ellipse at center, hsl(0 70% 40% / 0.3), hsl(0 70% 30% / 0.12))",
           opacity: killProgress,
