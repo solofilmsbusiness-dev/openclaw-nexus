@@ -171,13 +171,16 @@ export default function OnboardingTour() {
 
           {/* Step dots */}
           <div className="flex items-center justify-between">
-            <div className="flex gap-1.5">
-              {STEPS.map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === step ? "bg-primary" : "bg-muted-foreground/30"}`}
-                />
-              ))}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                {STEPS.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === step ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  />
+                ))}
+              </div>
+              <span className="text-[9px] font-mono text-muted-foreground/50">← → ESC</span>
             </div>
             <div className="flex items-center gap-2">
               {step < STEPS.length - 1 && (
