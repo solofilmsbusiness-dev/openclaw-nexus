@@ -223,6 +223,7 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
 }) {
   const stocks = ALL_INSTRUMENTS.filter((i) => i.type === "stock");
   const futures = ALL_INSTRUMENTS.filter((i) => i.type === "futures");
+  const crypto = ALL_INSTRUMENTS.filter((i) => i.type === "crypto");
 
   const toggleSymbol = (sym: string) => {
     if (activeSymbols.includes(sym)) {
@@ -300,8 +301,11 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
                 <TableCell className="py-2">
                   <div className="flex items-center gap-1.5">
                     <span className="font-mono font-semibold text-xs text-foreground">{t.symbol}</span>
-                    <Badge className={`text-[7px] px-1 py-0 leading-tight ${t.type === "futures" ? "bg-neon-orange/10 text-neon-orange border-neon-orange/30" : "bg-neon-green/10 text-neon-green border-neon-green/30"}`}>
-                      {t.type === "futures" ? "FUT" : "STK"}
+                    <Badge className={`text-[7px] px-1 py-0 leading-tight ${
+                      t.type === "crypto" ? "bg-neon-purple/10 text-neon-purple border-neon-purple/30" :
+                      t.type === "futures" ? "bg-neon-orange/10 text-neon-orange border-neon-orange/30" : "bg-neon-green/10 text-neon-green border-neon-green/30"
+                    }`}>
+                      {t.type === "crypto" ? "CRY" : t.type === "futures" ? "FUT" : "STK"}
                     </Badge>
                   </div>
                 </TableCell>
