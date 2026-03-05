@@ -8,18 +8,21 @@ export interface CustomPanelDef {
   id: string;
   title: string;
   type: CustomPanelType;
-  content: string; // for notes: text, for embed: url, for checklist: JSON stringified array
+  content: string;
 }
 
 export interface PanelItem {
   id: string;
   isCustom: boolean;
+  row: number;
+  col: number;
 }
 
 interface TradingLayoutContextType {
   panels: PanelItem[];
   customPanels: CustomPanelDef[];
-  reorderPanels: (newOrder: PanelItem[]) => void;
+  swapPanels: (draggedId: string, targetId: string) => void;
+  movePanelTo: (id: string, row: number, col: number) => void;
   removePanel: (id: string) => void;
   restorePanel: (id: string) => void;
   hiddenBuiltins: string[];
@@ -30,16 +33,49 @@ interface TradingLayoutContextType {
   setColumnCount: (count: 1 | 2 | 3) => void;
 }
 
-const STORAGE_KEY = "trading-layout-v1";
+const STORAGE_KEY = "trading-layout-v2";
 const ALL_BUILTINS: BuiltinPanelId[] = ["market", "agent", "history", "journal", "portfolio", "watchlist", "analytics"];
 
-function loadState(): { panels: PanelItem[]; customPanels: CustomPanelDef[]; hiddenBuiltins: string[]; columnCount: 1 | 2 | 3 } {
+function computePositions(panels: { id: string; isCustom: boolean }[], cols: number): PanelItem[] {
+  return panels.map((p, i) => ({
+    ...p,
+    row: Math.floor(i / cols),
+    col: i % cols,
+  }));
+}
+
+interface LayoutState {
+  panels: PanelItem[];
+  customPanels: CustomPanelDef[];
+  hiddenBuiltins: string[];
+  columnCount: 1 | 2 | 3;
+}
+
+function loadState(): LayoutState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Migrate from v1 (panels without row/col)
+      if (parsed.panels?.length > 0 && parsed.panels[0].row === undefined) {
+        const cols = parsed.columnCount || 2;
+        parsed.panels = computePositions(parsed.panels, cols);
+      }
+      return parsed;
+    }
+    // Try migrating from v1 key
+    const v1 = localStorage.getItem("trading-layout-v1");
+    if (v1) {
+      const parsed = JSON.parse(v1);
+      const cols = parsed.columnCount || 2;
+      return {
+        ...parsed,
+        panels: computePositions(parsed.panels || ALL_BUILTINS.map((id) => ({ id, isCustom: false })), cols),
+      };
+    }
   } catch {}
   return {
-    panels: ALL_BUILTINS.map((id) => ({ id, isCustom: false })),
+    panels: computePositions(ALL_BUILTINS.map((id) => ({ id, isCustom: false })), 2),
     customPanels: [],
     hiddenBuiltins: [],
     columnCount: 2,
@@ -55,36 +91,74 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const reorderPanels = useCallback((newOrder: PanelItem[]) => {
-    setState((s) => ({ ...s, panels: newOrder }));
+  const swapPanels = useCallback((draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+    setState((s) => {
+      const panels = [...s.panels];
+      const draggedIdx = panels.findIndex((p) => p.id === draggedId);
+      const targetIdx = panels.findIndex((p) => p.id === targetId);
+      if (draggedIdx === -1 || targetIdx === -1) return s;
+      // Swap row/col
+      const tempRow = panels[draggedIdx].row;
+      const tempCol = panels[draggedIdx].col;
+      panels[draggedIdx] = { ...panels[draggedIdx], row: panels[targetIdx].row, col: panels[targetIdx].col };
+      panels[targetIdx] = { ...panels[targetIdx], row: tempRow, col: tempCol };
+      return { ...s, panels };
+    });
+  }, []);
+
+  const movePanelTo = useCallback((id: string, row: number, col: number) => {
+    setState((s) => {
+      const panels = [...s.panels];
+      const idx = panels.findIndex((p) => p.id === id);
+      if (idx === -1) return s;
+      // Check if another panel occupies that cell
+      const occupant = panels.find((p) => p.row === row && p.col === col && p.id !== id);
+      if (occupant) {
+        // Swap
+        const oldRow = panels[idx].row;
+        const oldCol = panels[idx].col;
+        const occIdx = panels.indexOf(occupant);
+        panels[occIdx] = { ...panels[occIdx], row: oldRow, col: oldCol };
+      }
+      panels[idx] = { ...panels[idx], row, col };
+      return { ...s, panels };
+    });
   }, []);
 
   const removePanel = useCallback((id: string) => {
     setState((s) => {
       const panel = s.panels.find((p) => p.id === id);
       if (!panel) return s;
+      const remaining = s.panels.filter((p) => p.id !== id);
       return {
         ...s,
-        panels: s.panels.filter((p) => p.id !== id),
+        panels: computePositions(remaining, s.columnCount),
         hiddenBuiltins: panel.isCustom ? s.hiddenBuiltins : [...s.hiddenBuiltins, id],
       };
     });
   }, []);
 
   const restorePanel = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      panels: [...s.panels, { id, isCustom: false }],
-      hiddenBuiltins: s.hiddenBuiltins.filter((h) => h !== id),
-    }));
+    setState((s) => {
+      const newPanels = [...s.panels, { id, isCustom: false, row: 0, col: 0 }];
+      return {
+        ...s,
+        panels: computePositions(newPanels, s.columnCount),
+        hiddenBuiltins: s.hiddenBuiltins.filter((h) => h !== id),
+      };
+    });
   }, []);
 
   const addCustomPanel = useCallback((panel: CustomPanelDef) => {
-    setState((s) => ({
-      ...s,
-      panels: [...s.panels, { id: panel.id, isCustom: true }],
-      customPanels: [...s.customPanels, panel],
-    }));
+    setState((s) => {
+      const newPanels = [...s.panels, { id: panel.id, isCustom: true, row: 0, col: 0 }];
+      return {
+        ...s,
+        panels: computePositions(newPanels, s.columnCount),
+        customPanels: [...s.customPanels, panel],
+      };
+    });
   }, []);
 
   const updateCustomPanel = useCallback((id: string, content: string) => {
@@ -95,15 +169,22 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const deleteCustomPanel = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      panels: s.panels.filter((p) => p.id !== id),
-      customPanels: s.customPanels.filter((p) => p.id !== id),
-    }));
+    setState((s) => {
+      const remaining = s.panels.filter((p) => p.id !== id);
+      return {
+        ...s,
+        panels: computePositions(remaining, s.columnCount),
+        customPanels: s.customPanels.filter((p) => p.id !== id),
+      };
+    });
   }, []);
 
   const setColumnCount = useCallback((count: 1 | 2 | 3) => {
-    setState((s) => ({ ...s, columnCount: count }));
+    setState((s) => ({
+      ...s,
+      columnCount: count,
+      panels: computePositions(s.panels, count),
+    }));
   }, []);
 
   return (
@@ -111,7 +192,8 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
       value={{
         panels: state.panels,
         customPanels: state.customPanels,
-        reorderPanels,
+        swapPanels,
+        movePanelTo,
         removePanel,
         restorePanel,
         hiddenBuiltins: state.hiddenBuiltins,
