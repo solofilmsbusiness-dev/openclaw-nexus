@@ -4,13 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAgents } from "@/contexts/AgentContext";
 import { statusColor } from "@/data/agents";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Skull, HeartPulse, Pencil, Check, X, LogOut, ArrowLeft, Zap, Settings } from "lucide-react";
+import { Shield, Skull, HeartPulse, Pencil, Check, X, LogOut, ArrowLeft, Zap, Settings, User, Layout, Database, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeSettings from "@/components/admin/ThemeSettings";
 import NotificationSettings from "@/components/admin/NotificationSettings";
 import UserManagement from "@/components/admin/UserManagement";
 import SystemConfigSettings from "@/components/admin/SystemConfigSettings";
+import ProfileSettings from "@/components/admin/ProfileSettings";
+import LayoutSettings from "@/components/admin/LayoutSettings";
+import DataManagement from "@/components/admin/DataManagement";
+import CustomToolkit from "@/components/admin/CustomToolkit";
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -111,7 +115,6 @@ export default function Admin() {
             <Zap className="w-5 h-5 text-destructive" />
             <h2 className="font-display font-semibold text-base text-foreground">System Override</h2>
           </div>
-
           <div className="flex gap-3">
             {!killConfirm ? (
               <motion.button
@@ -135,7 +138,6 @@ export default function Admin() {
                 <button onClick={() => setKillConfirm(false)} className="px-4 py-2 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground font-mono text-xs tracking-wider uppercase hover:bg-secondary/50 transition-colors">CANCEL</button>
               </motion.div>
             )}
-
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -157,13 +159,10 @@ export default function Admin() {
             <h2 className="font-display font-semibold text-base text-foreground">Agent Registry</h2>
             <span className="text-[10px] font-mono text-muted-foreground">{agents.length} NODES</span>
           </div>
-
           <div className="space-y-1">
-            {/* Desktop header */}
             <div className="hidden md:grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-2 text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
               <span>Icon</span><span>Name</span><span>Status</span><span>Task</span><span>Progress</span><span>Edit</span>
             </div>
-
             <AnimatePresence>
               {agents.map((agent, i) => {
                 const color = statusColor(agent.status);
@@ -174,11 +173,8 @@ export default function Admin() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className={`rounded-lg border transition-all ${
-                      agent.status === "down" ? "border-destructive/30 bg-destructive/5" : "border-border/20 hover:border-border/40 hover:bg-secondary/20"
-                    }`}
+                    className={`rounded-lg border transition-all ${agent.status === "down" ? "border-destructive/30 bg-destructive/5" : "border-border/20 hover:border-border/40 hover:bg-secondary/20"}`}
                   >
-                    {/* Desktop row */}
                     <div className="hidden md:grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-3">
                       <span className="text-lg flex items-center">{agent.icon}</span>
                       <div className="flex items-center gap-2 min-w-0">
@@ -215,7 +211,6 @@ export default function Admin() {
                         )}
                       </div>
                     </div>
-
                     {/* Mobile card */}
                     <div className="md:hidden p-3 space-y-2">
                       <div className="flex items-center justify-between">
@@ -262,7 +257,7 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Settings Panel */}
+        {/* Settings Panel — Expanded with new tabs */}
         <div className="glass-panel neon-border p-6">
           <div className="flex items-center gap-3 mb-5">
             <Settings className="w-5 h-5 text-primary" />
@@ -270,15 +265,31 @@ export default function Admin() {
           </div>
 
           <Tabs defaultValue="theme" className="w-full">
-            <TabsList className="bg-secondary/30 border border-border/20 mb-5">
+            <TabsList className="bg-secondary/30 border border-border/20 mb-5 flex-wrap h-auto gap-0.5 p-1">
+              <TabsTrigger value="profile" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <User className="w-3 h-3 mr-1" /> PROFILE
+              </TabsTrigger>
               <TabsTrigger value="theme" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">THEME</TabsTrigger>
-              <TabsTrigger value="notifications" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">NOTIFICATIONS</TabsTrigger>
+              <TabsTrigger value="layout" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Layout className="w-3 h-3 mr-1" /> LAYOUT
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">ALERTS</TabsTrigger>
+              <TabsTrigger value="data" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Database className="w-3 h-3 mr-1" /> DATA
+              </TabsTrigger>
+              <TabsTrigger value="toolkit" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Wrench className="w-3 h-3 mr-1" /> TOOLKIT
+              </TabsTrigger>
               <TabsTrigger value="users" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">USERS</TabsTrigger>
               <TabsTrigger value="system" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">SYSTEM</TabsTrigger>
             </TabsList>
 
+            <TabsContent value="profile"><ProfileSettings /></TabsContent>
             <TabsContent value="theme"><ThemeSettings /></TabsContent>
+            <TabsContent value="layout"><LayoutSettings /></TabsContent>
             <TabsContent value="notifications"><NotificationSettings /></TabsContent>
+            <TabsContent value="data"><DataManagement /></TabsContent>
+            <TabsContent value="toolkit"><CustomToolkit /></TabsContent>
             <TabsContent value="users"><UserManagement /></TabsContent>
             <TabsContent value="system"><SystemConfigSettings /></TabsContent>
           </Tabs>
