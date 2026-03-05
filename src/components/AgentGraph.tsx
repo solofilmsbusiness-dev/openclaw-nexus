@@ -6,6 +6,7 @@ import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { ConfigManager } from "@/components/ConfigManager";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const CORE_X = 400;
 const CORE_Y = 300;
@@ -859,28 +860,36 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden">
       {/* Connect mode toggle */}
-      <button
-        onClick={() => {
-          setConnectMode(!connectMode);
-          setConnectSource(null);
-          setPendingEdge(null);
-        }}
-        className={`absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono tracking-wider transition-all duration-300 ${
-          connectMode
-            ? "border-primary bg-primary/20 text-primary shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
-            : "border-border/40 bg-secondary/40 text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
-        }`}
-        title={connectMode ? "Exit connect mode (ESC)" : "Connect nodes"}
-      >
-        {connectMode && (
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-          </span>
-        )}
-        <Link className="w-3.5 h-3.5" />
-        {connectMode ? "CONNECTING…" : "CONNECT"}
-      </button>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip open={connectMode ? false : undefined}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => {
+                setConnectMode(!connectMode);
+                setConnectSource(null);
+                setPendingEdge(null);
+              }}
+              className={`absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono tracking-wider transition-all duration-300 ${
+                connectMode
+                  ? "border-primary bg-primary/20 text-primary shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
+                  : "border-border/40 bg-secondary/40 text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+              }`}
+            >
+              {connectMode && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+              )}
+              <Link className="w-3.5 h-3.5" />
+              {connectMode ? "CONNECTING…" : "CONNECT"}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-[240px] text-center">
+            Click to enter connect mode. Then click a source node, then a target node to create a link. Double-click a node to quick-connect. Press ESC to cancel.
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {connectMode && !connectSource && !pendingEdge && (
         <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
