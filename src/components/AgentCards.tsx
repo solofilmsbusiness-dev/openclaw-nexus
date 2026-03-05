@@ -233,10 +233,14 @@ function AgentsTab({
             transition={{ delay: i * 0.03 }}
             whileHover={{ scale: 1.01, x: 3, boxShadow: `0 2px 12px ${color}15` }}
             whileTap={{ scale: 0.98 }}
-            className={`p-3 rounded-xl border transition-colors cursor-grab active:cursor-grabbing group ${
-              isSelected ? "border-primary/50 bg-primary/5" : "border-border/30 hover:border-border/60"
+            className={`p-3 rounded-xl border transition-colors cursor-grab active:cursor-grabbing group relative ${
+              isDead
+                ? "border-destructive/40 bg-destructive/5"
+                : isSelected
+                  ? "border-primary/50 bg-primary/5"
+                  : "border-border/30 hover:border-border/60"
             }`}
-            style={{ borderLeftWidth: 3, borderLeftColor: color }}
+            style={{ borderLeftWidth: 3, borderLeftColor: isDead ? "hsl(var(--destructive))" : color }}
           >
             <div
               ref={(el) => { cardRefs.current[agent.id] = el; }}
