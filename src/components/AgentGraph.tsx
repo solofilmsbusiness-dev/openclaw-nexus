@@ -918,6 +918,11 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         </g>
         <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#cursorGlow)" style={{ pointerEvents: "none" }} />
 
+        {/* Solar system effects */}
+        <Stardust viewBox={viewBox} />
+        <OrbitalParticles />
+        <CoreEnergyRings />
+
         {edges.map((edge) => {
           const from = positions[edge.from];
           const to = positions[edge.to];
