@@ -118,8 +118,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAgents() {
+export function useAgents(): AgentContextValue {
   const ctx = useContext(AgentContext);
-  if (!ctx) throw new Error("useAgents must be used within AgentProvider");
+  if (!ctx) {
+    throw new Error("useAgents must be used within AgentProvider");
+  }
   return ctx;
 }
