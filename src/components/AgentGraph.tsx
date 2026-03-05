@@ -559,6 +559,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const [pendingEdge, setPendingEdge] = useState<{ from: string; to: string } | null>(null);
   const [selectedKind, setSelectedKind] = useState<string>("data");
   const [locked, setLocked] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
   const positions = useMemo(() => {
     const merged: Record<string, { x: number; y: number }> = {};
@@ -1140,6 +1141,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ConfigManager open={configOpen} onOpenChange={setConfigOpen} />
     </div>
   );
 }
