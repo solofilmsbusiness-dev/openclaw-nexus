@@ -137,17 +137,95 @@ export function useTradingSimulation() {
   const [considerations, setConsiderations] = useState<AgentConsideration[]>([]);
   const [executedTrades, setExecutedTrades] = useState<ExecutedTrade[]>([]);
   const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
-  const [learningNotes, setLearningNotes] = useState<LearningNote[]>(() =>
-    LEARNING_TEMPLATES.slice(0, 3).map((n, i) => ({
-      id: uid(),
-      ...n,
-      timestamp: new Date(Date.now() - (3 - i) * 600_000),
-    }))
-  );
+  const [learningNotes, setLearningNotes] = useState<LearningNote[]>([]);
   const [dataSource, setDataSource] = useState<"loading" | "live" | "simulated">("loading");
+  const [dbLoaded, setDbLoaded] = useState(false);
 
-  const noteIndexRef = useRef(3);
+  const noteIndexRef = useRef(0);
   const livePricesRef = useRef<Record<string, number>>({});
+
+  // Load persisted data from database on mount
+  useEffect(() => {
+    const loadPersistedData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // No session — seed with templates
+        setLearningNotes(
+          LEARNING_TEMPLATES.slice(0, 3).map((n, i) => ({
+            id: uid(),
+            ...n,
+            timestamp: new Date(Date.now() - (3 - i) * 600_000),
+          }))
+        );
+        noteIndexRef.current = 3;
+        setDbLoaded(true);
+        return;
+      }
+
+      // Load trade history
+      const { data: trades } = await supabase
+        .from("trade_history")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (trades && trades.length > 0) {
+        setTradeHistory(
+          trades.map((t) => ({
+            id: t.id,
+            type: t.type as "buy" | "sell",
+            asset: t.asset,
+            entryPrice: Number(t.entry_price),
+            exitPrice: t.exit_price != null ? Number(t.exit_price) : null,
+            pnl: t.pnl != null ? Number(t.pnl) : null,
+            timestamp: new Date(t.created_at),
+          }))
+        );
+      }
+
+      // Load learning notes
+      const { data: notes } = await supabase
+        .from("learning_notes")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (notes && notes.length > 0) {
+        setLearningNotes(
+          notes.map((n) => ({
+            id: n.id,
+            category: n.category as LearningNote["category"],
+            content: n.content,
+            timestamp: new Date(n.created_at),
+          }))
+        );
+        noteIndexRef.current = 3;
+      } else {
+        // Seed with templates if no notes exist
+        const seedNotes = LEARNING_TEMPLATES.slice(0, 3).map((n, i) => ({
+          id: uid(),
+          ...n,
+          timestamp: new Date(Date.now() - (3 - i) * 600_000),
+        }));
+        setLearningNotes(seedNotes);
+        noteIndexRef.current = 3;
+
+        // Persist seed notes
+        for (const note of seedNotes) {
+          await supabase.from("learning_notes").insert({
+            id: note.id,
+            user_id: session.user.id,
+            category: note.category,
+            content: note.content,
+          });
+        }
+      }
+
+      setDbLoaded(true);
+    };
+
+    loadPersistedData();
+  }, []);
 
   // Fetch real market data from edge function
   const fetchMarketData = useCallback(async () => {
