@@ -74,7 +74,7 @@ function ProgressArc({ cx, cy, r, progress, color }: { cx: number; cy: number; r
 }
 
 function AgentNode({
-  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId,
+  agent, x, y, onHover, onClick, isHovered, isSelected, hoveredId, selectedId, onDragStart, onDrag, onDragEnd, isDragging,
 }: {
   agent: Agent; x: number; y: number;
   onHover: (a: Agent | null) => void;
@@ -83,6 +83,10 @@ function AgentNode({
   isSelected: boolean;
   hoveredId: string | null;
   selectedId: string | null;
+  onDragStart: (agentId: string, e: React.MouseEvent | React.TouchEvent) => void;
+  onDrag: (e: React.MouseEvent | React.TouchEvent) => void;
+  onDragEnd: () => void;
+  isDragging: boolean;
 }) {
   const color = statusColor(agent.status);
   const size = 20 + agent.backlogCount * 1.5;
@@ -96,10 +100,11 @@ function AgentNode({
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: dimmed, scale }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      style={{ cursor: "pointer", transformOrigin: `${x}px ${y}px` }}
-      onMouseEnter={() => onHover(agent)}
-      onMouseLeave={() => onHover(null)}
-      onClick={() => onClick(agent)}
+      style={{ cursor: isDragging ? "grabbing" : "grab", transformOrigin: `${x}px ${y}px` }}
+      onMouseEnter={() => { if (!isDragging) onHover(agent); }}
+      onMouseLeave={() => { if (!isDragging) onHover(null); }}
+      onMouseDown={(e) => { e.stopPropagation(); onDragStart(agent.id, e); }}
+      onClick={(e) => { if (!isDragging) onClick(agent); }}
     >
       {/* Selection ring */}
       {isSelected && (
