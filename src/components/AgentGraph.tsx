@@ -40,6 +40,10 @@ function getNodePositions(agents: Agent[]) {
   return positions;
 }
 
+function getAgentColor(agent: Agent): string {
+  return agent.color ?? statusColor(agent.status).bg;
+}
+
 // Solar system particle effects
 function OrbitalParticles({ viewBox, killSwitchActive }: { viewBox: { x: number; y: number; w: number; h: number }; killSwitchActive?: boolean }) {
   const scale = viewBox.w / DEFAULT_VIEWBOX.w;
@@ -234,7 +238,7 @@ function AgentNode({
   size: number;
   onResizeStart: (agentId: string, e: React.MouseEvent) => void;
 }) {
-  const color = statusColor(agent.status);
+  const nodeColor = getAgentColor(agent);
   const active = isHovered || isSelected;
   const isConnectSource = connectSource === agent.id;
   const scale = active || isConnectSource ? 1.1 : 1;
@@ -262,18 +266,18 @@ function AgentNode({
       )}
       {/* Selection ring */}
       {isSelected && !isConnectSource && (
-        <circle cx={x} cy={y} r={size + 16} fill="none" stroke={color.bg} strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6}>
+        <circle cx={x} cy={y} r={size + 16} fill="none" stroke={nodeColor} strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6}>
           <animate attributeName="stroke-dashoffset" values="0;-18" dur="2s" repeatCount="indefinite" />
         </circle>
       )}
       {/* Soft glow */}
-      <circle cx={x} cy={y} r={size + 12} fill={`${color.bg}`} opacity={active ? 0.08 : 0.04}>
+      <circle cx={x} cy={y} r={size + 12} fill={nodeColor} opacity={active ? 0.08 : 0.04}>
         <animate attributeName="r" values={`${size + 8};${size + 14};${size + 8}`} dur="4s" repeatCount="indefinite" />
       </circle>
       {/* Progress arc */}
-      <ProgressArc cx={x} cy={y} r={size + 4} progress={agent.progress} color={color.bg} />
+      <ProgressArc cx={x} cy={y} r={size + 4} progress={agent.progress} color={nodeColor} />
       {/* Main circle */}
-      <circle cx={x} cy={y} r={size} fill={`${color.bg}15`} stroke={isConnectSource ? "hsl(215, 80%, 60%)" : color.bg} strokeWidth={active || isConnectSource ? 2 : 1.5} opacity={0.9} />
+      <circle cx={x} cy={y} r={size} fill={`${nodeColor}15`} stroke={isConnectSource ? "hsl(215, 80%, 60%)" : nodeColor} strokeWidth={active || isConnectSource ? 2 : 1.5} opacity={0.9} />
       {/* Icon */}
       <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fontSize="16">
         {agent.icon}
@@ -287,7 +291,7 @@ function AgentNode({
         {agent.subtitle}
       </text>
       {/* Current task */}
-      <text x={x} y={y + size + 38} textAnchor="middle" fill={color.bg} fontSize="7" fontFamily="JetBrains Mono" opacity="0.5">
+      <text x={x} y={y + size + 38} textAnchor="middle" fill={nodeColor} fontSize="7" fontFamily="JetBrains Mono" opacity="0.5">
         {agent.currentTask}
       </text>
       {/* Resize handle - visible on hover/selection */}
@@ -305,20 +309,35 @@ function AgentNode({
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive,
+  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive, fromDown, toDown,
 }: {
   x1: number; y1: number; x2: number; y2: number;
   color: string; weight: number; highlighted: boolean; pathId: string; kind: string;
   onDelete?: (edgeId: string) => void; edgeId: string; killSwitchActive?: boolean;
+  fromDown?: boolean; toDown?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 15), [x1, x2, y1]);
   const midY = useMemo(() => (y1 + y2) / 2 + (Math.cos(x2 + y2) * 15), [y1, y2, x2]);
   const path = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
-  const dur = highlighted ? 3 + weight : 5 + weight;
+  
+  const eitherDown = fromDown || toDown;
+  const bothHealthy = !fromDown && !toDown;
+  
+  // Activity-based: higher weight = faster particles
+  const baseDur = highlighted ? 3 : 5;
+  const dur = baseDur + (1 - weight) * 3; // weight 1 = fast, weight 0 = slow
+  
+  // Edge opacity based on node health
+  const edgeOpacity = eitherDown ? 0.04 : (highlighted ? 0.5 : 0.12);
+  const edgeStrokeColor = eitherDown ? "hsl(0, 40%, 35%)" : color;
 
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
   const actualMidY = 0.25 * y1 + 0.5 * midY + 0.25 * y2;
+
+  // Green data color for particles
+  const dataColor = "hsl(152, 70%, 55%)";
+  const showParticles = !killSwitchActive && !eitherDown;
 
   return (
     <g
@@ -326,44 +345,75 @@ function AnimatedEdge({
       onMouseLeave={() => setHovered(false)}
     >
       <path d={path} fill="none" stroke="transparent" strokeWidth={12} style={{ cursor: "pointer" }} />
+      {/* Edge path with pulsing glow when both nodes healthy */}
       <path
         id={pathId}
         d={path}
         fill="none"
-        stroke={color}
+        stroke={edgeStrokeColor}
         strokeWidth={highlighted ? weight * 2 : weight * 1.2}
-        opacity={highlighted ? 0.5 : 0.12}
+        opacity={edgeOpacity}
         strokeLinecap="round"
-        style={{ transition: "opacity 0.4s, stroke-width 0.4s" }}
+        style={{ transition: "opacity 0.4s, stroke-width 0.4s, stroke 0.4s" }}
       />
+      {/* Subtle pulsing glow on active edges */}
+      {bothHealthy && !killSwitchActive && (
+        <path
+          d={path}
+          fill="none"
+          stroke={dataColor}
+          strokeWidth={highlighted ? weight * 3 : weight * 2}
+          opacity={0}
+          strokeLinecap="round"
+          filter="url(#particleGlow)"
+        >
+          <animate attributeName="opacity" values="0.02;0.06;0.02" dur="4s" repeatCount="indefinite" />
+        </path>
+      )}
       {highlighted && (
-        <text fontSize="7" fontFamily="JetBrains Mono" fill={color} opacity="0.7" letterSpacing="1">
+        <text fontSize="7" fontFamily="JetBrains Mono" fill={edgeStrokeColor} opacity="0.7" letterSpacing="1">
           <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
             {kind.toUpperCase()}
           </textPath>
         </text>
       )}
-      {!killSwitchActive && (
+      {showParticles && (
         <>
-          <circle r={highlighted ? 2.5 : 1.5} fill={color} opacity="0">
+          {/* Primary directional green data orb: from → to */}
+          <circle r={highlighted ? 3 : 2} fill={dataColor} opacity="0" filter="url(#dataGlow)">
             <animateMotion dur={`${dur}s`} repeatCount="indefinite">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.35};${highlighted ? 0.7 : 0.35};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.9 : 0.6};${highlighted ? 0.9 : 0.6};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
           </circle>
-          {/* Reverse particle */}
-          <circle r={highlighted ? 2 : 1.2} fill={color} opacity="0">
-            <animateMotion dur={`${dur * 1.3}s`} repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
-              <mpath href={`#${pathId}`} />
-            </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.5 : 0.2};${highlighted ? 0.5 : 0.2};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.3}s`} repeatCount="indefinite" />
-          </circle>
-          {/* Comet trail */}
-          <circle r={highlighted ? 5 : 3} fill={color} opacity="0" filter="url(#particleGlow)">
+          {/* Comet trail glow for primary */}
+          <circle r={highlighted ? 8 : 5} fill={dataColor} opacity="0" filter="url(#particleGlow)">
             <animateMotion dur={`${dur}s`} repeatCount="indefinite">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.15 : 0.06};${highlighted ? 0.15 : 0.06};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.12 : 0.05};${highlighted ? 0.12 : 0.05};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+          </circle>
+          {/* Second green orb on high-weight edges */}
+          {weight > 0.7 && (
+            <circle r={highlighted ? 2.5 : 1.8} fill={dataColor} opacity="0" filter="url(#dataGlow)">
+              <animateMotion dur={`${dur * 1.15}s`} begin={`${dur * 0.45}s`} repeatCount="indefinite">
+                <mpath href={`#${pathId}`} />
+              </animateMotion>
+              <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.45};${highlighted ? 0.7 : 0.45};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.15}s`} begin={`${dur * 0.45}s`} repeatCount="indefinite" />
+            </circle>
+          )}
+          {/* Faint reverse particle */}
+          <circle r={highlighted ? 1.5 : 1} fill={color} opacity="0">
+            <animateMotion dur={`${dur * 1.6}s`} repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href={`#${pathId}`} />
+            </animateMotion>
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.15 : 0.08};${highlighted ? 0.15 : 0.08};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.6}s`} repeatCount="indefinite" />
+          </circle>
+          {/* Arrival pulse at destination */}
+          <circle cx={x2} cy={y2} r={3} fill="none" stroke={dataColor} strokeWidth={1} opacity={0}>
+            <animate attributeName="r" values="3;12;12" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0;0;0.4;0" keyTimes={`0;0.85;0.92;1`} dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="stroke-width" values="1.5;0.3;0" dur={`${dur}s`} repeatCount="indefinite" />
           </circle>
         </>
       )}
@@ -417,7 +467,6 @@ function Minimap({
   const MINIMAP_W = 160;
   const MINIMAP_H = 120;
 
-  // Compute bounding box of all positions
   const bounds = useMemo(() => {
     const allPos = Object.values(positions);
     if (allPos.length === 0) return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
@@ -451,7 +500,6 @@ function Minimap({
     [bounds, bw, bh, setViewBox]
   );
 
-  // Viewport rect mapped to minimap coords
   const vpX = viewBox.x;
   const vpY = viewBox.y;
   const vpW = viewBox.w;
@@ -466,7 +514,6 @@ function Minimap({
         style={{ display: "block", cursor: "crosshair" }}
         onClick={handleClick}
       >
-        {/* Edges */}
         {edges.map((edge) => {
           const from = positions[edge.from];
           const to = positions[edge.to];
@@ -484,30 +531,24 @@ function Minimap({
             />
           );
         })}
-
-        {/* Core */}
         {positions.core && (
           <circle cx={positions.core.x} cy={positions.core.y} r={5} fill="hsl(215, 80%, 60%)" opacity={0.6} />
         )}
-
-        {/* Nodes */}
         {agents.map((agent) => {
           const pos = positions[agent.id];
           if (!pos) return null;
-          const color = statusColor(agent.status);
+          const color = getAgentColor(agent);
           return (
             <circle
               key={agent.id}
               cx={pos.x}
               cy={pos.y}
               r={3}
-              fill={color.bg}
+              fill={color}
               opacity={0.8}
             />
           );
         })}
-
-        {/* Viewport rectangle */}
         <rect
           x={vpX}
           y={vpY}
@@ -548,14 +589,10 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ agentId: string; startMouse: { x: number; y: number }; startPos: { x: number; y: number }; moved: boolean } | null>(null);
 
-  // Zoom & Pan state
   const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
   const panRef = useRef<{ startMouse: { x: number; y: number }; startViewBox: typeof DEFAULT_VIEWBOX } | null>(null);
-
-  // Resize ref
   const resizeRef = useRef<{ agentId: string; startDist: number; startSize: number } | null>(null);
 
-  // Kill switch animation state
   const [killProgress, setKillProgress] = useState(killSwitchActive ? 1 : 0);
   useEffect(() => {
     let raf: number;
@@ -575,13 +612,19 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     return () => cancelAnimationFrame(raf);
   }, [killSwitchActive]);
 
-  // Connect mode state
   const [connectMode, setConnectMode] = useState(false);
   const [connectSource, setConnectSource] = useState<string | null>(null);
   const [pendingEdge, setPendingEdge] = useState<{ from: string; to: string } | null>(null);
   const [selectedKind, setSelectedKind] = useState<string>("data");
   const [locked, setLocked] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+
+  // Build agent status lookup for edges
+  const agentStatusMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    agents.forEach(a => { map[a.id] = a.status === "down"; });
+    return map;
+  }, [agents]);
 
   const positions = useMemo(() => {
     const merged: Record<string, { x: number; y: number }> = {};
@@ -603,16 +646,13 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     };
   }, [viewBox]);
 
-  // Get node size (custom or default)
   const getNodeSize = useCallback((agent: Agent) => {
     return nodeSizes[agent.id] ?? (20 + agent.backlogCount * 1.5);
   }, [nodeSizes]);
 
-  // Delete confirmation state
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteAgent = pendingDeleteId ? agents.find((a) => a.id === pendingDeleteId) : null;
 
-  // ESC to cancel connect mode, Delete/Backspace to delete selected node
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -631,23 +671,18 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     return () => window.removeEventListener("keydown", handler);
   }, [selectedAgentId, connectMode, onDeleteAgent]);
 
-  // Zoom with mouse wheel
   const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
     if (locked) return;
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    // Cursor position as fraction of SVG element
     const fx = (e.clientX - rect.left) / rect.width;
     const fy = (e.clientY - rect.top) / rect.height;
-
     const zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
-
     setViewBox((prev) => {
       const newW = Math.min(MAX_W, Math.max(MIN_W, prev.w * zoomFactor));
-      const newH = newW * (600 / 800); // maintain aspect ratio
-      // Zoom centered on cursor
+      const newH = newW * (600 / 800);
       const newX = prev.x + (prev.w - newW) * fx;
       const newY = prev.y + (prev.h - newH) * fy;
       return { x: newX, y: newY, w: newW, h: newH };
@@ -658,7 +693,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     const pt = getSvgPoint(e.clientX, e.clientY);
     setMouse(pt);
 
-    // Resize mode
     if (resizeRef.current) {
       const { agentId, startDist, startSize } = resizeRef.current;
       const pos = positions[agentId];
@@ -671,13 +705,11 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       return;
     }
 
-    // Pan mode
     if (panRef.current) {
       const svg = svgRef.current;
       if (!svg) return;
       const rect = svg.getBoundingClientRect();
       const { startMouse, startViewBox } = panRef.current;
-      // Use client coords for panning to avoid feedback loop
       const dx = ((e.clientX - startMouse.x) / rect.width) * startViewBox.w;
       const dy = ((e.clientY - startMouse.y) / rect.height) * startViewBox.h;
       setViewBox({
@@ -688,7 +720,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       return;
     }
 
-    // Node drag
     if (dragRef.current) {
       const { agentId, startMouse, startPos } = dragRef.current;
       const dx = pt.x - startMouse.x;
@@ -726,10 +757,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     resizeRef.current = null;
   }, []);
 
-  // Background mouse down → start panning
   const handleBgMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (locked) return;
-    // Only pan if clicking directly on SVG background (not on a node)
     if (e.target === svgRef.current || (e.target as SVGElement).tagName === 'rect') {
       panRef.current = {
         startMouse: { x: e.clientX, y: e.clientY },
@@ -742,7 +771,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   const handleNodeClick = useCallback((agent: Agent) => {
     if (dragRef.current?.moved) return;
-
     if (connectMode) {
       if (!connectSource) {
         setConnectSource(agent.id);
@@ -752,7 +780,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       }
       return;
     }
-
     onSelectAgent(selectedAgentId === agent.id ? null : agent.id);
   }, [selectedAgentId, onSelectAgent, connectMode, connectSource]);
 
@@ -789,7 +816,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     panRef.current = null;
   }, [handleDragEnd]);
 
-  // Zoom controls
   const zoomIn = useCallback(() => {
     setViewBox((prev) => {
       const newW = Math.max(MIN_W, prev.w * 0.8);
@@ -851,7 +877,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         {connectMode ? "CONNECTING…" : "CONNECT"}
       </button>
 
-      {/* Connect mode instructions */}
       {connectMode && !connectSource && !pendingEdge && (
         <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
           Click source node
@@ -863,7 +888,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         </div>
       )}
 
-      {/* Kind selector popup */}
       {pendingEdge && (
         <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48">
           <div className="text-[10px] font-mono text-muted-foreground mb-2">CONNECTION TYPE</div>
@@ -986,6 +1010,10 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
             <feGaussianBlur stdDeviation="1.5" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
+          <filter id="dataGlow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
           <filter id="killGlow">
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -1010,7 +1038,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           const to = positions[edge.to];
           if (!from || !to) return null;
           const fromAgent = agents.find((a) => a.id === edge.from);
-          const color = killSwitchActive ? "hsl(0, 70%, 50%)" : (fromAgent ? statusColor(fromAgent.status).bg : "hsl(215, 80%, 60%)");
+          const toAgent = agents.find((a) => a.id === edge.to);
+          const edgeColor = killSwitchActive ? "hsl(0, 70%, 50%)" : (fromAgent ? getAgentColor(fromAgent) : "hsl(215, 80%, 60%)");
           const highlighted = focusId ? (edge.from === focusId || edge.to === focusId) : false;
           return (
             <AnimatedEdge
@@ -1021,12 +1050,14 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              color={color}
+              color={edgeColor}
               weight={edge.weight}
               highlighted={highlighted}
               kind={edge.kind}
               onDelete={killSwitchActive ? undefined : onDeleteEdge}
               killSwitchActive={killSwitchActive}
+              fromDown={agentStatusMap[edge.from] ?? false}
+              toDown={agentStatusMap[edge.to] ?? false}
             />
           );
         })}
@@ -1087,7 +1118,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         })}
       </svg>
 
-      {/* Kill switch red overlay — full container HTML div with pulse */}
+      {/* Kill switch red overlay */}
       <div
         className={`absolute inset-0 pointer-events-none z-[1] rounded-xl ${killProgress >= 1 ? 'animate-[killPulse_3s_ease-in-out_infinite]' : ''}`}
         style={{
@@ -1124,11 +1155,14 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
             <svg viewBox="0 0 100 20" className="w-full h-5">
               <polyline
                 fill="none"
-                stroke={statusColor(displayAgent.status).bg}
+                stroke={getAgentColor(displayAgent)}
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                points={displayAgent.metrics.activity.map((v, i) => `${(i / 19) * 100},${20 - v * 18}`).join(" ")}
+                points={displayAgent.status === "down"
+                  ? displayAgent.metrics.activity.map((_, i) => `${(i / 19) * 100},19`).join(" ")
+                  : displayAgent.metrics.activity.map((v, i) => `${(i / 19) * 100},${20 - v * 18}`).join(" ")
+                }
               />
             </svg>
             <span className="text-[9px] text-muted-foreground font-mono">Activity</span>
@@ -1173,6 +1207,8 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Config Manager */}
       <ConfigManager open={configOpen} onOpenChange={setConfigOpen} />
     </div>
   );

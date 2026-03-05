@@ -5,10 +5,32 @@ import AnimatedCounter from "@/components/AnimatedCounter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity, Search, X, Plus, Trash2 } from "lucide-react";
+import { Layers, Lightbulb, BarChart3, GripVertical, ChevronDown, Play, Pause, RotateCcw, Activity, Search, X, Plus, Trash2, Power, Zap } from "lucide-react";
 import { toast } from "sonner";
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
+const COLOR_SWATCHES = [
+  "hsl(215, 80%, 60%)",
+  "hsl(152, 60%, 48%)",
+  "hsl(38, 70%, 55%)",
+  "hsl(0, 60%, 55%)",
+  "hsl(270, 60%, 60%)",
+  "hsl(195, 70%, 50%)",
+  "hsl(330, 65%, 55%)",
+  "hsl(165, 60%, 45%)",
+  "hsl(45, 80%, 55%)",
+  "hsl(180, 50%, 50%)",
+];
+
+function Sparkline({ data, color, isDead }: { data: number[]; color: string; isDead?: boolean }) {
+  if (isDead) {
+    // Flatline: horizontal line at bottom
+    const flatPoints = data.map((_, i) => `${(i / (data.length - 1)) * 60},15`).join(" ");
+    return (
+      <svg viewBox="0 0 60 16" className="w-full h-4">
+        <polyline fill="none" stroke="hsl(0, 40%, 40%)" strokeWidth="1.2" points={flatPoints} opacity="0.6" />
+      </svg>
+    );
+  }
   const points = data.map((v, i) => `${(i / (data.length - 1)) * 60},${16 - v * 14}`).join(" ");
   return (
     <svg viewBox="0 0 60 16" className="w-full h-4">
@@ -34,16 +56,51 @@ const insights = [
   { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
 ];
 
-function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChange: (id: string, status: AgentStatus, taskUpdate?: Partial<Agent>) => void }) {
+function ColorPicker({ agent, onColorChange }: { agent: Agent; onColorChange: (color: string | undefined) => void }) {
+  const currentColor = agent.color ?? statusColor(agent.status).bg;
+  
+  return (
+    <div>
+      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Node Color</p>
+      <div className="flex flex-wrap gap-1.5">
+        {/* Reset to default */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onColorChange(undefined); }}
+          className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center ${
+            !agent.color ? "border-foreground/60 scale-110" : "border-border/40 hover:border-border/70"
+          }`}
+          style={{ background: statusColor(agent.status).bg }}
+          title="Default (status color)"
+        >
+          {!agent.color && <span className="text-[6px] text-white font-bold">✓</span>}
+        </button>
+        {COLOR_SWATCHES.map((swatch) => (
+          <button
+            key={swatch}
+            onClick={(e) => { e.stopPropagation(); onColorChange(swatch); }}
+            className={`w-5 h-5 rounded-full border-2 transition-all ${
+              agent.color === swatch ? "border-foreground/60 scale-110" : "border-border/40 hover:border-border/70"
+            }`}
+            style={{ background: swatch }}
+            title={swatch}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AgentDetailView({ agent, onStatusChange, onColorChange }: { agent: Agent; onStatusChange: (id: string, status: AgentStatus, taskUpdate?: Partial<Agent>) => void; onColorChange: (id: string, color: string | undefined) => void }) {
   const color = statusColor(agent.status);
   const recentEvents = SAMPLE_EVENTS.filter(e => e.agentId === agent.id).slice(0, 3);
   const avgLatency = (agent.metrics.latency.reduce((a, b) => a + b, 0) / agent.metrics.latency.length * 100).toFixed(0);
   const avgSuccess = (agent.metrics.successRate.reduce((a, b) => a + b, 0) / agent.metrics.successRate.length * 100).toFixed(0);
+  const isDead = agent.status === "down";
 
   const handleAction = (action: string) => {
     switch (action) {
       case "Run":
-        onStatusChange(agent.id, "active", { currentTask: agent.currentTask === "Halted" ? "Resuming operations" : agent.currentTask, progress: Math.max(agent.progress, 10) });
+        onStatusChange(agent.id, "active", { currentTask: agent.currentTask === "Halted" || agent.currentTask === "KILLED" ? "Resuming operations" : agent.currentTask, progress: Math.max(agent.progress, 10) });
         toast.success(`${agent.name} is now running`, { description: "Agent activated successfully" });
         break;
       case "Pause":
@@ -56,6 +113,10 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
         setTimeout(() => {
           onStatusChange(agent.id, "healthy", { currentTask: agent.currentTask.replace("Paused — ", ""), progress: 50 });
         }, 2000);
+        break;
+      case "Kill":
+        onStatusChange(agent.id, "down", { currentTask: "KILLED", progress: 0 });
+        toast.error(`${agent.name} killed`, { description: "Agent has been terminated" });
         break;
     }
   };
@@ -71,9 +132,9 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
       <div className="pt-2 mt-2 border-t border-border/20 space-y-3">
         <div className="grid grid-cols-3 gap-1.5">
           {[
-            { label: "AVG LATENCY", value: `${avgLatency}ms`, color: "text-neon-cyan" },
-            { label: "SUCCESS", value: `${avgSuccess}%`, color: "text-neon-green" },
-            { label: "BACKLOG", value: `${agent.backlogCount}`, color: agent.backlogCount > 5 ? "text-neon-red" : "text-neon-orange" },
+            { label: "AVG LATENCY", value: isDead ? "—" : `${avgLatency}ms`, color: isDead ? "text-muted-foreground" : "text-neon-cyan" },
+            { label: "SUCCESS", value: isDead ? "0%" : `${avgSuccess}%`, color: isDead ? "text-muted-foreground" : "text-neon-green" },
+            { label: "BACKLOG", value: `${agent.backlogCount}`, color: isDead ? "text-muted-foreground" : (agent.backlogCount > 5 ? "text-neon-red" : "text-neon-orange") },
           ].map((m) => (
             <div key={m.label} className="text-center p-1.5 rounded bg-muted/30">
               <span className={`font-mono text-xs font-bold ${m.color}`}>{m.value}</span>
@@ -81,6 +142,10 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
             </div>
           ))}
         </div>
+        
+        {/* Color picker */}
+        <ColorPicker agent={agent} onColorChange={(c) => onColorChange(agent.id, c)} />
+        
         {recentEvents.length > 0 && (
           <div>
             <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Recent Events</p>
@@ -99,12 +164,17 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
             { icon: Play, label: "Run", disabled: agent.status === "active" },
             { icon: Pause, label: "Pause", disabled: agent.status === "down" || agent.status === "degraded" },
             { icon: RotateCcw, label: "Restart", disabled: false },
+            { icon: Power, label: "Kill", disabled: agent.status === "down" },
           ].map((action) => (
             <button
               key={action.label}
               disabled={action.disabled}
               onClick={(e) => { e.stopPropagation(); handleAction(action.label); }}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[9px] font-mono uppercase tracking-wider border border-border/30 hover:border-border/60 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[9px] font-mono uppercase tracking-wider border transition-colors disabled:opacity-30 disabled:pointer-events-none ${
+                action.label === "Kill"
+                  ? "border-destructive/40 hover:border-destructive/70 hover:bg-destructive/20 text-destructive hover:text-destructive"
+                  : "border-border/30 hover:border-border/60 hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
+              }`}
             >
               <action.icon className="w-2.5 h-2.5" />
               {action.label}
@@ -117,7 +187,7 @@ function AgentDetailView({ agent, onStatusChange }: { agent: Agent; onStatusChan
 }
 
 function AgentsTab({
-  agents, onReorder, onStatusChange, selectedAgentId, onSelectAgent, onDeleteAgent,
+  agents, onReorder, onStatusChange, selectedAgentId, onSelectAgent, onDeleteAgent, onColorChange,
 }: {
   agents: Agent[];
   onReorder: (newOrder: Agent[]) => void;
@@ -125,13 +195,13 @@ function AgentsTab({
   selectedAgentId: string | null;
   onSelectAgent: (id: string | null) => void;
   onDeleteAgent: (id: string) => void;
+  onColorChange: (id: string, color: string | undefined) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingAgent = pendingDeleteId ? agents.find(a => a.id === pendingDeleteId) : null;
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Auto-expand and scroll to selected agent
   useEffect(() => {
     if (selectedAgentId) {
       setExpandedId(selectedAgentId);
@@ -150,7 +220,8 @@ function AgentsTab({
     <>
     <Reorder.Group axis="y" values={agents} onReorder={onReorder} className="space-y-2">
       {agents.map((agent, i) => {
-        const color = statusColor(agent.status);
+        const color = agent.color ?? statusColor(agent.status).bg;
+        const isDead = agent.status === "down";
         const isExpanded = expandedId === agent.id;
         const isSelected = selectedAgentId === agent.id;
         return (
@@ -158,14 +229,14 @@ function AgentsTab({
             key={agent.id}
             value={agent}
             initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            animate={{ opacity: isDead ? 0.6 : 1, x: 0 }}
             transition={{ delay: i * 0.03 }}
-            whileHover={{ scale: 1.01, x: 3, boxShadow: `0 2px 12px ${color.bg}15` }}
+            whileHover={{ scale: 1.01, x: 3, boxShadow: `0 2px 12px ${color}15` }}
             whileTap={{ scale: 0.98 }}
             className={`p-3 rounded-xl border transition-colors cursor-grab active:cursor-grabbing group ${
               isSelected ? "border-primary/50 bg-primary/5" : "border-border/30 hover:border-border/60"
             }`}
-            style={{ borderLeftWidth: 3, borderLeftColor: color.bg }}
+            style={{ borderLeftWidth: 3, borderLeftColor: color }}
           >
             <div
               ref={(el) => { cardRefs.current[agent.id] = el; }}
@@ -176,9 +247,36 @@ function AgentsTab({
                 <div className="flex items-center gap-2">
                   <GripVertical className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   <span className="text-sm">{agent.icon}</span>
-                  <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
+                  <span className={`font-display font-semibold text-xs ${isDead ? "text-muted-foreground" : "text-foreground"}`}>{agent.name}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  {/* Kill button on hover */}
+                  {!isDead && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStatusChange(agent.id, "down", { currentTask: "KILLED", progress: 0 });
+                        toast.error(`${agent.name} killed`);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20"
+                      title="Kill agent"
+                    >
+                      <Power className="w-3 h-3 text-destructive" />
+                    </button>
+                  )}
+                  {isDead && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStatusChange(agent.id, "healthy", { currentTask: "Resuming operations", progress: 50 });
+                        toast.success(`${agent.name} revived`);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-neon-green/20"
+                      title="Revive agent"
+                    >
+                      <Zap className="w-3 h-3 text-neon-green" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -191,7 +289,7 @@ function AgentsTab({
                   </button>
                   <span
                     className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded"
-                    style={{ color: color.bg, backgroundColor: `${color.bg}15` }}
+                    style={{ color: isDead ? "hsl(0, 40%, 45%)" : color, backgroundColor: isDead ? "hsl(0, 40%, 45%, 0.15)" : `${color}15` }}
                   >
                     {agent.status.toUpperCase()}
                   </span>
@@ -200,11 +298,11 @@ function AgentsTab({
                   </motion.div>
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground mb-1.5 truncate">{agent.currentTask}</p>
+              <p className={`text-[10px] mb-1.5 truncate ${isDead ? "text-destructive/60" : "text-muted-foreground"}`}>{agent.currentTask}</p>
               <div className="w-full h-1 bg-muted rounded-full mb-1.5">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ backgroundColor: color.bg }}
+                  style={{ backgroundColor: isDead ? "hsl(0, 40%, 35%)" : color }}
                   initial={{ width: 0 }}
                   animate={{ width: `${agent.progress}%` }}
                   transition={{ delay: i * 0.04, duration: 0.8 }}
@@ -212,21 +310,21 @@ function AgentsTab({
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <Sparkline data={agent.metrics.latency} color={color.bg} />
+                  <Sparkline data={agent.metrics.latency} color={color} isDead={isDead} />
                   <span className="text-[8px] text-muted-foreground font-mono">LATENCY</span>
                 </div>
                 <div className="flex-1">
-                  <Sparkline data={agent.metrics.successRate} color={color.bg} />
+                  <Sparkline data={agent.metrics.successRate} color={color} isDead={isDead} />
                   <span className="text-[8px] text-muted-foreground font-mono">SUCCESS</span>
                 </div>
                 <div className="flex-1">
-                  <Sparkline data={agent.metrics.activity} color={color.bg} />
+                  <Sparkline data={agent.metrics.activity} color={color} isDead={isDead} />
                   <span className="text-[8px] text-muted-foreground font-mono">ACTIVITY</span>
                 </div>
               </div>
             </div>
             <AnimatePresence>
-              {isExpanded && <AgentDetailView agent={agent} onStatusChange={onStatusChange} />}
+              {isExpanded && <AgentDetailView agent={agent} onStatusChange={onStatusChange} onColorChange={onColorChange} />}
             </AnimatePresence>
           </Reorder.Item>
         );
@@ -368,6 +466,10 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
     onAgentsChange(agents.map(a => a.id === id ? { ...a, ...update, status } : a));
   }, [agents, onAgentsChange]);
 
+  const handleColorChange = useCallback((id: string, color: string | undefined) => {
+    onAgentsChange(agents.map(a => a.id === id ? { ...a, color } : a));
+  }, [agents, onAgentsChange]);
+
   const filteredAgents = search
     ? agents.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()) || a.type.toLowerCase().includes(search.toLowerCase()))
     : agents;
@@ -500,6 +602,7 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
                 selectedAgentId={selectedAgentId}
                 onSelectAgent={onSelectAgent}
                 onDeleteAgent={onDeleteAgent}
+                onColorChange={handleColorChange}
               />
             )}
             {activeTab === "backlog" && <BacklogTab agents={agents} />}

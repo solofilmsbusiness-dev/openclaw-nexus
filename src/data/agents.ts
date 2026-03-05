@@ -10,6 +10,7 @@ export interface Agent {
   currentTask: string;
   progress: number;
   backlogCount: number;
+  color?: string;
   metrics: {
     latency: number[];
     successRate: number[];
