@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
-import { Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Activity, CheckCircle, AlertTriangle, XCircle, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import type { Agent } from "@/data/agents";
 
 export default function MetricsBar({ agents }: { agents: Agent[] }) {
+  const navigate = useNavigate();
   const downCount = agents.filter((a) => a.status === "down").length;
 
   const metrics = [
@@ -42,9 +44,19 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
           )}
         </motion.div>
       ))}
-      <div className="ml-auto flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-neon-green" />
-        <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">Online</span>
+      <div className="ml-auto flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-neon-green" />
+          <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">Online</span>
+        </div>
+        <div className="h-4 w-px bg-border/30" />
+        <button
+          onClick={() => navigate("/admin")}
+          className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 group"
+          title="Settings"
+        >
+          <Settings className="w-4 h-4 transition-transform duration-500 group-hover:rotate-90" />
+        </button>
       </div>
     </div>
   );

@@ -865,14 +865,20 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           setConnectSource(null);
           setPendingEdge(null);
         }}
-        className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono tracking-wider transition-all ${
+        className={`absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono tracking-wider transition-all duration-300 ${
           connectMode
-            ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_hsl(215,80%,60%,0.3)]"
-            : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+            ? "border-primary bg-primary/20 text-primary shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
+            : "border-border/40 bg-secondary/40 text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
         }`}
         title={connectMode ? "Exit connect mode (ESC)" : "Connect nodes"}
       >
-        <Link className="w-3 h-3" />
+        {connectMode && (
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+          </span>
+        )}
+        <Link className="w-3.5 h-3.5" />
         {connectMode ? "CONNECTING…" : "CONNECT"}
       </button>
 
