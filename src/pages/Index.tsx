@@ -94,6 +94,7 @@ const Index = () => {
             onAddEdge={handleAddEdge}
             onDeleteEdge={handleDeleteEdge}
             onDeleteAgent={handleDeleteAgent}
+            killSwitchActive={killSwitchActive}
           />
         </div>
 
