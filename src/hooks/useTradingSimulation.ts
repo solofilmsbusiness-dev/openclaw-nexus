@@ -576,6 +576,20 @@ export function useTradingSimulation() {
     await supabase.from("learning_notes").delete().eq("id", id);
   }, []);
 
+  const addLearningNote = useCallback(async (category: LearningNote["category"], content: string) => {
+    const note: LearningNote = { id: uid(), category, content, timestamp: new Date() };
+    setLearningNotes((prev) => [note, ...prev].slice(0, 20));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase.from("learning_notes").insert({
+        id: note.id,
+        user_id: session.user.id,
+        category: note.category,
+        content: note.content,
+      });
+    }
+  }, []);
+
   return {
     tickers,
     evaluations,
