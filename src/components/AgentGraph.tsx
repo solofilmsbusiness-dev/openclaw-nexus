@@ -4,7 +4,7 @@ import { EDGES, statusColor, type Agent } from "@/data/agents";
 
 const CORE_X = 400;
 const CORE_Y = 300;
-const RADIUS = 220;
+const RADIUS = 250;
 
 function getNodePositions(agents: Agent[]) {
   const positions: Record<string, { x: number; y: number }> = {
