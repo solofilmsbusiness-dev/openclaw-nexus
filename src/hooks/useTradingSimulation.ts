@@ -491,10 +491,80 @@ export function useTradingSimulation() {
   })();
 
   // Aggregate stats
-  const totalPnl = tradeHistory.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
+  const closedTrades = tradeHistory.filter((t) => t.pnl !== null);
+  const totalPnl = closedTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
   const totalTrades = tradeHistory.length;
-  const wins = tradeHistory.filter((t) => t.pnl !== null && t.pnl > 0).length;
-  const winRate = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
+  const wins = closedTrades.filter((t) => t.pnl! > 0).length;
+  const losses = closedTrades.filter((t) => t.pnl! <= 0).length;
+  const winRate = closedTrades.length > 0 ? Math.round((wins / closedTrades.length) * 100) : 0;
+
+  // Win/Loss streaks
+  let currentStreak = 0;
+  let currentStreakType: "win" | "loss" | null = null;
+  let maxWinStreak = 0;
+  let maxLossStreak = 0;
+  // Iterate oldest-first for streak calculation
+  const chronological = [...closedTrades].reverse();
+  for (const t of chronological) {
+    const isWin = t.pnl! > 0;
+    if (currentStreakType === (isWin ? "win" : "loss")) {
+      currentStreak++;
+    } else {
+      currentStreak = 1;
+      currentStreakType = isWin ? "win" : "loss";
+    }
+    if (isWin) maxWinStreak = Math.max(maxWinStreak, currentStreak);
+    else maxLossStreak = Math.max(maxLossStreak, currentStreak);
+  }
+
+  // Average trade duration (simulate as time between sequential trades)
+  let avgDurationMs = 0;
+  if (chronological.length >= 2) {
+    const durations: number[] = [];
+    for (let i = 1; i < chronological.length; i++) {
+      durations.push(chronological[i].timestamp.getTime() - chronological[i - 1].timestamp.getTime());
+    }
+    avgDurationMs = durations.reduce((a, b) => a + b, 0) / durations.length;
+  }
+  const avgDurationSec = Math.round(avgDurationMs / 1000);
+
+  // Sharpe ratio (annualized, using per-trade returns)
+  let sharpeRatio = 0;
+  if (closedTrades.length >= 2) {
+    const returns = closedTrades.map((t) => t.pnl!);
+    const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((sum, r) => sum + (r - meanReturn) ** 2, 0) / (returns.length - 1);
+    const stdDev = Math.sqrt(variance);
+    if (stdDev > 0) {
+      sharpeRatio = Math.round((meanReturn / stdDev) * Math.sqrt(252) * 100) / 100; // annualized
+    }
+  }
+
+  // Profit factor
+  const grossProfit = closedTrades.filter((t) => t.pnl! > 0).reduce((s, t) => s + t.pnl!, 0);
+  const grossLoss = Math.abs(closedTrades.filter((t) => t.pnl! <= 0).reduce((s, t) => s + t.pnl!, 0));
+  const profitFactor = grossLoss > 0 ? Math.round((grossProfit / grossLoss) * 100) / 100 : grossProfit > 0 ? Infinity : 0;
+
+  // Average win / average loss
+  const avgWin = wins > 0 ? Math.round((grossProfit / wins) * 100) / 100 : 0;
+  const avgLoss = losses > 0 ? Math.round((grossLoss / losses) * 100) / 100 : 0;
+
+  const advancedStats = {
+    totalPnl: Math.round(totalPnl * 100) / 100,
+    totalTrades,
+    winRate,
+    wins,
+    losses,
+    maxWinStreak,
+    maxLossStreak,
+    currentStreak,
+    currentStreakType,
+    avgDurationSec,
+    sharpeRatio,
+    profitFactor,
+    avgWin,
+    avgLoss,
+  };
 
   const deleteTrade = useCallback(async (id: string) => {
     setTradeHistory((prev) => prev.filter((t) => t.id !== id));
@@ -515,7 +585,7 @@ export function useTradingSimulation() {
     learningNotes,
     dataSource,
     portfolio,
-    stats: { totalPnl: Math.round(totalPnl * 100) / 100, totalTrades, winRate },
+    stats: advancedStats,
     deleteTrade,
     deleteLearningNote,
   };
