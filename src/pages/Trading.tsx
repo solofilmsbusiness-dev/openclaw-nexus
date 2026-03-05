@@ -97,7 +97,7 @@ const Trading = () => {
 
     switch (panelItem.id) {
       case "market":
-        return <MarketPanel tickers={tickers} />;
+        return <MarketPanel tickers={tickers} activeSymbols={activeSymbols} setActiveSymbols={setActiveSymbols} />;
       case "agent":
         return <AgentPanel evaluations={evaluations} considerations={considerations} executedTrades={executedTrades} />;
       case "history":
@@ -119,7 +119,7 @@ const Trading = () => {
       case "portfolio":
         return <PortfolioPanel portfolio={portfolio} />;
       case "watchlist":
-        return <WatchlistInner tickers={tickers} />;
+        return <WatchlistInner tickers={tickers} activeSymbols={activeSymbols} />;
       case "analytics":
         return <AnalyticsInner stats={stats} tradeHistory={tradeHistory} />;
       default:
