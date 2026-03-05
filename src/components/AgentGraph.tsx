@@ -369,8 +369,9 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
           const pos = positions[agent.id];
           const isHovered = hoveredId === agent.id;
           const isSelected = selectedAgentId === agent.id;
+          const isNodeDragging = draggingId === agent.id;
           return (
-            <FloatingGroup key={agent.id} index={i} isHovered={isHovered || isSelected}>
+            <FloatingGroup key={agent.id} index={i} isHovered={isHovered || isSelected || isNodeDragging}>
               <AgentNode
                 agent={agent}
                 x={pos.x}
@@ -381,6 +382,10 @@ export default function AgentGraph({ agents, selectedAgentId, onSelectAgent }: A
                 isSelected={isSelected}
                 hoveredId={hoveredId}
                 selectedId={selectedAgentId}
+                onDragStart={handleDragStart}
+                onDrag={() => {}}
+                onDragEnd={handleDragEnd}
+                isDragging={isNodeDragging}
               />
             </FloatingGroup>
           );
