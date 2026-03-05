@@ -68,6 +68,25 @@ export default function OnboardingTour() {
     return () => window.removeEventListener("resize", onResize);
   }, [active, step, measure]);
 
+  useEffect(() => {
+    if (!active) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") goNext();
+      else if (e.key === "ArrowLeft") goBack();
+      else if (e.key === "Escape") finish();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [active, step]);
+
+  const goBack = () => {
+    if (step > 0) {
+      const prev = step - 1;
+      setStep(prev);
+      measure(prev);
+    }
+  };
+
   const goNext = () => {
     if (step >= STEPS.length - 1) {
       finish();
