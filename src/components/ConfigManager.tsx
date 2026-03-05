@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAgents } from "@/contexts/AgentContext";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Save, FolderOpen, Trash2, Pencil, Loader2 } from "lucide-react";
 import type { Agent, Edge } from "@/data/agents";
 
@@ -42,7 +42,7 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
       .select("*")
       .order("updated_at", { ascending: false });
     if (error) {
-      toast({ title: "Error loading configs", description: error.message, variant: "destructive" });
+      toast.error("Error loading configs", { description: error.message });
     } else {
       setConfigs((data as unknown as GraphConfig[]) || []);
     }
@@ -55,13 +55,13 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast({ title: "Name required", variant: "destructive" });
+      toast.error("Name required");
       return;
     }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast({ title: "Please log in to save configs", variant: "destructive" });
+      toast.error("Please log in to save configs");
       setSaving(false);
       return;
     }
@@ -74,9 +74,9 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
     };
     const { error } = await supabase.from("graph_configs").insert(payload);
     if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast.error("Save failed", { description: error.message });
     } else {
-      toast({ title: "Configuration saved" });
+      toast.success("Configuration saved");
       setName("");
       setProject("");
       fetchConfigs();
@@ -92,17 +92,17 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
     } else {
       loadConfig(agentsData as Agent[], edgesData as Edge[]);
     }
-    toast({ title: `Loaded "${config.name}"` });
+    toast.success(`Loaded "${config.name}"`);
     onOpenChange(false);
   };
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("graph_configs").delete().eq("id", id);
     if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      toast.error("Delete failed", { description: error.message });
     } else {
       setConfigs((prev) => prev.filter((c) => c.id !== id));
-      toast({ title: "Configuration deleted" });
+      toast.success("Configuration deleted");
     }
   };
 
@@ -112,11 +112,11 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
       .update({ name: editName.trim(), project: editProject.trim(), updated_at: new Date().toISOString() })
       .eq("id", id);
     if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      toast.error("Update failed", { description: error.message });
     } else {
       setEditingId(null);
       fetchConfigs();
-      toast({ title: "Configuration updated" });
+      toast.success("Configuration updated");
     }
   };
 

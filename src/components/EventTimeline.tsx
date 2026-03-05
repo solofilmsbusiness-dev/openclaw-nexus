@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { statusColor, AGENTS, type AgentEvent } from "@/data/agents";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Radio } from "lucide-react";
 
 interface EventTimelineProps {
   events: AgentEvent[];
@@ -32,6 +32,12 @@ export default function EventTimeline({ events, selectedAgentId, onSelectAgent }
         )}
       </div>
       <ScrollArea className="flex-1">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
+            <Radio className="w-5 h-5 opacity-40" />
+            <span className="text-[10px] font-mono tracking-wider">No events</span>
+          </div>
+        ) : (
         <div className="space-y-1 pr-1">
           <AnimatePresence initial={false}>
             {filtered.map((event) => {
@@ -76,6 +82,7 @@ export default function EventTimeline({ events, selectedAgentId, onSelectAgent }
             })}
           </AnimatePresence>
         </div>
+        )}
       </ScrollArea>
     </div>
   );

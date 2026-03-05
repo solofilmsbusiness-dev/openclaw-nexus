@@ -159,7 +159,8 @@ export default function Admin() {
           </div>
 
           <div className="space-y-1">
-            <div className="grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-2 text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
+            {/* Desktop header */}
+            <div className="hidden md:grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-2 text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
               <span>Icon</span><span>Name</span><span>Status</span><span>Task</span><span>Progress</span><span>Edit</span>
             </div>
 
@@ -173,43 +174,86 @@ export default function Admin() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className={`grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-3 rounded-lg border transition-all ${
+                    className={`rounded-lg border transition-all ${
                       agent.status === "down" ? "border-destructive/30 bg-destructive/5" : "border-border/20 hover:border-border/40 hover:bg-secondary/20"
                     }`}
                   >
-                    <span className="text-lg flex items-center">{agent.icon}</span>
-                    <div className="flex items-center gap-2 min-w-0">
-                      {isEditing ? (
-                        <div className="flex items-center gap-1.5 flex-1">
-                          <input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }} autoFocus className="flex-1 h-7 px-2 rounded border border-primary/50 bg-secondary/50 text-foreground font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary/30" />
-                          <button onClick={handleSaveEdit} className="text-neon-green hover:scale-110 transition-transform"><Check className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-destructive transition-colors"><X className="w-3.5 h-3.5" /></button>
-                        </div>
-                      ) : (
-                        <div className="truncate">
-                          <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
-                          <p className="text-[9px] text-muted-foreground truncate">{agent.subtitle}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-[9px] font-mono font-semibold px-2 py-1 rounded" style={{ color: color.bg, backgroundColor: `${color.bg}15` }}>
-                        {agent.status === "down" && agent.currentTask === "KILLED" ? "KILLED" : agent.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono text-muted-foreground truncate flex items-center">{agent.currentTask}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-muted rounded-full">
-                        <motion.div className="h-full rounded-full" style={{ backgroundColor: color.bg }} animate={{ width: `${agent.progress}%` }} transition={{ duration: 0.5 }} />
+                    {/* Desktop row */}
+                    <div className="hidden md:grid grid-cols-[40px_1fr_120px_140px_80px_60px] gap-3 px-3 py-3">
+                      <span className="text-lg flex items-center">{agent.icon}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }} autoFocus className="flex-1 h-7 px-2 rounded border border-primary/50 bg-secondary/50 text-foreground font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                            <button onClick={handleSaveEdit} className="text-neon-green hover:scale-110 transition-transform"><Check className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-destructive transition-colors"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                        ) : (
+                          <div className="truncate">
+                            <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
+                            <p className="text-[9px] text-muted-foreground truncate">{agent.subtitle}</p>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{agent.progress}%</span>
+                      <div className="flex items-center">
+                        <span className="text-[9px] font-mono font-semibold px-2 py-1 rounded" style={{ color: color.bg, backgroundColor: `${color.bg}15` }}>
+                          {agent.status === "down" && agent.currentTask === "KILLED" ? "KILLED" : agent.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground truncate flex items-center">{agent.currentTask}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-muted rounded-full">
+                          <motion.div className="h-full rounded-full" style={{ backgroundColor: color.bg }} animate={{ width: `${agent.progress}%` }} transition={{ duration: 0.5 }} />
+                        </div>
+                        <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{agent.progress}%</span>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {!isEditing && (
+                          <button onClick={() => handleStartEdit(agent.id, agent.name)} className="p-1.5 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-primary transition-colors">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-center">
-                      {!isEditing && (
-                        <button onClick={() => handleStartEdit(agent.id, agent.name)} className="p-1.5 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-primary transition-colors">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+
+                    {/* Mobile card */}
+                    <div className="md:hidden p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-lg">{agent.icon}</span>
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5 flex-1">
+                              <input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }} autoFocus className="flex-1 h-7 px-2 rounded border border-primary/50 bg-secondary/50 text-foreground font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                              <button onClick={handleSaveEdit} className="text-neon-green hover:scale-110 transition-transform"><Check className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-destructive transition-colors"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                          ) : (
+                            <div className="truncate">
+                              <span className="font-display font-semibold text-xs text-foreground">{agent.name}</span>
+                              <p className="text-[9px] text-muted-foreground truncate">{agent.subtitle}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-mono font-semibold px-2 py-1 rounded" style={{ color: color.bg, backgroundColor: `${color.bg}15` }}>
+                            {agent.status === "down" && agent.currentTask === "KILLED" ? "KILLED" : agent.status.toUpperCase()}
+                          </span>
+                          {!isEditing && (
+                            <button onClick={() => handleStartEdit(agent.id, agent.name)} className="p-1.5 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-primary transition-colors">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-mono text-muted-foreground truncate flex-1">{agent.currentTask}</span>
+                        <div className="flex items-center gap-2 w-24">
+                          <div className="flex-1 h-1.5 bg-muted rounded-full">
+                            <motion.div className="h-full rounded-full" style={{ backgroundColor: color.bg }} animate={{ width: `${agent.progress}%` }} transition={{ duration: 0.5 }} />
+                          </div>
+                          <span className="text-[9px] font-mono text-muted-foreground">{agent.progress}%</span>
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 );

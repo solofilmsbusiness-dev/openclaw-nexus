@@ -4,7 +4,7 @@ import { statusColor, type Agent, type Edge } from "@/data/agents";
 import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen } from "lucide-react";
 import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { ConfigManager } from "@/components/ConfigManager";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -1169,7 +1169,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
                 if (pendingDeleteId && onDeleteAgent) {
                   const name = pendingDeleteAgent?.name;
                   onDeleteAgent(pendingDeleteId);
-                  toast({ title: "Agent deleted", description: `${name} has been removed.` });
+                  toast.success("Agent deleted", { description: `${name} has been removed.` });
                   setPendingDeleteId(null);
                 }
               }}
