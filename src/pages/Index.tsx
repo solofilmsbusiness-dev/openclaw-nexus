@@ -34,7 +34,14 @@ const Index = () => {
     checkAuth();
   }, [navigate, loadLastConfig]);
 
-  if (!authChecked) return null;
+  if (!authChecked) {
+    return (
+      <div className="h-screen bg-background flex flex-col items-center justify-center gap-3">
+        <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <span className="font-mono text-xs text-muted-foreground tracking-wider">Initializing…</span>
+      </div>
+    );
+  }
 
   const {
     agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,

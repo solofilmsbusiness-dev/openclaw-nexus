@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Terminal } from "lucide-react";
 import type { AgentEvent } from "@/data/agents";
 
 export default function TerminalLog({ events }: { events: AgentEvent[] }) {
@@ -17,6 +18,12 @@ export default function TerminalLog({ events }: { events: AgentEvent[] }) {
         <span className="ml-auto text-[9px] font-mono text-neon-green/70">● Live</span>
       </div>
       <ScrollArea className="flex-1">
+        {events.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-24 gap-2 text-muted-foreground">
+            <Terminal className="w-5 h-5 opacity-40" />
+            <span className="text-[10px] font-mono tracking-wider">Awaiting signals…</span>
+          </div>
+        ) : (
         <div className="font-mono text-[11px] leading-relaxed space-y-0.5">
           <AnimatePresence initial={false}>
             {events.slice(0, 30).map((event) => (
@@ -36,6 +43,7 @@ export default function TerminalLog({ events }: { events: AgentEvent[] }) {
             ))}
           </AnimatePresence>
         </div>
+        )}
       </ScrollArea>
     </div>
   );

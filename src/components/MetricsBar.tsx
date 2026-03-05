@@ -28,13 +28,13 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
         </span>
       </div>
       <div className="hidden sm:block h-5 w-px bg-border/50" />
-      {metrics.map((m) => (
+      {metrics.map((m, i) => (
         <motion.div
           key={m.label}
           className="flex items-center gap-1.5 relative"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: i * 0.08 }}
         >
           <m.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${m.colorClass}`} />
           <span className="hidden sm:inline text-muted-foreground text-xs tracking-wide">{m.label}</span>
@@ -46,7 +46,7 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
       ))}
       <div className="ml-auto flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-neon-green" />
+          <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse-glow" />
           <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">Online</span>
         </div>
         <div className="h-4 w-px bg-border/30" />
