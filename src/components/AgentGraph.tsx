@@ -291,11 +291,11 @@ function AgentNode({
         {agent.icon}
       </text>
       {/* Agent name */}
-      <text x={x} y={y + size + 16} textAnchor="middle" fill="hsl(0, 0%, 85%)" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600">
+      <text x={x} y={y + size + 16} textAnchor="middle" fill="hsl(var(--foreground))" fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600">
         {agent.name}
       </text>
       {/* Subtitle */}
-      <text x={x} y={y + size + 27} textAnchor="middle" fill="hsl(0, 0%, 55%)" fontSize="7.5" fontFamily="-apple-system, Inter, sans-serif" fontStyle="italic" opacity="0.8">
+      <text x={x} y={y + size + 27} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="7.5" fontFamily="-apple-system, Inter, sans-serif" fontStyle="italic" opacity="0.8">
         {agent.subtitle}
       </text>
       {/* Current task */}
@@ -1057,7 +1057,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
             <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke={killSwitchActive ? "hsl(0, 30%, 14%)" : "hsl(225, 10%, 14%)"} strokeWidth="0.4" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke={killSwitchActive ? "hsl(0, 30%, 14%)" : "hsl(var(--border))"} strokeWidth="0.4" />
           </pattern>
         </defs>
 
@@ -1130,13 +1130,13 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
             <circle cx={CORE_X} cy={CORE_Y} r="65" fill="url(#coreGlow)" filter="url(#blur)">
               <animate attributeName="r" values="60;70;60" dur="5s" repeatCount="indefinite" />
             </circle>
-            <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(225, 12%, 10%)" stroke={killSwitchActive ? "hsl(0, 70%, 50%)" : connectSource === "core" ? "hsl(215, 80%, 60%)" : "hsl(215, 80%, 60%)"} strokeWidth={killSwitchActive ? "2.5" : connectSource === "core" ? "2.5" : "1.5"} opacity="0.9">
+            <circle cx={CORE_X} cy={CORE_Y} r="32" fill="hsl(var(--card))" stroke={killSwitchActive ? "hsl(0, 70%, 50%)" : connectSource === "core" ? "hsl(215, 80%, 60%)" : "hsl(215, 80%, 60%)"} strokeWidth={killSwitchActive ? "2.5" : connectSource === "core" ? "2.5" : "1.5"} opacity="0.9">
               <animate attributeName="r" values="30;34;30" dur="5s" repeatCount="indefinite" />
             </circle>
             <circle cx={CORE_X} cy={CORE_Y} r="6" fill={killSwitchActive ? "hsl(0, 70%, 55%)" : "hsl(215, 80%, 65%)"}>
               <animate attributeName="opacity" values={killSwitchActive ? "0.5;1;0.5" : "0.7;1;0.7"} dur={killSwitchActive ? "1.5s" : "3s"} repeatCount="indefinite" />
             </circle>
-            <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 70%, 60%)" : "hsl(0, 0%, 75%)"} fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
+            <text x={CORE_X} y={CORE_Y + 50} textAnchor="middle" fill={killSwitchActive ? "hsl(0, 70%, 60%)" : "hsl(var(--foreground))"} fontSize="10" fontFamily="-apple-system, Inter, sans-serif" fontWeight="600" letterSpacing="2">
               {killSwitchActive ? "⚠ SYSTEM KILLED" : "SOLO OS CORE"}
             </text>
             {!killSwitchActive && <RotatingCoreText />}
