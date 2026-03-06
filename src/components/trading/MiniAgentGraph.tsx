@@ -320,16 +320,33 @@ export default function MiniAgentGraph() {
                 fill="hsl(var(--card))" stroke={isSelected ? agent.color : "hsl(var(--border))"} strokeWidth={isSelected ? 1.5 : 1} />
 
               {/* Icon */}
-              <text x={cx} y={y + 15} textAnchor="middle" fontSize="12" className="select-none pointer-events-none">
+              <text x={cx} y={y + 14} textAnchor="middle" fontSize="11" className="select-none pointer-events-none">
                 {agent.icon}
               </text>
               {/* Name */}
-              <text x={cx} y={y + 29} textAnchor="middle" fontSize="7" fontFamily="monospace"
+              <text x={cx} y={y + 25} textAnchor="middle" fontSize="7" fontFamily="monospace"
                 fill="hsl(var(--foreground))" fontWeight="600" className="pointer-events-none">
                 {agent.name}
               </text>
+              {/* Sparkline */}
+              {(() => {
+                const spkX = x + 6;
+                const spkY = y + 29;
+                const spkW = NODE_W - 12;
+                const spkH = 10;
+                const pathD = sparklinePath(sparkHistory[agent.id], spkX, spkY, spkW, spkH);
+                return pathD ? (
+                  <g className="pointer-events-none">
+                    {/* Sparkline area fill */}
+                    <path d={`${pathD} L ${spkX + spkW} ${spkY + spkH} L ${spkX} ${spkY + spkH} Z`}
+                      fill={agent.color} opacity={0.08} />
+                    {/* Sparkline stroke */}
+                    <path d={pathD} fill="none" stroke={agent.color} strokeWidth={0.8} opacity={0.5} />
+                  </g>
+                ) : null;
+              })()}
               {/* Status */}
-              <text x={cx} y={y + 42} textAnchor="middle" fontSize="5.5" fontFamily="monospace"
+              <text x={cx} y={y + 52} textAnchor="middle" fontSize="5.5" fontFamily="monospace"
                 fill="hsl(var(--muted-foreground))" className="pointer-events-none">
                 {nodeStatus[agent.id].length > 14 ? nodeStatus[agent.id].slice(0, 13) + "…" : nodeStatus[agent.id]}
               </text>
