@@ -2,10 +2,17 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
-  isSameMonth, isSameDay, isToday, format, setHours,
+  isSameMonth, isSameDay, isToday, format,
 } from "date-fns";
 import type { ScheduledJob } from "@/hooks/useScheduledJobs";
 import JobEventCard from "./JobEventCard";
+
+const statusDotColors: Record<string, string> = {
+  scheduled: "hsl(var(--neon-blue))",
+  running: "hsl(var(--neon-orange))",
+  completed: "hsl(var(--neon-green))",
+  failed: "hsl(var(--neon-red))",
+};
 
 interface MonthViewProps {
   currentDate: Date;
@@ -41,10 +48,23 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick, 
     if (!jobId || !onReschedule) return;
     const oldScheduled = e.dataTransfer.getData("application/job-scheduled");
     const oldDate = oldScheduled ? new Date(oldScheduled) : new Date();
-    // Keep the original time, change the date
     const newDate = new Date(day);
     newDate.setHours(oldDate.getHours(), oldDate.getMinutes(), 0, 0);
     onReschedule(jobId, newDate);
+  };
+
+  /** Build a set of up to 4 status dots for a day */
+  const getDots = (dayJobs: ScheduledJob[]) => {
+    const seen = new Set<string>();
+    const dots: string[] = [];
+    for (const j of dayJobs) {
+      if (!seen.has(j.status)) {
+        seen.add(j.status);
+        dots.push(statusDotColors[j.status] || statusDotColors.scheduled);
+        if (dots.length >= 4) break;
+      }
+    }
+    return dots;
   };
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -62,8 +82,8 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick, 
           const dayJobs = jobsByDay[key] || [];
           const inMonth = isSameMonth(day, currentDate);
           const today = isToday(day);
-          const hasRunning = dayJobs.some((j) => j.status === "running");
           const isDragOver = dragOverDay === key;
+          const dots = getDots(dayJobs);
 
           return (
             <motion.div
@@ -80,18 +100,28 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick, 
               onDrop={(e) => { e.stopPropagation(); handleDrop(e, day); }}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-[11px] font-mono ${
-                  today ? "bg-primary text-primary-foreground w-5 h-5 rounded-full flex items-center justify-center font-semibold"
-                    : inMonth ? "text-foreground/80" : "text-muted-foreground/40"
-                }`}>
-                  {format(day, "d")}
-                </span>
-                {hasRunning && (
-                  <motion.div
-                    className="w-1.5 h-1.5 rounded-full bg-neon-orange"
-                    animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
+                <div className="flex items-center gap-1">
+                  <span className={`text-[11px] font-mono ${
+                    today ? "bg-primary text-primary-foreground w-5 h-5 rounded-full flex items-center justify-center font-semibold"
+                      : inMonth ? "text-foreground/80" : "text-muted-foreground/40"
+                  }`}>
+                    {format(day, "d")}
+                  </span>
+                  {/* Heat-map dots */}
+                  {dots.length > 0 && (
+                    <div className="flex items-center gap-[2px] ml-0.5">
+                      {dots.map((color, idx) => (
+                        <div
+                          key={idx}
+                          className="w-[5px] h-[5px] rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {dayJobs.length > 0 && (
+                  <span className="text-[8px] font-mono text-muted-foreground">{dayJobs.length}</span>
                 )}
               </div>
               <div className="space-y-0.5">
