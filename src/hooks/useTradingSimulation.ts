@@ -292,11 +292,18 @@ export function useTradingSimulation() {
     loadPersistedData();
   }, []);
 
-  // Fetch real market data
+  // Fetch real market data - use ref to avoid unstable deps
+  const activeInstrumentsRef = useRef(activeInstruments);
+  activeInstrumentsRef.current = activeInstruments;
+  const isFetchingRef = useRef(false);
+
   const fetchMarketData = useCallback(async () => {
+    if (isFetchingRef.current) return false;
+    isFetchingRef.current = true;
     try {
-      const stockSymbols = activeInstruments.filter((i) => i.type === "stock").map((t) => t.symbol);
-      const cryptoSymbols = activeInstruments.filter((i) => i.type === "crypto").map((t) => t.symbol);
+      const instruments = activeInstrumentsRef.current;
+      const stockSymbols = instruments.filter((i) => i.type === "stock").map((t) => t.symbol);
+      const cryptoSymbols = instruments.filter((i) => i.type === "crypto").map((t) => t.symbol);
       if (stockSymbols.length === 0 && cryptoSymbols.length === 0) {
         setDataSource("simulated");
         return false;
@@ -345,8 +352,10 @@ export function useTradingSimulation() {
       console.warn("Market data fetch failed, using simulation:", err);
       setDataSource("simulated");
       return false;
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [activeInstruments]);
+  }, []); // stable - uses refs
 
   useEffect(() => {
     fetchMarketData();
