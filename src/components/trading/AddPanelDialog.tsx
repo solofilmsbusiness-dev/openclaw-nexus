@@ -125,6 +125,22 @@ const PREMADE_TEMPLATES: PremadeTemplate[] = [
     type: "embed",
     content: "https://finviz.com/map.ashx",
   },
+  {
+    key: "agent-network",
+    title: "Agent Network",
+    description: "Live mini-map of your agent ecosystem",
+    icon: Network,
+    type: "graph" as CustomPanelType,
+    content: "",
+  },
+  {
+    key: "calculator",
+    title: "Calculator",
+    description: "Quick trading calculations & position sizing",
+    icon: Calculator,
+    type: "calculator" as CustomPanelType,
+    content: "",
+  },
 ];
 
 export default function AddPanelDialog() {
