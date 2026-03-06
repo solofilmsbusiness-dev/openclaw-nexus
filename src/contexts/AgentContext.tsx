@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 import { useSimulation } from "@/hooks/useSimulation";
 import { supabase } from "@/integrations/supabase/client";
@@ -151,7 +152,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     return true;
   }, [loadConfig]);
 
-  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive);
+  const { pathname } = useLocation();
+  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive, pathname);
 
   return (
     <AgentContext.Provider
