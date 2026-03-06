@@ -5,8 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, Trash2, Plus, LayoutGrid,
-  Settings2, Check, Minimize2, Maximize2, Clock,
+  Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
