@@ -149,7 +149,7 @@ export default function AddPanelDialog() {
   const { addCustomPanel, hiddenBuiltins, restorePanel } = useTradingLayout();
   const [open, setOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
-  const [title, setTitle] = useState("");
+  const [search, setSearch] = useState("");
   const [type, setType] = useState<CustomPanelType>("notes");
   const [embedUrl, setEmbedUrl] = useState("");
 
