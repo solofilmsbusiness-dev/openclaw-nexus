@@ -6,9 +6,12 @@ export interface InstrumentInfo {
   symbol: string;
   name: string;
   basePrice: number;
-  type: "stock" | "futures" | "crypto";
-  tickSize?: number;
-  contractMonth?: string;
+  tickSize: number;
+  pointValue: number;
+  initialMargin: number;
+  maintenanceMargin: number;
+  contractMonth: string;
+  category: "index" | "commodity" | "rates" | "micro";
 }
 
 export interface MarketTicker {
@@ -20,7 +23,6 @@ export interface MarketTicker {
   volume: number;
   history: number[];
   isLive: boolean;
-  type: "stock" | "futures" | "crypto";
 }
 
 export interface AgentEvaluation {
@@ -68,68 +70,61 @@ export interface LearningNote {
 export interface PortfolioHolding {
   symbol: string;
   name: string;
-  shares: number;
-  avgCost: number;
+  contracts: number;
+  initialMargin: number;
   currentPrice: number;
-  value: number;
   pnl: number;
   pnlPercent: number;
-  allocation: number;
 }
 
 export interface PortfolioSummary {
-  totalValue: number;
-  cashBalance: number;
-  investedValue: number;
+  accountBalance: number;
+  usedMargin: number;
+  availableMargin: number;
+  marginUtilization: number;
   totalPnl: number;
   totalPnlPercent: number;
   holdings: PortfolioHolding[];
 }
 
-// --- All instruments ---
+// --- All instruments (futures only) ---
 export const ALL_INSTRUMENTS: InstrumentInfo[] = [
-  // Stocks
-  { symbol: "AAPL", name: "Apple Inc.", basePrice: 198.5, type: "stock" },
-  { symbol: "TSLA", name: "Tesla Inc.", basePrice: 245.2, type: "stock" },
-  { symbol: "NVDA", name: "NVIDIA Corp.", basePrice: 875.3, type: "stock" },
-  { symbol: "MSFT", name: "Microsoft Corp.", basePrice: 415.8, type: "stock" },
-  { symbol: "AMZN", name: "Amazon.com", basePrice: 185.6, type: "stock" },
-  { symbol: "GOOGL", name: "Alphabet Inc.", basePrice: 155.4, type: "stock" },
-  { symbol: "META", name: "Meta Platforms", basePrice: 505.1, type: "stock" },
-  { symbol: "AMD", name: "AMD Inc.", basePrice: 162.7, type: "stock" },
-  // Stock Index Futures
-  { symbol: "ES", name: "S&P 500 E-mini", basePrice: 5420.0, type: "futures", tickSize: 0.25, contractMonth: "Mar 26" },
-  { symbol: "NQ", name: "Nasdaq E-mini", basePrice: 18950.0, type: "futures", tickSize: 0.25, contractMonth: "Mar 26" },
-  { symbol: "YM", name: "Dow E-mini", basePrice: 39800.0, type: "futures", tickSize: 1.0, contractMonth: "Mar 26" },
-  { symbol: "RTY", name: "Russell 2000 E-mini", basePrice: 2080.0, type: "futures", tickSize: 0.1, contractMonth: "Mar 26" },
+  // Index Futures
+  { symbol: "ES", name: "S&P 500 E-mini", basePrice: 5420.0, tickSize: 0.25, pointValue: 50, initialMargin: 12650, maintenanceMargin: 11500, contractMonth: "Mar 26", category: "index" },
+  { symbol: "NQ", name: "Nasdaq E-mini", basePrice: 18950.0, tickSize: 0.25, pointValue: 20, initialMargin: 18700, maintenanceMargin: 17000, contractMonth: "Mar 26", category: "index" },
+  { symbol: "YM", name: "Dow E-mini", basePrice: 39800.0, tickSize: 1.0, pointValue: 5, initialMargin: 9900, maintenanceMargin: 9000, contractMonth: "Mar 26", category: "index" },
+  { symbol: "RTY", name: "Russell 2000 E-mini", basePrice: 2080.0, tickSize: 0.1, pointValue: 50, initialMargin: 6820, maintenanceMargin: 6200, contractMonth: "Mar 26", category: "index" },
+  // Micro Index Futures
+  { symbol: "MES", name: "Micro S&P 500", basePrice: 5420.0, tickSize: 0.25, pointValue: 5, initialMargin: 1265, maintenanceMargin: 1150, contractMonth: "Mar 26", category: "micro" },
+  { symbol: "MNQ", name: "Micro Nasdaq", basePrice: 18950.0, tickSize: 0.25, pointValue: 2, initialMargin: 1870, maintenanceMargin: 1700, contractMonth: "Mar 26", category: "micro" },
   // Commodity Futures
-  { symbol: "CL", name: "Crude Oil", basePrice: 78.5, type: "futures", tickSize: 0.01, contractMonth: "Apr 26" },
-  { symbol: "GC", name: "Gold", basePrice: 2340.0, type: "futures", tickSize: 0.1, contractMonth: "Jun 26" },
-  { symbol: "SI", name: "Silver", basePrice: 27.8, type: "futures", tickSize: 0.005, contractMonth: "May 26" },
-  { symbol: "NG", name: "Natural Gas", basePrice: 2.15, type: "futures", tickSize: 0.001, contractMonth: "Apr 26" },
-  // Other Futures
-  { symbol: "ZB", name: "Treasury Bonds", basePrice: 118.5, type: "futures", tickSize: 0.03125, contractMonth: "Jun 26" },
-  { symbol: "6E", name: "Euro FX", basePrice: 1.085, type: "futures", tickSize: 0.00005, contractMonth: "Jun 26" },
-  // Cryptocurrencies
-  { symbol: "BTC", name: "Bitcoin", basePrice: 42350.0, type: "crypto" },
-  { symbol: "ETH", name: "Ethereum", basePrice: 2280.5, type: "crypto" },
-  { symbol: "SOL", name: "Solana", basePrice: 145.8, type: "crypto" },
+  { symbol: "CL", name: "Crude Oil", basePrice: 78.5, tickSize: 0.01, pointValue: 1000, initialMargin: 6820, maintenanceMargin: 6200, contractMonth: "Apr 26", category: "commodity" },
+  { symbol: "GC", name: "Gold", basePrice: 2340.0, tickSize: 0.1, pointValue: 100, initialMargin: 10450, maintenanceMargin: 9500, contractMonth: "Jun 26", category: "commodity" },
+  { symbol: "SI", name: "Silver", basePrice: 27.8, tickSize: 0.005, pointValue: 5000, initialMargin: 11000, maintenanceMargin: 10000, contractMonth: "May 26", category: "commodity" },
+  { symbol: "NG", name: "Natural Gas", basePrice: 2.15, tickSize: 0.001, pointValue: 10000, initialMargin: 3300, maintenanceMargin: 3000, contractMonth: "Apr 26", category: "commodity" },
+  { symbol: "ZC", name: "Corn", basePrice: 445.0, tickSize: 0.25, pointValue: 50, initialMargin: 1650, maintenanceMargin: 1500, contractMonth: "May 26", category: "commodity" },
+  { symbol: "ZS", name: "Soybeans", basePrice: 1185.0, tickSize: 0.25, pointValue: 50, initialMargin: 3025, maintenanceMargin: 2750, contractMonth: "May 26", category: "commodity" },
+  { symbol: "ZW", name: "Wheat", basePrice: 580.0, tickSize: 0.25, pointValue: 50, initialMargin: 1925, maintenanceMargin: 1750, contractMonth: "May 26", category: "commodity" },
+  { symbol: "HG", name: "Copper", basePrice: 3.85, tickSize: 0.0005, pointValue: 25000, initialMargin: 5500, maintenanceMargin: 5000, contractMonth: "May 26", category: "commodity" },
+  // Rates & FX
+  { symbol: "ZB", name: "Treasury Bonds", basePrice: 118.5, tickSize: 0.03125, pointValue: 1000, initialMargin: 4400, maintenanceMargin: 4000, contractMonth: "Jun 26", category: "rates" },
+  { symbol: "6E", name: "Euro FX", basePrice: 1.085, tickSize: 0.00005, pointValue: 125000, initialMargin: 2750, maintenanceMargin: 2500, contractMonth: "Jun 26", category: "rates" },
 ];
 
-const DEFAULT_ACTIVE = ["AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "AMD"];
+const DEFAULT_ACTIVE = ["ES", "NQ", "YM", "CL", "GC"];
 const LS_KEY = "trading-active-instruments";
 
 // --- Seed data ---
 const LEARNING_TEMPLATES: { category: LearningNote["category"]; content: string }[] = [
-  { category: "Mistake", content: "Entered TSLA position too early — RSI hadn't confirmed oversold. Wait for confirmation next time." },
-  { category: "Insight", content: "NVDA consistently shows momentum continuation after breaking previous day high in first 30 min." },
-  { category: "Adjustment", content: "Reducing position size on volatile days. Max risk per trade capped at 1.5% of portfolio." },
-  { category: "Pattern", content: "AAPL tends to consolidate between 10:30-11:00 AM before a breakout. Consider waiting for this window." },
-  { category: "Insight", content: "Strong correlation between SPY volume spikes and tech sector momentum shifts within 15 min." },
-  { category: "Mistake", content: "Held AMZN short too long through support bounce. Need tighter stop-loss on counter-trend trades." },
+  { category: "Mistake", content: "Entered ES long too early — RSI hadn't confirmed oversold. Wait for confirmation next time." },
+  { category: "Insight", content: "NQ consistently shows momentum continuation after breaking previous day high in first 30 min of RTH." },
+  { category: "Adjustment", content: "Reducing position size on volatile days. Max risk per trade capped at 1.5% of account." },
+  { category: "Pattern", content: "ES tends to consolidate between 10:30-11:00 AM ET before a breakout. Consider waiting for this window." },
+  { category: "Insight", content: "Strong correlation between ES volume spikes and NQ momentum shifts within 15 min." },
+  { category: "Mistake", content: "Held CL short too long through support bounce. Need tighter stop-loss on counter-trend trades." },
   { category: "Adjustment", content: "Added VWAP as primary entry filter. Entries above VWAP for longs, below for shorts." },
-  { category: "Pattern", content: "META shows mean-reversion tendencies on gap-down opens > 2%. Fade strategy effective 68% of the time." },
-  { category: "Insight", content: "MACD histogram divergence on 5-min chart is a reliable early signal for trend exhaustion." },
+  { category: "Pattern", content: "GC shows mean-reversion tendencies on gap-down opens > 1%. Fade strategy effective 68% of the time." },
+  { category: "Insight", content: "MACD histogram divergence on 5-min chart is a reliable early signal for trend exhaustion on ES." },
   { category: "Adjustment", content: "Implementing trailing stop at 1.2x ATR after 2:1 R:R achieved. Locks in profits more consistently." },
 ];
 
@@ -155,7 +150,11 @@ export function useTradingSimulation() {
       const saved = localStorage.getItem(LS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filter out any old stock/crypto symbols
+          const valid = parsed.filter((s: string) => ALL_INSTRUMENTS.some((i) => i.symbol === s));
+          if (valid.length > 0) return valid;
+        }
       }
     } catch {}
     return DEFAULT_ACTIVE;
@@ -175,10 +174,9 @@ export function useTradingSimulation() {
       price: t.basePrice,
       change: 0,
       changePercent: 0,
-      volume: randInt(5_000_000, 80_000_000),
-      history: Array.from({ length: 20 }, () => t.basePrice + rand(-5, 5)),
+      volume: randInt(50_000, 800_000),
+      history: Array.from({ length: 20 }, () => t.basePrice + rand(-t.basePrice * 0.002, t.basePrice * 0.002)),
       isLive: false,
-      type: t.type,
     }))
   );
 
@@ -205,10 +203,9 @@ export function useTradingSimulation() {
           price: inst.basePrice,
           change: 0,
           changePercent: 0,
-          volume: randInt(5_000_000, 80_000_000),
-          history: Array.from({ length: 20 }, () => inst.basePrice + rand(-5, 5)),
+          volume: randInt(50_000, 800_000),
+          history: Array.from({ length: 20 }, () => inst.basePrice + rand(-inst.basePrice * 0.002, inst.basePrice * 0.002)),
           isLive: false,
-          type: inst.type,
         };
       });
     });
@@ -292,7 +289,7 @@ export function useTradingSimulation() {
     loadPersistedData();
   }, []);
 
-  // Fetch real market data - use ref to avoid unstable deps
+  // Fetch real market data
   const activeInstrumentsRef = useRef(activeInstruments);
   activeInstrumentsRef.current = activeInstruments;
   const isFetchingRef = useRef(false);
@@ -302,15 +299,14 @@ export function useTradingSimulation() {
     isFetchingRef.current = true;
     try {
       const instruments = activeInstrumentsRef.current;
-      const stockSymbols = instruments.filter((i) => i.type === "stock").map((t) => t.symbol);
-      const cryptoSymbols = instruments.filter((i) => i.type === "crypto").map((t) => t.symbol);
-      if (stockSymbols.length === 0 && cryptoSymbols.length === 0) {
+      const symbols = instruments.map((t) => t.symbol);
+      if (symbols.length === 0) {
         setDataSource("simulated");
         return false;
       }
 
       const { data, error } = await supabase.functions.invoke("market-data", {
-        body: { symbols: stockSymbols, cryptoSymbols },
+        body: { symbols },
       });
 
       if (error) {
@@ -355,7 +351,7 @@ export function useTradingSimulation() {
     } finally {
       isFetchingRef.current = false;
     }
-  }, []); // stable - uses refs
+  }, []);
 
   useEffect(() => {
     fetchMarketData();
@@ -371,7 +367,6 @@ export function useTradingSimulation() {
           const inst = ALL_INSTRUMENTS.find((s) => s.symbol === t.symbol);
           if (!inst) return t;
           const basePrice = livePricesRef.current[t.symbol] || inst.basePrice;
-          // Scale fluctuation to price magnitude
           const scale = basePrice * 0.001;
           const delta = rand(-scale, scale);
           const newPrice = Math.max(0.01, t.price + delta);
@@ -382,7 +377,7 @@ export function useTradingSimulation() {
             price: Math.round(newPrice * 100) / 100,
             change: Math.round(change * 100) / 100,
             changePercent: Math.round(changePercent * 100) / 100,
-            volume: Math.max(0, t.volume + randInt(-50_000, 100_000)),
+            volume: Math.max(0, t.volume + randInt(-5_000, 10_000)),
             history: [...t.history.slice(-19), newPrice],
           };
         })
@@ -445,7 +440,7 @@ export function useTradingSimulation() {
     return () => clearInterval(interval);
   }, [activeSymbols]);
 
-  // Executed trades every 10s
+  // Executed trades every 10s — tick-based P&L
   useEffect(() => {
     if (!dbLoaded) return;
     const interval = setInterval(async () => {
@@ -455,7 +450,7 @@ export function useTradingSimulation() {
       const currentPrice = livePricesRef.current[inst.symbol] || inst.basePrice;
       const scale = currentPrice * 0.01;
       const price = currentPrice + rand(-scale, scale);
-      const quantity = inst.type === "futures" ? randInt(1, 10) : randInt(5, 100);
+      const quantity = randInt(1, 5); // contracts
 
       const executed: ExecutedTrade = {
         id: uid(),
@@ -469,7 +464,10 @@ export function useTradingSimulation() {
 
       const hasExit = Math.random() > 0.4;
       const exitPrice = hasExit ? Math.round((price + rand(-scale * 2, scale * 3)) * 100) / 100 : null;
-      const pnl = exitPrice ? Math.round((exitPrice - price) * quantity * (action === "buy" ? 1 : -1) * 100) / 100 : null;
+      // Tick-based P&L: ((exit - entry) / tickSize) * pointValue * contracts
+      const pnl = exitPrice
+        ? Math.round(((exitPrice - price) / inst.tickSize) * inst.pointValue * quantity * (action === "buy" ? 1 : -1) * 100) / 100
+        : null;
       const tradeEntry: TradeHistory = {
         id: uid(),
         type: action,
@@ -517,57 +515,50 @@ export function useTradingSimulation() {
     return () => clearInterval(interval);
   }, [dbLoaded]);
 
-  // Portfolio computation
-  const INITIAL_CASH = 100_000;
+  // Portfolio → Margin-based computation
+  const INITIAL_ACCOUNT = 100_000;
   const TICKER_NAME_MAP: Record<string, string> = {};
   ALL_INSTRUMENTS.forEach((t) => { TICKER_NAME_MAP[t.symbol] = t.name; });
 
   const portfolio: PortfolioSummary = (() => {
-    // Only create holdings for active stocks
-    const stockTickers = tickers.filter((t) => t.type === "stock");
-    const holdingSeed = stockTickers.slice(0, 6).map((t) => ({
-      symbol: t.symbol,
-      shares: randInt(8, 50),
+    const holdingSeed = activeInstruments.slice(0, 5).map((inst) => ({
+      symbol: inst.symbol,
+      contracts: randInt(1, 4),
     }));
 
     const holdings: PortfolioHolding[] = holdingSeed.map((h) => {
       const ticker = tickers.find((t) => t.symbol === h.symbol);
       const inst = ALL_INSTRUMENTS.find((s) => s.symbol === h.symbol)!;
       const currentPrice = ticker?.price ?? inst.basePrice;
-      const avgCost = inst.basePrice * (1 + rand(-0.05, 0.05));
-      const value = currentPrice * h.shares;
-      const costBasis = avgCost * h.shares;
-      const pnl = value - costBasis;
-      const pnlPercent = (pnl / costBasis) * 100;
+      const entryPrice = inst.basePrice * (1 + rand(-0.005, 0.005));
+      // Tick-based P&L per holding
+      const ticks = (currentPrice - entryPrice) / inst.tickSize;
+      const pnl = Math.round(ticks * inst.pointValue * h.contracts * 100) / 100;
+      const marginUsed = inst.initialMargin * h.contracts;
+      const pnlPercent = marginUsed > 0 ? (pnl / marginUsed) * 100 : 0;
       return {
         symbol: h.symbol,
         name: TICKER_NAME_MAP[h.symbol] || h.symbol,
-        shares: h.shares,
-        avgCost: Math.round(avgCost * 100) / 100,
+        contracts: h.contracts,
+        initialMargin: inst.initialMargin,
         currentPrice: Math.round(currentPrice * 100) / 100,
-        value: Math.round(value * 100) / 100,
-        pnl: Math.round(pnl * 100) / 100,
+        pnl,
         pnlPercent: Math.round(pnlPercent * 100) / 100,
-        allocation: 0,
       };
     });
 
-    const investedValue = holdings.reduce((s, h) => s + h.value, 0);
-    const cashBalance = INITIAL_CASH - holdings.reduce((s, h) => s + h.avgCost * h.shares, 0);
-    const totalValue = investedValue + cashBalance;
-
-    holdings.forEach((h) => {
-      h.allocation = Math.round((h.value / totalValue) * 1000) / 10;
-    });
-
-    const totalCost = holdings.reduce((s, h) => s + h.avgCost * h.shares, 0);
-    const totalPnl = investedValue - totalCost;
-    const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+    const usedMargin = holdings.reduce((s, h) => s + h.initialMargin * h.contracts, 0);
+    const totalPnl = holdings.reduce((s, h) => s + h.pnl, 0);
+    const accountBalance = INITIAL_ACCOUNT + totalPnl;
+    const availableMargin = accountBalance - usedMargin;
+    const marginUtilization = accountBalance > 0 ? Math.round((usedMargin / accountBalance) * 1000) / 10 : 0;
+    const totalPnlPercent = INITIAL_ACCOUNT > 0 ? (totalPnl / INITIAL_ACCOUNT) * 100 : 0;
 
     return {
-      totalValue: Math.round(totalValue * 100) / 100,
-      cashBalance: Math.round(cashBalance * 100) / 100,
-      investedValue: Math.round(investedValue * 100) / 100,
+      accountBalance: Math.round(accountBalance * 100) / 100,
+      usedMargin: Math.round(usedMargin * 100) / 100,
+      availableMargin: Math.round(availableMargin * 100) / 100,
+      marginUtilization,
       totalPnl: Math.round(totalPnl * 100) / 100,
       totalPnlPercent: Math.round(totalPnlPercent * 100) / 100,
       holdings,
