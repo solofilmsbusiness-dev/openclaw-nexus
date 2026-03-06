@@ -215,15 +215,20 @@ const Trading = () => {
         </div>
 
         {/* Session clock */}
+        {layout.isTopBarVisible("session") && (
         <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2 py-1">
           <Clock className="w-3 h-3 text-muted-foreground" />
           <span className={`text-[10px] font-mono font-semibold ${session.color}`}>{session.label}</span>
           <span className="text-[9px] font-mono text-muted-foreground">→ {session.next}</span>
           <span className="text-[10px] font-mono text-foreground">{session.countdown}</span>
         </div>
+        )}
 
-        <div className="h-5 w-px bg-border/50 hidden sm:block" />
+        {(layout.isTopBarVisible("pnl") || layout.isTopBarVisible("trades") || layout.isTopBarVisible("winrate")) && (
+          <div className="h-5 w-px bg-border/50 hidden sm:block" />
+        )}
 
+        {layout.isTopBarVisible("pnl") && (
         <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <DollarSign className={`w-4 h-4 ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`} />
           <span className="text-xs text-muted-foreground hidden sm:inline">P/L</span>
@@ -231,18 +236,24 @@ const Trading = () => {
             {stats.totalPnl >= 0 ? "+" : ""}${stats.totalPnl.toFixed(2)}
           </span>
         </motion.div>
+        )}
+        {layout.isTopBarVisible("trades") && (
         <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
           <BarChart3 className="w-4 h-4 text-neon-blue" />
           <span className="text-xs text-muted-foreground hidden sm:inline">Trades</span>
           <span className="font-mono text-sm font-semibold text-neon-blue">{stats.totalTrades}</span>
         </motion.div>
+        )}
+        {layout.isTopBarVisible("winrate") && (
         <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <Target className="w-4 h-4 text-neon-cyan" />
           <span className="text-xs text-muted-foreground hidden sm:inline">Win Rate</span>
           <span className="font-mono text-sm font-semibold text-neon-cyan">{stats.winRate}%</span>
         </motion.div>
+        )}
 
         <div className="ml-auto flex items-center gap-3">
+          {layout.isTopBarVisible("theme") && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -250,6 +261,8 @@ const Trading = () => {
           >
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
+          )}
+          {layout.isTopBarVisible("compact") && (
           <button
             onClick={() => layout.setCompactMode(!layout.compactMode)}
             className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
@@ -257,6 +270,8 @@ const Trading = () => {
           >
             {layout.compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
           </button>
+          )}
+          {layout.isTopBarVisible("columns") && (
           <div className="flex items-center gap-1 bg-secondary/50 rounded-md p-1">
             {([1, 2, 3] as const).map((cols) => (
               <button
@@ -269,11 +284,43 @@ const Trading = () => {
               </button>
             ))}
           </div>
-          <AddPanelDialog />
-          <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
-          <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
-            {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
-          </span>
+          )}
+          {layout.isTopBarVisible("addpanel") && <AddPanelDialog />}
+          {layout.isTopBarVisible("status") && (
+          <>
+            <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
+              {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
+            </span>
+          </>
+          )}
+
+          {/* Top bar settings */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50" title="Customize top bar">
+                <Settings2 className="w-4 h-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="end">
+              <div className="p-3 border-b border-border/30">
+                <p className="font-display font-semibold text-xs text-foreground">Top Bar Items</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Show or hide top bar elements</p>
+              </div>
+              <div className="p-2 space-y-1">
+                {TOP_BAR_ITEMS.map((item) => (
+                  <label key={item.id} className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
+                    <span className="text-xs font-mono text-foreground">{item.label}</span>
+                    <Switch
+                      checked={layout.isTopBarVisible(item.id)}
+                      onCheckedChange={() => layout.toggleTopBarItem(item.id)}
+                      className="scale-75"
+                    />
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
