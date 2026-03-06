@@ -1027,7 +1027,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       )}
 
       {pendingEdge && (
-        <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48">
+        <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48 animate-fade-in">
           <div className="text-[10px] font-mono text-muted-foreground mb-2">CONNECTION TYPE</div>
           <div className="flex flex-wrap gap-1.5 mb-3">
             {EDGE_KINDS.map((kind) => (
