@@ -118,6 +118,7 @@ const Trading = () => {
   const sim = useTradingSimulation();
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote, activeSymbols, setActiveSymbols, allInstruments } = sim;
   const layout = useTradingLayout();
+  const { theme, setTheme } = useTheme();
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Session clock
