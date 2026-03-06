@@ -60,6 +60,18 @@ function progressArc(cx: number, cy: number, r: number, fraction: number): strin
   return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
 }
 
+// Build sparkline polyline from history array
+function sparklinePath(history: number[], x: number, y: number, w: number, h: number): string {
+  if (history.length < 2) return "";
+  const max = Math.max(1, ...history);
+  const stepX = w / (history.length - 1);
+  return history.map((v, i) => {
+    const px = x + i * stepX;
+    const py = y + h - (v / max) * h;
+    return `${i === 0 ? "M" : "L"} ${px.toFixed(1)} ${py.toFixed(1)}`;
+  }).join(" ");
+}
+
 export default function MiniAgentGraph() {
   const { executedTrades, considerations, evaluations, selectedAgentId, setSelectedAgentId, setTradeAgentMap } = useTradingData();
   const [flashNodes, setFlashNodes] = useState<Set<string>>(new Set());
@@ -70,6 +82,37 @@ export default function MiniAgentGraph() {
     strategist: considerations.length,
     executor: executedTrades.length,
   }), [evaluations.length, considerations.length, executedTrades.length]);
+
+  // Sparkline history: rolling window of count deltas
+  const prevCountsRef = useRef<Record<PipelineId, number>>({ researcher: 0, analyst: 0, strategist: 0, executor: 0 });
+  const [sparkHistory, setSparkHistory] = useState<Record<PipelineId, number[]>>({
+    researcher: Array(SPARKLINE_POINTS).fill(0),
+    analyst: Array(SPARKLINE_POINTS).fill(0),
+    strategist: Array(SPARKLINE_POINTS).fill(0),
+    executor: Array(SPARKLINE_POINTS).fill(0),
+  });
+
+  const sampleSparkline = useCallback(() => {
+    setSparkHistory((prev) => {
+      const next = { ...prev };
+      for (const agent of PIPELINE_AGENTS) {
+        const id = agent.id;
+        const currentCount = id === "researcher" || id === "analyst"
+          ? evaluations.length
+          : id === "strategist" ? considerations.length : executedTrades.length;
+        const delta = Math.max(0, currentCount - prevCountsRef.current[id]);
+        prevCountsRef.current[id] = currentCount;
+        const arr = [...prev[id].slice(1), delta];
+        next[id] = arr;
+      }
+      return next;
+    });
+  }, [evaluations.length, considerations.length, executedTrades.length]);
+
+  useEffect(() => {
+    const interval = setInterval(sampleSparkline, SPARKLINE_INTERVAL);
+    return () => clearInterval(interval);
+  }, [sampleSparkline]);
 
   const nodeStatus = useMemo(() => {
     const status: Record<PipelineId, string> = {
