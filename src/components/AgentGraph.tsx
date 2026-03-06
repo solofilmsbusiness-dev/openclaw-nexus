@@ -1066,6 +1066,27 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         >
           <FolderOpen className="w-3.5 h-3.5" />
         </button>
+        <div className="w-full h-px bg-border/20" />
+        <button
+          onClick={() => bgFileRef.current?.click()}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          title="Upload background image"
+        >
+          <ImagePlus className="w-3.5 h-3.5" />
+        </button>
+        {bgSettings.image && (
+          <button
+            onClick={() => setShowBgControls((v) => !v)}
+            className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
+              showBgControls
+                ? "border-primary/60 bg-primary/20 text-primary hover:bg-primary/30"
+                : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+            }`}
+            title="Background image controls"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Edge kind color legend */}
