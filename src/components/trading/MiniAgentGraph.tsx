@@ -193,6 +193,11 @@ export default function MiniAgentGraph() {
                 fill="hsl(var(--muted-foreground))" className="pointer-events-none">
                 {nodeStatus[agent.id].length > 14 ? nodeStatus[agent.id].slice(0, 13) + "…" : nodeStatus[agent.id]}
               </text>
+              {/* Stats row */}
+              <text x={x + NODE_W / 2} y={y + NODE_H + STATS_Y_OFFSET} textAnchor="middle" fontSize="5" fontFamily="monospace"
+                fill={agent.color} className="pointer-events-none" opacity={0.8}>
+                {nodeCounts[agent.id]} processed
+              </text>
             </g>
           );
         })}
