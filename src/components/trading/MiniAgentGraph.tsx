@@ -18,7 +18,7 @@ function getAgentColor(agent: Agent): string {
 
 export default function MiniAgentGraph() {
   const { agents, edges } = useAgents();
-  const { executedTrades, considerations, evaluations } = useTradingData();
+  const { executedTrades, considerations, evaluations, selectedAgentId, setSelectedAgentId, tradeAgentMap, setTradeAgentMap } = useTradingData();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; status: string; task: string } | null>(null);
   const [taglineIdx, setTaglineIdx] = useState(0);
   const [flashNodes, setFlashNodes] = useState<Set<string>>(new Set());
@@ -34,10 +34,11 @@ export default function MiniAgentGraph() {
   useEffect(() => {
     if (executedTrades.length > prevTradeCount.current && executedTrades.length > 0) {
       const latest = executedTrades[0];
-      // Flash a random agent to simulate activity
       const randomAgent = agents[Math.floor(Math.random() * agents.length)];
       if (randomAgent) {
         setFlashNodes((prev) => new Set(prev).add(randomAgent.id));
+        // Track which agent "executed" this trade
+        setTradeAgentMap((prev) => ({ ...prev, [latest.id]: randomAgent.id }));
         setTimeout(() => {
           setFlashNodes((prev) => {
             const next = new Set(prev);
@@ -48,7 +49,7 @@ export default function MiniAgentGraph() {
       }
     }
     prevTradeCount.current = executedTrades.length;
-  }, [executedTrades.length, agents]);
+  }, [executedTrades.length, agents, setTradeAgentMap]);
 
   const positions = useMemo(() => {
     const pos: Record<string, { x: number; y: number }> = { core: { x: CX, y: CY } };
@@ -250,12 +251,14 @@ export default function MiniAgentGraph() {
           const color = getAgentColor(agent);
           const nodeR = agent.status === "down" ? 4 : 6;
           const isFlashing = flashNodes.has(agent.id);
+          const isSelected = selectedAgentId === agent.id;
           const dur = 8 + (i % 4) * 1.5;
           const dx = 1.5 + (i % 3);
           const dy = 1 + ((i + 1) % 3);
+          const dimmed = selectedAgentId && !isSelected ? 0.35 : 1;
 
           return (
-            <g key={agent.id}>
+            <g key={agent.id} opacity={dimmed} style={{ transition: "opacity 0.3s" }}>
               {/* Floating animation */}
               <animateTransform
                 attributeName="transform" type="translate"
@@ -288,13 +291,21 @@ export default function MiniAgentGraph() {
                 <animate attributeName="r" values={`${nodeR + 6};${nodeR + 10};${nodeR + 6}`} dur="4s" repeatCount="indefinite" />
               </circle>
 
+              {/* Selection ring */}
+              {isSelected && (
+                <circle cx={pos.x} cy={pos.y} r={nodeR + 10} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="4 2" opacity={0.7}>
+                  <animate attributeName="stroke-dashoffset" values="0;-12" dur="1.5s" repeatCount="indefinite" />
+                </circle>
+              )}
+
               {/* Main node */}
               <circle
                 cx={pos.x} cy={pos.y} r={nodeR}
-                fill={`${color}20`} stroke={color} strokeWidth={1.2} opacity={0.9}
+                fill={`${color}20`} stroke={color} strokeWidth={isSelected ? 2 : 1.2} opacity={0.9}
                 className="cursor-pointer"
                 onMouseEnter={() => setTooltip({ x: pos.x, y: pos.y, name: agent.name, status: agent.status, task: agent.currentTask })}
                 onMouseLeave={() => setTooltip(null)}
+                onClick={() => setSelectedAgentId(selectedAgentId === agent.id ? null : agent.id)}
               />
 
               {/* Active pulse */}
