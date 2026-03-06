@@ -87,7 +87,7 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
       data-panel-id={item.id}
       layout
       layoutId={item.id}
-      className={`glass-panel neon-border p-4 flex flex-col min-h-0 relative group/panel ${className} ${
+      className={`glass-panel neon-border ${layout.compactMode ? "p-2" : "p-4"} flex flex-col min-h-0 relative group/panel ${className} ${
         isDragging ? "z-50 shadow-2xl shadow-primary/20" : "z-0"
       } ${isDropTarget ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
       style={{
@@ -103,7 +103,7 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
     >
       {/* Drag handle + remove button — in flow, not absolute */}
-      <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover/panel:opacity-100 transition-opacity z-10 -mb-1 -mt-1 -mr-1">
+      <div className={`flex items-center justify-end gap-0.5 opacity-0 group-hover/panel:opacity-100 transition-opacity z-10 -mr-1 ${layout.compactMode ? "-mt-0.5 -mb-0.5" : "-mt-1 -mb-1"}`}>
         <motion.button
           onPointerDown={(e) => e.stopPropagation()}
           className="p-1 rounded cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary/50 transition-colors touch-none"
@@ -125,7 +125,7 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className={`flex-1 flex flex-col min-h-0 ${layout.compactMode ? "compact-panel" : ""}`}>
         {children}
       </div>
     </motion.div>

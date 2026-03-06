@@ -31,6 +31,8 @@ interface TradingLayoutContextType {
   deleteCustomPanel: (id: string) => void;
   columnCount: 1 | 2 | 3;
   setColumnCount: (count: 1 | 2 | 3) => void;
+  compactMode: boolean;
+  setCompactMode: (compact: boolean) => void;
 }
 
 const STORAGE_KEY = "trading-layout-v2";
@@ -49,6 +51,7 @@ interface LayoutState {
   customPanels: CustomPanelDef[];
   hiddenBuiltins: string[];
   columnCount: 1 | 2 | 3;
+  compactMode: boolean;
 }
 
 function loadState(): LayoutState {
@@ -79,6 +82,7 @@ function loadState(): LayoutState {
     customPanels: [],
     hiddenBuiltins: [],
     columnCount: 2,
+    compactMode: false,
   };
 }
 
@@ -187,6 +191,10 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     }));
   }, []);
 
+  const setCompactMode = useCallback((compact: boolean) => {
+    setState((s) => ({ ...s, compactMode: compact }));
+  }, []);
+
   return (
     <TradingLayoutContext.Provider
       value={{
@@ -202,6 +210,8 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
         deleteCustomPanel,
         columnCount: state.columnCount,
         setColumnCount,
+        compactMode: state.compactMode,
+        setCompactMode,
       }}
     >
       {children}
