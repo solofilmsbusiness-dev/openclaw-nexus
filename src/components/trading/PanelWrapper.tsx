@@ -102,8 +102,8 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
     >
-      {/* Drag handle + remove button */}
-      <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover/panel:opacity-100 transition-opacity z-10">
+      {/* Drag handle + remove button — in flow, not absolute */}
+      <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover/panel:opacity-100 transition-opacity z-10 -mb-1 -mt-1 -mr-1">
         <motion.button
           onPointerDown={(e) => e.stopPropagation()}
           className="p-1 rounded cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary/50 transition-colors touch-none"
@@ -125,7 +125,9 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
-      {children}
+      <div className="flex-1 flex flex-col min-h-0">
+        {children}
+      </div>
     </motion.div>
   );
 }
