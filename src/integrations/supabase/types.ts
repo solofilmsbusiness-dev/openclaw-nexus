@@ -71,6 +71,54 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_jobs: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          job_type: string
+          recurrence: string | null
+          scheduled_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          job_type?: string
+          recurrence?: string | null
+          scheduled_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          job_type?: string
+          recurrence?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trade_history: {
         Row: {
           asset: string
