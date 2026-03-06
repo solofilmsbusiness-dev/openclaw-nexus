@@ -3,9 +3,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Globe, CheckSquare } from "lucide-react";
+import { Plus, FileText, Globe, CheckSquare, Network, Calculator } from "lucide-react";
 import type { CustomPanelDef } from "@/contexts/TradingLayoutContext";
 import { useTradingLayout } from "@/contexts/TradingLayoutContext";
+import MiniAgentGraph from "./MiniAgentGraph";
+import CalculatorPanel from "./CalculatorPanel";
 
 interface ChecklistItem {
   id: string;
@@ -16,7 +18,14 @@ interface ChecklistItem {
 export default function CustomPanel({ panel }: { panel: CustomPanelDef }) {
   const { updateCustomPanel } = useTradingLayout();
 
-  const icon = panel.type === "notes" ? <FileText className="w-3.5 h-3.5" /> : panel.type === "embed" ? <Globe className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />;
+  const iconMap: Record<string, React.ReactNode> = {
+    notes: <FileText className="w-3.5 h-3.5" />,
+    embed: <Globe className="w-3.5 h-3.5" />,
+    checklist: <CheckSquare className="w-3.5 h-3.5" />,
+    graph: <Network className="w-3.5 h-3.5" />,
+    calculator: <Calculator className="w-3.5 h-3.5" />,
+  };
+  const icon = iconMap[panel.type] ?? <FileText className="w-3.5 h-3.5" />;
 
   return (
     <>
@@ -28,6 +37,8 @@ export default function CustomPanel({ panel }: { panel: CustomPanelDef }) {
       {panel.type === "notes" && <NotesContent panel={panel} onUpdate={updateCustomPanel} />}
       {panel.type === "embed" && <EmbedContent panel={panel} />}
       {panel.type === "checklist" && <ChecklistContent panel={panel} onUpdate={updateCustomPanel} />}
+      {panel.type === "graph" && <MiniAgentGraph />}
+      {panel.type === "calculator" && <CalculatorPanel />}
     </>
   );
 }

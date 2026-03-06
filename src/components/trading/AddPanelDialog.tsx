@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight } from "lucide-react";
+import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator } from "lucide-react";
 import { useTradingLayout, type CustomPanelType, type BuiltinPanelId } from "@/contexts/TradingLayoutContext";
 
 const BUILTIN_LABELS: Record<BuiltinPanelId, string> = {
@@ -124,6 +124,22 @@ const PREMADE_TEMPLATES: PremadeTemplate[] = [
     icon: Link,
     type: "embed",
     content: "https://finviz.com/map.ashx",
+  },
+  {
+    key: "agent-network",
+    title: "Agent Network",
+    description: "Live mini-map of your agent ecosystem",
+    icon: Network,
+    type: "graph" as CustomPanelType,
+    content: "",
+  },
+  {
+    key: "calculator",
+    title: "Calculator",
+    description: "Quick trading calculations & position sizing",
+    icon: Calculator,
+    type: "calculator" as CustomPanelType,
+    content: "",
   },
 ];
 
