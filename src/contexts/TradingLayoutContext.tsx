@@ -191,6 +191,10 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     }));
   }, []);
 
+  const setCompactMode = useCallback((compact: boolean) => {
+    setState((s) => ({ ...s, compactMode: compact }));
+  }, []);
+
   return (
     <TradingLayoutContext.Provider
       value={{
@@ -206,6 +210,8 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
         deleteCustomPanel,
         columnCount: state.columnCount,
         setColumnCount,
+        compactMode: state.compactMode,
+        setCompactMode,
       }}
     >
       {children}
