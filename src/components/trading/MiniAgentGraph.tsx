@@ -25,6 +25,14 @@ export default function MiniAgentGraph() {
   const [flashNodes, setFlashNodes] = useState<Set<string>>(new Set());
   const [orbProgress, setOrbProgress] = useState<number | null>(null);
 
+  // Per-stage processed counts
+  const nodeCounts = useMemo<Record<PipelineId, number>>(() => ({
+    researcher: evaluations.length,
+    analyst: evaluations.length,
+    strategist: considerations.length,
+    executor: executedTrades.length,
+  }), [evaluations.length, considerations.length, executedTrades.length]);
+
   // Derive activity text per node
   const nodeStatus = useMemo(() => {
     const status: Record<PipelineId, string> = {
