@@ -11,8 +11,9 @@ const PIPELINE_AGENTS = [
 type PipelineId = (typeof PIPELINE_AGENTS)[number]["id"];
 
 // Layout constants
-const SVG_W = 400, SVG_H = 140;
+const SVG_W = 400, SVG_H = 160;
 const NODE_W = 76, NODE_H = 52, GAP = 16;
+const STATS_Y_OFFSET = 14;
 const TOTAL_W = PIPELINE_AGENTS.length * NODE_W + (PIPELINE_AGENTS.length - 1) * GAP;
 const START_X = (SVG_W - TOTAL_W) / 2;
 const NODE_Y = (SVG_H - NODE_H) / 2;
@@ -23,6 +24,14 @@ export default function MiniAgentGraph() {
   const { executedTrades, considerations, evaluations, selectedAgentId, setSelectedAgentId, tradeAgentMap, setTradeAgentMap } = useTradingData();
   const [flashNodes, setFlashNodes] = useState<Set<string>>(new Set());
   const [orbProgress, setOrbProgress] = useState<number | null>(null);
+
+  // Per-stage processed counts
+  const nodeCounts = useMemo<Record<PipelineId, number>>(() => ({
+    researcher: evaluations.length,
+    analyst: evaluations.length,
+    strategist: considerations.length,
+    executor: executedTrades.length,
+  }), [evaluations.length, considerations.length, executedTrades.length]);
 
   // Derive activity text per node
   const nodeStatus = useMemo(() => {
@@ -183,6 +192,11 @@ export default function MiniAgentGraph() {
               <text x={x + NODE_W / 2} y={y + 42} textAnchor="middle" fontSize="5.5" fontFamily="monospace"
                 fill="hsl(var(--muted-foreground))" className="pointer-events-none">
                 {nodeStatus[agent.id].length > 14 ? nodeStatus[agent.id].slice(0, 13) + "…" : nodeStatus[agent.id]}
+              </text>
+              {/* Stats row */}
+              <text x={x + NODE_W / 2} y={y + NODE_H + STATS_Y_OFFSET} textAnchor="middle" fontSize="5" fontFamily="monospace"
+                fill={agent.color} className="pointer-events-none" opacity={0.8}>
+                {nodeCounts[agent.id]} processed
               </text>
             </g>
           );
