@@ -26,6 +26,7 @@ import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
 import PanelWrapper from "@/components/trading/PanelWrapper";
 import CustomPanel from "@/components/trading/CustomPanel";
 import AddPanelDialog from "@/components/trading/AddPanelDialog";
+import { TradingDataProvider } from "@/contexts/TradingDataContext";
 
 function formatTime(d: Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -137,6 +138,7 @@ const Trading = () => {
   }
 
   return (
+    <TradingDataProvider executedTrades={executedTrades} considerations={considerations} evaluations={evaluations}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-3 sm:gap-6 px-4 sm:px-6 py-3 glass-panel rounded-none border-x-0 border-t-0">
@@ -211,6 +213,7 @@ const Trading = () => {
         </AnimatePresence>
       </div>
     </div>
+    </TradingDataProvider>
   );
 };
 

@@ -126,9 +126,9 @@ const PREMADE_TEMPLATES: PremadeTemplate[] = [
     content: "https://finviz.com/map.ashx",
   },
   {
-    key: "agent-network",
-    title: "Agent Network",
-    description: "Live mini-map of your agent ecosystem",
+    key: "agent-trade",
+    title: "Agent Trade",
+    description: "Live agent trade flow tracker",
     icon: Network,
     type: "graph" as CustomPanelType,
     content: "",
