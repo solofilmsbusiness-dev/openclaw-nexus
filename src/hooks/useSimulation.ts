@@ -48,7 +48,8 @@ export function useSimulation(
   agents: Agent[],
   onAgentsChange: (agents: Agent[]) => void,
   onNewEvent: (event: AgentEvent) => void,
-  killSwitchActive: boolean = false
+  killSwitchActive: boolean = false,
+  pathname: string = "/"
 ) {
   let simulationSpeed = 1500;
   let logRetention = 50;
@@ -125,12 +126,14 @@ export function useSimulation(
           );
           onAgentsChange(updated);
 
-          if (newStatus === "down") {
-            toast.error(`${agent.name} went down`, { description: "Agent is offline" });
-          } else if (oldStatus === "down") {
-            toast.success(`${agent.name} is back online`, { description: `Status: ${newStatus}` });
-          } else if (newStatus === "degraded") {
-            toast.warning(`${agent.name} degraded`, { description: "Performance impacted" });
+          if (pathname === "/") {
+            if (newStatus === "down") {
+              toast.error(`${agent.name} went down`, { description: "Agent is offline" });
+            } else if (oldStatus === "down") {
+              toast.success(`${agent.name} is back online`, { description: `Status: ${newStatus}` });
+            } else if (newStatus === "degraded") {
+              toast.warning(`${agent.name} degraded`, { description: "Performance impacted" });
+            }
           }
         }
         timerRef.current = scheduleNext();
