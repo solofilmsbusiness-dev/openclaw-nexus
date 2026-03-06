@@ -226,7 +226,7 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const isTopBarVisible = useCallback((id: TopBarItemId) => {
-    return state.topBarItems.includes(id);
+    return Array.isArray(state.topBarItems) && state.topBarItems.includes(id);
   }, [state.topBarItems]);
 
   const toggleTopBarItem = useCallback((id: TopBarItemId) => {
