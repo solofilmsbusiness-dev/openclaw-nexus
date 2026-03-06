@@ -165,6 +165,17 @@
   }
 }
 
+@keyframes feed-pulse {
+  0% { opacity: 0.3; transform: translateX(-4px); background-color: hsl(var(--neon-green) / 0.08); }
+  40% { opacity: 1; transform: translateX(0); background-color: hsl(var(--neon-green) / 0.12); }
+  100% { opacity: 1; transform: translateX(0); background-color: transparent; }
+}
+
+.animate-feed-pulse {
+  animation: feed-pulse 1.2s ease-out forwards;
+  border-radius: 2px;
+}
+
 @keyframes pulse-glow {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
