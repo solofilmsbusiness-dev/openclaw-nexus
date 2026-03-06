@@ -243,6 +243,13 @@ const Trading = () => {
 
         <div className="ml-auto flex items-center gap-3">
           <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          <button
             onClick={() => layout.setCompactMode(!layout.compactMode)}
             className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
             title={layout.compactMode ? "Expand panels" : "Compact panels"}
