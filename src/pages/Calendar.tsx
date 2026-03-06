@@ -132,6 +132,21 @@ export default function Calendar() {
           setSelectedJob((prev) => prev && prev.id === id ? { ...prev, ...updates } : prev);
         }}
         onDelete={deleteJob}
+        onDuplicate={async (jobToDuplicate) => {
+          const newDate = new Date(jobToDuplicate.scheduled_at);
+          newDate.setDate(newDate.getDate() + 1);
+          await addJob({
+            title: `${jobToDuplicate.title} (Copy)`,
+            description: jobToDuplicate.description,
+            agent_id: jobToDuplicate.agent_id,
+            agent_name: jobToDuplicate.agent_name,
+            job_type: jobToDuplicate.job_type,
+            scheduled_at: newDate,
+            duration_minutes: jobToDuplicate.duration_minutes,
+            recurrence: jobToDuplicate.recurrence,
+          });
+          toast.success("Job duplicated", { description: `Scheduled for ${newDate.toLocaleDateString()}` });
+        }}
       />
 
       <AddJobDialog
