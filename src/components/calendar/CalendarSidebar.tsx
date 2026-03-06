@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, Activity, CheckCircle, XCircle, Clock, Zap, ChevronDown, ChevronUp } from "lucide-react";
-import { AGENTS } from "@/data/agents";
+import { Filter, Activity, CheckCircle, XCircle, Clock, Zap, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { useAgents } from "@/contexts/AgentContext";
 import type { ScheduledJob } from "@/hooks/useScheduledJobs";
+import { Input } from "@/components/ui/input";
 
 interface CalendarSidebarProps {
   jobs: ScheduledJob[];
@@ -12,6 +13,7 @@ interface CalendarSidebarProps {
   onAgentFilter: (agents: string[]) => void;
   onTypeFilter: (types: string[]) => void;
   onStatusFilter: (statuses: string[]) => void;
+  onRenameAgent?: (agentId: string, newName: string) => void;
 }
 
 const JOB_TYPES = ["task", "workflow", "recurring", "automation"];
@@ -35,7 +37,33 @@ function FilterSection({ title, children, defaultOpen = true }: { title: string;
   );
 }
 
-export default function CalendarSidebar({ jobs, agentFilter, typeFilter, statusFilter, onAgentFilter, onTypeFilter, onStatusFilter }: CalendarSidebarProps) {
+export default function CalendarSidebar({ jobs, agentFilter, typeFilter, statusFilter, onAgentFilter, onTypeFilter, onStatusFilter, onRenameAgent }: CalendarSidebarProps) {
+  const { agents } = useAgents();
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingAgentId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingAgentId]);
+
+  const startEdit = (agentId: string, currentName: string) => {
+    setEditingAgentId(agentId);
+    setEditName(currentName);
+  };
+
+  const saveEdit = (agentId: string) => {
+    const trimmed = editName.trim();
+    if (trimmed && onRenameAgent) {
+      onRenameAgent(agentId, trimmed);
+    }
+    setEditingAgentId(null);
+  };
+
+  const cancelEdit = () => setEditingAgentId(null);
   const toggleFilter = (arr: string[], val: string, setter: (v: string[]) => void) => {
     setter(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
   };
@@ -69,17 +97,41 @@ export default function CalendarSidebar({ jobs, agentFilter, typeFilter, statusF
 
       <FilterSection title="Agents">
         <div className="space-y-0.5">
-          {AGENTS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => toggleFilter(agentFilter, a.id, onAgentFilter)}
-              className={`w-full text-left px-2 py-1 rounded-md text-[10px] font-mono flex items-center gap-1.5 transition-all ${
-                agentFilter.includes(a.id) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-              }`}
-            >
-              <span>{a.icon}</span>
-              <span className="truncate">{a.name}</span>
-            </button>
+          {agents.map((a) => (
+            <div key={a.id} className="group flex items-center gap-0.5">
+              {editingAgentId === a.id ? (
+                <Input
+                  ref={editInputRef}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit(a.id);
+                    if (e.key === "Escape") cancelEdit();
+                  }}
+                  onBlur={() => saveEdit(a.id)}
+                  className="h-6 text-[10px] font-mono px-1.5 py-0 bg-muted/50 border-primary/30"
+                />
+              ) : (
+                <>
+                  <button
+                    onClick={() => toggleFilter(agentFilter, a.id, onAgentFilter)}
+                    className={`flex-1 text-left px-2 py-1 rounded-md text-[10px] font-mono flex items-center gap-1.5 transition-all ${
+                      agentFilter.includes(a.id) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    <span>{a.icon}</span>
+                    <span className="truncate">{a.name}</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); startEdit(a.id, a.name); }}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-foreground transition-opacity"
+                    title="Rename agent"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                </>
+              )}
+            </div>
           ))}
         </div>
       </FilterSection>

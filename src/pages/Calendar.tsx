@@ -18,8 +18,8 @@ import AddJobDialog from "@/components/calendar/AddJobDialog";
 export default function Calendar() {
   const navigate = useNavigate();
   const { layout } = useSettings();
-  const { agents } = useAgents();
-  const { jobs, loading, addJob, updateJob, deleteJob } = useScheduledJobs();
+  const { agents, renameAgent } = useAgents();
+  const { jobs, loading, fetchJobs, addJob, updateJob, deleteJob } = useScheduledJobs();
 
   const [authChecked, setAuthChecked] = useState(false);
   const [view, setView] = useState<CalendarView>("month");
@@ -67,6 +67,18 @@ export default function Calendar() {
     toast.success("Job rescheduled", { description: `Moved to ${newDate.toLocaleString()}` });
   }, [updateJob]);
 
+  const handleRenameAgent = useCallback(async (agentId: string, newName: string) => {
+    renameAgent(agentId, newName);
+    const { error } = await supabase
+      .from("scheduled_jobs")
+      .update({ agent_name: newName, updated_at: new Date().toISOString() } as any)
+      .eq("agent_id", agentId);
+    if (!error) {
+      fetchJobs();
+      toast.success("Agent renamed", { description: `Updated to "${newName}"` });
+    }
+  }, [renameAgent, fetchJobs]);
+
   if (!authChecked) {
     return (
       <div className="h-screen bg-background flex flex-col items-center justify-center gap-3">
@@ -99,6 +111,7 @@ export default function Calendar() {
           onAgentFilter={setAgentFilter}
           onTypeFilter={setTypeFilter}
           onStatusFilter={setStatusFilter}
+          onRenameAgent={handleRenameAgent}
         />
 
         <motion.div
