@@ -47,7 +47,7 @@ const NotFound = () => {
       <NotFoundParticles />
 
       <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: "linear-gradient(hsl(225, 10%, 30%) 1px, transparent 1px), linear-gradient(90deg, hsl(225, 10%, 30%) 1px, transparent 1px)",
+        backgroundImage: "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
         backgroundSize: "40px 40px",
       }} />
 
