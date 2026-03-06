@@ -26,7 +26,7 @@ import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
 import PanelWrapper from "@/components/trading/PanelWrapper";
 import CustomPanel from "@/components/trading/CustomPanel";
 import AddPanelDialog from "@/components/trading/AddPanelDialog";
-import { TradingDataProvider } from "@/contexts/TradingDataContext";
+import { TradingDataProvider, useTradingData } from "@/contexts/TradingDataContext";
 
 function formatTime(d: Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
