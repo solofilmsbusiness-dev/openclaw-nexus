@@ -993,7 +993,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               }}
               className={`absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono tracking-wider transition-all duration-300 ${
                 connectMode
-                  ? "border-primary bg-primary/20 text-primary shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
+                  ? "border-primary bg-primary/20 text-primary shadow-[0_0_16px_hsl(var(--primary)/0.4)] scale-105"
                   : "border-border/40 bg-secondary/40 text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
               }`}
             >
@@ -1016,18 +1016,18 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       </TooltipProvider>
 
       {connectMode && !connectSource && !pendingEdge && (
-        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
+        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary animate-fade-in">
           Click source node
         </div>
       )}
       {connectMode && connectSource && !pendingEdge && (
-        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
+        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary animate-fade-in">
           Click target node
         </div>
       )}
 
       {pendingEdge && (
-        <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48">
+        <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48 animate-fade-in">
           <div className="text-[10px] font-mono text-muted-foreground mb-2">CONNECTION TYPE</div>
           <div className="flex flex-wrap gap-1.5 mb-3">
             {EDGE_KINDS.map((kind) => (
