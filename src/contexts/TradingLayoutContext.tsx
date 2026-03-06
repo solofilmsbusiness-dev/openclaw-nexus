@@ -18,6 +18,22 @@ export interface PanelItem {
   col: number;
 }
 
+export const TOP_BAR_ITEMS = [
+  { id: "session", label: "Session Clock" },
+  { id: "pnl", label: "P/L" },
+  { id: "trades", label: "Trade Count" },
+  { id: "winrate", label: "Win Rate" },
+  { id: "theme", label: "Theme Toggle" },
+  { id: "compact", label: "Compact Mode" },
+  { id: "columns", label: "Column Layout" },
+  { id: "addpanel", label: "Add Panel" },
+  { id: "status", label: "Data Status" },
+] as const;
+
+export type TopBarItemId = typeof TOP_BAR_ITEMS[number]["id"];
+
+const ALL_TOP_BAR_IDS: TopBarItemId[] = TOP_BAR_ITEMS.map((i) => i.id);
+
 interface TradingLayoutContextType {
   panels: PanelItem[];
   customPanels: CustomPanelDef[];
@@ -33,6 +49,10 @@ interface TradingLayoutContextType {
   setColumnCount: (count: 1 | 2 | 3) => void;
   compactMode: boolean;
   setCompactMode: (compact: boolean) => void;
+  topBarItems: TopBarItemId[];
+  setTopBarItems: (items: TopBarItemId[]) => void;
+  isTopBarVisible: (id: TopBarItemId) => boolean;
+  toggleTopBarItem: (id: TopBarItemId) => void;
 }
 
 const STORAGE_KEY = "trading-layout-v2";
@@ -52,6 +72,7 @@ interface LayoutState {
   hiddenBuiltins: string[];
   columnCount: 1 | 2 | 3;
   compactMode: boolean;
+  topBarItems: TopBarItemId[];
 }
 
 function loadState(): LayoutState {
