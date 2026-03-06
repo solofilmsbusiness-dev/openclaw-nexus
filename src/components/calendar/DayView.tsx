@@ -13,6 +13,7 @@ interface DayViewProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const SLOT_HEIGHT = 56; // px per hour
 
 export default function DayView({ currentDate, jobs, onSelectJob, onReschedule }: DayViewProps) {
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
@@ -47,6 +48,13 @@ export default function DayView({ currentDate, jobs, onSelectJob, onReschedule }
     onReschedule(jobId, newDate);
   };
 
+  /** Calculate block height based on duration */
+  const getJobHeight = (job: ScheduledJob) => {
+    if (!job.duration_minutes) return undefined;
+    const fraction = job.duration_minutes / 60;
+    return Math.max(fraction * SLOT_HEIGHT, 28); // min 28px
+  };
+
   return (
     <ScrollArea className="flex-1">
       <div className="p-4 space-y-0">
@@ -61,10 +69,14 @@ export default function DayView({ currentDate, jobs, onSelectJob, onReschedule }
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.015 }}
-              className={`grid grid-cols-[70px_1fr] gap-3 min-h-[56px] border-t border-border/15 relative ${
+              className={`grid grid-cols-[70px_1fr] gap-3 border-t border-border/15 relative ${
                 isNow ? "bg-primary/5" : ""
               } ${isDragOver ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOverHour(hour); }}
+              style={{ minHeight: `${SLOT_HEIGHT}px` }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverHour(hour);
+              }}
               onDragLeave={() => setDragOverHour(null)}
               onDrop={(e) => handleDrop(e, hour)}
             >
@@ -78,10 +90,15 @@ export default function DayView({ currentDate, jobs, onSelectJob, onReschedule }
                   {format(new Date(2000, 0, 1, hour), "h:mm a")}
                 </span>
               </div>
-              <div className="py-1.5 space-y-1.5">
-                {hourJobs.map((job) => (
-                  <JobEventCard key={job.id} job={job} draggable onClick={() => onSelectJob(job)} />
-                ))}
+              <div className="py-1.5 space-y-1">
+                {hourJobs.map((job) => {
+                  const h = getJobHeight(job);
+                  return (
+                    <div key={job.id} style={h ? { height: `${h}px` } : undefined}>
+                      <JobEventCard job={job} draggable onClick={() => onSelectJob(job)} />
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           );

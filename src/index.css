@@ -185,3 +185,33 @@
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50% { transform: scale(1.03); filter: brightness(1.15); }
 }
+
+@keyframes job-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.job-block-shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.job-block-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.18) 50%, transparent 100%);
+  animation: job-shimmer 2s ease-in-out infinite;
+}
+
+.job-stripe-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    hsl(0 0% 0% / 0.12) 3px,
+    hsl(0 0% 0% / 0.12) 6px
+  );
+}
