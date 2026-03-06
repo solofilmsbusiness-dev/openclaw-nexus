@@ -21,9 +21,15 @@ interface JobEventCardProps {
   job: ScheduledJob;
   compact?: boolean;
   onClick?: () => void;
+  draggable?: boolean;
 }
 
-export default function JobEventCard({ job, compact = false, onClick }: JobEventCardProps) {
+export default function JobEventCard({ job, compact = false, onClick, draggable = false }: JobEventCardProps) {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("application/job-id", job.id);
+    e.dataTransfer.setData("application/job-scheduled", job.scheduled_at);
+    e.dataTransfer.effectAllowed = "move";
+  };
   const config = statusConfig[job.status] || statusConfig.scheduled;
   const StatusIcon = config.icon;
   const typeColor = typeColors[job.job_type] || typeColors.task;
@@ -33,7 +39,9 @@ export default function JobEventCard({ job, compact = false, onClick }: JobEvent
     return (
       <motion.button
         onClick={onClick}
-        className="w-full text-left px-1.5 py-0.5 rounded-md text-[9px] font-mono truncate transition-all hover:brightness-125 cursor-pointer relative overflow-hidden"
+        draggable={draggable}
+        onDragStart={handleDragStart}
+        className={`w-full text-left px-1.5 py-0.5 rounded-md text-[9px] font-mono truncate transition-all hover:brightness-125 cursor-pointer relative overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{ backgroundColor: `${config.color}18`, color: config.color, borderLeft: `2px solid ${config.color}` }}
         whileHover={{ scale: 1.02 }}
         layout
@@ -54,7 +62,9 @@ export default function JobEventCard({ job, compact = false, onClick }: JobEvent
   return (
     <motion.div
       onClick={onClick}
-      className="glass-panel neon-border p-3 cursor-pointer hover:bg-muted/30 transition-all relative overflow-hidden group"
+      draggable={draggable}
+      onDragStart={handleDragStart}
+      className={`glass-panel neon-border p-3 cursor-pointer hover:bg-muted/30 transition-all relative overflow-hidden group ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
       whileHover={{ scale: 1.01 }}
       layout
     >
