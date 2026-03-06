@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, PieChart as PieChartIcon, Trash2, Plus, LayoutGrid,
-  Settings2, Check,
+  Settings2, Check, Minimize2, Maximize2,
 } from "lucide-react";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -172,6 +172,13 @@ const Trading = () => {
         </motion.div>
 
         <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={() => layout.setCompactMode(!layout.compactMode)}
+            className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
+            title={layout.compactMode ? "Expand panels" : "Compact panels"}
+          >
+            {layout.compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+          </button>
           <div className="flex items-center gap-1 bg-secondary/50 rounded-md p-1">
             {([1, 2, 3] as const).map((cols) => (
               <button
