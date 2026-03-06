@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator } from "lucide-react";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator, Search } from "lucide-react";
 import { useTradingLayout, type CustomPanelType, type BuiltinPanelId } from "@/contexts/TradingLayoutContext";
+import TemplatePreview from "./TemplatePreview";
 
 const BUILTIN_LABELS: Record<BuiltinPanelId, string> = {
   market: "Live Market Data",
@@ -147,6 +149,7 @@ export default function AddPanelDialog() {
   const { addCustomPanel, hiddenBuiltins, restorePanel } = useTradingLayout();
   const [open, setOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [title, setTitle] = useState("");
   const [type, setType] = useState<CustomPanelType>("notes");
   const [embedUrl, setEmbedUrl] = useState("");
@@ -181,45 +184,88 @@ export default function AddPanelDialog() {
       <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-sm">Add Panel</DialogTitle>
-        </DialogHeader>
+         </DialogHeader>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            className="h-8 text-xs pl-8"
+            placeholder="Search panels..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
 
         {/* Restore hidden builtins */}
-        {hiddenBuiltins.length > 0 && (
+        {hiddenBuiltins.filter((id) => {
+          if (!search) return true;
+          const label = BUILTIN_LABELS[id as BuiltinPanelId] || id;
+          return label.toLowerCase().includes(search.toLowerCase());
+        }).length > 0 && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground font-mono">Restore hidden panels:</p>
             <div className="flex flex-wrap gap-1.5">
-              {hiddenBuiltins.map((id) => (
-                <Button key={id} variant="secondary" size="sm" className="text-[10px] gap-1 h-7" onClick={() => { restorePanel(id); setOpen(false); }}>
-                  <RotateCcw className="w-3 h-3" /> {BUILTIN_LABELS[id as BuiltinPanelId] || id}
-                </Button>
-              ))}
+              {hiddenBuiltins
+                .filter((id) => {
+                  if (!search) return true;
+                  const label = BUILTIN_LABELS[id as BuiltinPanelId] || id;
+                  return label.toLowerCase().includes(search.toLowerCase());
+                })
+                .map((id) => (
+                  <Button key={id} variant="secondary" size="sm" className="text-[10px] gap-1 h-7" onClick={() => { restorePanel(id); setOpen(false); }}>
+                    <RotateCcw className="w-3 h-3" /> {BUILTIN_LABELS[id as BuiltinPanelId] || id}
+                  </Button>
+                ))}
             </div>
             <div className="border-t border-border/30 my-2" />
           </div>
         )}
 
         {/* Templates grid */}
-        <div className="space-y-2">
-          <p className="text-xs font-mono text-muted-foreground">Templates</p>
-          <div className="grid grid-cols-2 gap-2">
-            {PREMADE_TEMPLATES.map((tpl) => {
-              const Icon = tpl.icon;
-              return (
-                <button
-                  key={tpl.key}
-                  onClick={() => handleTemplate(tpl)}
-                  className="flex items-start gap-2.5 rounded-md border border-border/50 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Icon className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium leading-tight truncate">{tpl.title}</p>
-                    <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{tpl.description}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {(() => {
+          const filtered = PREMADE_TEMPLATES.filter((t) => {
+            if (!search) return true;
+            const q = search.toLowerCase();
+            return [t.title, t.description, t.type].some((s) => s.toLowerCase().includes(q));
+          });
+          return (
+            <div className="space-y-2">
+              <p className="text-xs font-mono text-muted-foreground">Templates</p>
+              {filtered.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">No panels match "{search}"</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {filtered.map((tpl) => {
+                    const Icon = tpl.icon;
+                    return (
+                      <HoverCard key={tpl.key} openDelay={300} closeDelay={100}>
+                        <HoverCardTrigger asChild>
+                          <button
+                            onClick={() => handleTemplate(tpl)}
+                            className="flex items-start gap-2.5 rounded-md border border-border/50 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <Icon className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium leading-tight truncate">{tpl.title}</p>
+                              <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{tpl.description}</p>
+                            </div>
+                          </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" sideOffset={8} className="w-60 p-3 border-border/50 bg-popover/95 backdrop-blur-sm">
+                          <p className="text-[11px] font-medium text-foreground mb-2">{tpl.title}</p>
+                          <div className="max-h-40 overflow-hidden">
+                            <TemplatePreview template={tpl} />
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="border-t border-border/30" />
 
