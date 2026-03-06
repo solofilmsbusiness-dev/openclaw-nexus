@@ -138,6 +138,7 @@ const Trading = () => {
   }
 
   return (
+    <TradingDataProvider executedTrades={executedTrades} considerations={considerations} evaluations={evaluations}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-3 sm:gap-6 px-4 sm:px-6 py-3 glass-panel rounded-none border-x-0 border-t-0">
