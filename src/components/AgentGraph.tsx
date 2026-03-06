@@ -1016,12 +1016,12 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       </TooltipProvider>
 
       {connectMode && !connectSource && !pendingEdge && (
-        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
+        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary animate-fade-in">
           Click source node
         </div>
       )}
       {connectMode && connectSource && !pendingEdge && (
-        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary">
+        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary animate-fade-in">
           Click target node
         </div>
       )}
