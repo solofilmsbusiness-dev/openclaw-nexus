@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useTradingData } from "@/contexts/TradingDataContext";
 
 const PIPELINE_AGENTS = [
@@ -10,9 +10,12 @@ const PIPELINE_AGENTS = [
 
 type PipelineId = (typeof PIPELINE_AGENTS)[number]["id"];
 
+const SPARKLINE_POINTS = 12; // number of data points in the sparkline
+const SPARKLINE_INTERVAL = 2000; // sample every 2s
+
 // Layout constants
-const SVG_W = 400, SVG_H = 180;
-const NODE_W = 76, NODE_H = 52, GAP = 16;
+const SVG_W = 400, SVG_H = 190;
+const NODE_W = 76, NODE_H = 64, GAP = 16;
 const STATS_Y_OFFSET = 14;
 const TOTAL_W = PIPELINE_AGENTS.length * NODE_W + (PIPELINE_AGENTS.length - 1) * GAP;
 const START_X = (SVG_W - TOTAL_W) / 2;
