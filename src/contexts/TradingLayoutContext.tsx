@@ -104,6 +104,7 @@ function loadState(): LayoutState {
     hiddenBuiltins: [],
     columnCount: 2,
     compactMode: false,
+    topBarItems: [...ALL_TOP_BAR_IDS],
   };
 }
 
@@ -216,6 +217,23 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     setState((s) => ({ ...s, compactMode: compact }));
   }, []);
 
+  const setTopBarItems = useCallback((items: TopBarItemId[]) => {
+    setState((s) => ({ ...s, topBarItems: items }));
+  }, []);
+
+  const isTopBarVisible = useCallback((id: TopBarItemId) => {
+    return state.topBarItems.includes(id);
+  }, [state.topBarItems]);
+
+  const toggleTopBarItem = useCallback((id: TopBarItemId) => {
+    setState((s) => ({
+      ...s,
+      topBarItems: s.topBarItems.includes(id)
+        ? s.topBarItems.filter((i) => i !== id)
+        : [...s.topBarItems, id],
+    }));
+  }, []);
+
   return (
     <TradingLayoutContext.Provider
       value={{
@@ -233,6 +251,10 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
         setColumnCount,
         compactMode: state.compactMode,
         setCompactMode,
+        topBarItems: state.topBarItems,
+        setTopBarItems,
+        isTopBarVisible,
+        toggleTopBarItem,
       }}
     >
       {children}
