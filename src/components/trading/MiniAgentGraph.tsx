@@ -126,6 +126,23 @@ export default function MiniAgentGraph() {
     return items.slice(0, 4);
   }, [executedTrades, considerations, evaluations]);
 
+  // Track new feed items for pulse animation
+  const prevFeedIds = useRef<Set<string>>(new Set());
+  const [newFeedIds, setNewFeedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const currentIds = new Set(activityFeed.map((i) => i.id));
+    const fresh = new Set<string>();
+    for (const id of currentIds) {
+      if (!prevFeedIds.current.has(id)) fresh.add(id);
+    }
+    if (fresh.size > 0) {
+      setNewFeedIds(fresh);
+      const timer = setTimeout(() => setNewFeedIds(new Set()), 1200);
+      return () => clearTimeout(timer);
+    }
+    prevFeedIds.current = currentIds;
+  }, [activityFeed]);
+
   // Max count for progress arc normalization
   const maxCount = Math.max(1, ...Object.values(nodeCounts));
 
@@ -283,12 +300,16 @@ export default function MiniAgentGraph() {
       {/* Activity feed */}
       {activityFeed.length > 0 && (
         <div className="px-2 pb-1 space-y-0.5">
-          {activityFeed.map((item) => (
-            <div key={item.id} className="flex items-center justify-between text-[9px] font-mono leading-tight">
-              <span className="text-foreground/80 truncate flex-1">{item.text}</span>
-              <span className="text-muted-foreground/60 ml-2 shrink-0">{item.time}</span>
-            </div>
-          ))}
+          {activityFeed.map((item) => {
+            const isNew = newFeedIds.has(item.id);
+            return (
+              <div key={item.id}
+                className={`flex items-center justify-between text-[9px] font-mono leading-tight transition-all duration-500 ${isNew ? "animate-feed-pulse" : ""}`}>
+                <span className="text-foreground/80 truncate flex-1">{item.text}</span>
+                <span className="text-muted-foreground/60 ml-2 shrink-0">{item.time}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
