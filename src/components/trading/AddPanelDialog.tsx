@@ -150,6 +150,7 @@ export default function AddPanelDialog() {
   const [open, setOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [title, setTitle] = useState("");
   const [type, setType] = useState<CustomPanelType>("notes");
   const [embedUrl, setEmbedUrl] = useState("");
 
