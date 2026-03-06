@@ -5,8 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, Trash2, Plus, LayoutGrid,
-  Settings2, Check, Minimize2, Maximize2, Clock,
+  Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -117,6 +118,7 @@ const Trading = () => {
   const sim = useTradingSimulation();
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote, activeSymbols, setActiveSymbols, allInstruments } = sim;
   const layout = useTradingLayout();
+  const { theme, setTheme } = useTheme();
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Session clock
@@ -240,6 +242,13 @@ const Trading = () => {
         </motion.div>
 
         <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           <button
             onClick={() => layout.setCompactMode(!layout.compactMode)}
             className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
