@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
-  isSameMonth, isSameDay, isToday, format,
+  isSameMonth, isSameDay, isToday, format, setHours,
 } from "date-fns";
 import type { ScheduledJob } from "@/hooks/useScheduledJobs";
 import JobEventCard from "./JobEventCard";
@@ -12,9 +12,12 @@ interface MonthViewProps {
   jobs: ScheduledJob[];
   onSelectJob: (job: ScheduledJob) => void;
   onDayClick: (date: Date) => void;
+  onReschedule?: (jobId: string, newDate: Date) => void;
 }
 
-export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick }: MonthViewProps) {
+export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick, onReschedule }: MonthViewProps) {
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentDate));
     const end = endOfWeek(endOfMonth(currentDate));
@@ -30,6 +33,19 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick }
     });
     return map;
   }, [jobs]);
+
+  const handleDrop = (e: React.DragEvent, day: Date) => {
+    e.preventDefault();
+    setDragOverDay(null);
+    const jobId = e.dataTransfer.getData("application/job-id");
+    if (!jobId || !onReschedule) return;
+    const oldScheduled = e.dataTransfer.getData("application/job-scheduled");
+    const oldDate = oldScheduled ? new Date(oldScheduled) : new Date();
+    // Keep the original time, change the date
+    const newDate = new Date(day);
+    newDate.setHours(oldDate.getHours(), oldDate.getMinutes(), 0, 0);
+    onReschedule(jobId, newDate);
+  };
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -47,17 +63,21 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick }
           const inMonth = isSameMonth(day, currentDate);
           const today = isToday(day);
           const hasRunning = dayJobs.some((j) => j.status === "running");
+          const isDragOver = dragOverDay === key;
 
           return (
-            <motion.button
+            <motion.div
               key={key}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.005 }}
               onClick={() => onDayClick(day)}
-              className={`min-h-[100px] p-1.5 text-left transition-all hover:bg-muted/30 relative ${
+              className={`min-h-[100px] p-1.5 text-left transition-all hover:bg-muted/30 relative cursor-pointer ${
                 inMonth ? "bg-card/50" : "bg-card/20"
-              } ${today ? "ring-1 ring-primary/40" : ""}`}
+              } ${today ? "ring-1 ring-primary/40" : ""} ${isDragOver ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOverDay(key); }}
+              onDragLeave={() => setDragOverDay(null)}
+              onDrop={(e) => { e.stopPropagation(); handleDrop(e, day); }}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className={`text-[11px] font-mono ${
@@ -80,6 +100,7 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick }
                     key={job.id}
                     job={job}
                     compact
+                    draggable
                     onClick={() => { onSelectJob(job); }}
                   />
                 ))}
@@ -89,7 +110,7 @@ export default function MonthView({ currentDate, jobs, onSelectJob, onDayClick }
                   </span>
                 )}
               </div>
-            </motion.button>
+            </motion.div>
           );
         })}
       </div>

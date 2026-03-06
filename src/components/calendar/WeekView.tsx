@@ -1,6 +1,5 @@
-import { useMemo } from "react";
-import { motion } from "framer-motion";
-import { startOfWeek, addDays, isSameDay, isToday, format } from "date-fns";
+import { useMemo, useState } from "react";
+import { startOfWeek, addDays, isSameDay, isToday, format, setHours } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ScheduledJob } from "@/hooks/useScheduledJobs";
 import JobEventCard from "./JobEventCard";
@@ -9,13 +8,15 @@ interface WeekViewProps {
   currentDate: Date;
   jobs: ScheduledJob[];
   onSelectJob: (job: ScheduledJob) => void;
+  onReschedule?: (jobId: string, newDate: Date) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-export default function WeekView({ currentDate, jobs, onSelectJob }: WeekViewProps) {
+export default function WeekView({ currentDate, jobs, onSelectJob, onReschedule }: WeekViewProps) {
   const weekStart = startOfWeek(currentDate);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   const jobsByDayHour = useMemo(() => {
     const map: Record<string, ScheduledJob[]> = {};
@@ -27,6 +28,19 @@ export default function WeekView({ currentDate, jobs, onSelectJob }: WeekViewPro
     });
     return map;
   }, [jobs]);
+
+  const handleDrop = (e: React.DragEvent, day: Date, hour: number) => {
+    e.preventDefault();
+    setDragOverKey(null);
+    const jobId = e.dataTransfer.getData("application/job-id");
+    if (!jobId || !onReschedule) return;
+    const oldScheduled = e.dataTransfer.getData("application/job-scheduled");
+    const oldDate = oldScheduled ? new Date(oldScheduled) : new Date();
+    const newDate = setHours(new Date(day), hour);
+    newDate.setMinutes(oldDate.getMinutes());
+    newDate.setSeconds(0);
+    onReschedule(jobId, newDate);
+  };
 
   return (
     <ScrollArea className="flex-1">
@@ -59,13 +73,19 @@ export default function WeekView({ currentDate, jobs, onSelectJob }: WeekViewPro
               {weekDays.map((day) => {
                 const key = `${format(day, "yyyy-MM-dd")}-${hour}`;
                 const cellJobs = jobsByDayHour[key] || [];
+                const isDragOver = dragOverKey === key;
                 return (
                   <div
                     key={key}
-                    className={`bg-card/30 min-h-[48px] p-0.5 border-t border-border/10 ${isToday(day) ? "bg-primary/5" : ""}`}
+                    className={`bg-card/30 min-h-[48px] p-0.5 border-t border-border/10 transition-colors ${
+                      isToday(day) ? "bg-primary/5" : ""
+                    } ${isDragOver ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverKey(key); }}
+                    onDragLeave={() => setDragOverKey(null)}
+                    onDrop={(e) => handleDrop(e, day, hour)}
                   >
                     {cellJobs.map((job) => (
-                      <JobEventCard key={job.id} job={job} compact onClick={() => onSelectJob(job)} />
+                      <JobEventCard key={job.id} job={job} compact draggable onClick={() => onSelectJob(job)} />
                     ))}
                   </div>
                 );
