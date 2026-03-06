@@ -1,12 +1,40 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen, ImagePlus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { ConfigManager } from "@/components/ConfigManager";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Slider } from "@/components/ui/slider";
+
+const BG_STORAGE_KEY = "agent-graph-bg-settings";
+
+interface BgSettings {
+  image: string;
+  blur: number;
+  opacity: number;
+  scale: number;
+  posX: number;
+  posY: number;
+}
+
+const DEFAULT_BG: BgSettings = { image: "", blur: 8, opacity: 0.3, scale: 100, posX: 50, posY: 50 };
+
+function loadBgSettings(): BgSettings {
+  try {
+    const stored = localStorage.getItem(BG_STORAGE_KEY);
+    if (stored) return { ...DEFAULT_BG, ...JSON.parse(stored) };
+  } catch {}
+  return DEFAULT_BG;
+}
+
+function saveBgSettings(settings: BgSettings) {
+  try {
+    localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(settings));
+  } catch {}
+}
 
 const CORE_X = 400;
 const CORE_Y = 300;
