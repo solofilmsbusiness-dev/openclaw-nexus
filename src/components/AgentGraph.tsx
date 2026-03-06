@@ -1,12 +1,40 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { statusColor, type Agent, type Edge } from "@/data/agents";
-import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen } from "lucide-react";
+import { Link, X, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Power, FolderOpen, ImagePlus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useAgents } from "@/contexts/AgentContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { ConfigManager } from "@/components/ConfigManager";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Slider } from "@/components/ui/slider";
+
+const BG_STORAGE_KEY = "agent-graph-bg-settings";
+
+interface BgSettings {
+  image: string;
+  blur: number;
+  opacity: number;
+  scale: number;
+  posX: number;
+  posY: number;
+}
+
+const DEFAULT_BG: BgSettings = { image: "", blur: 8, opacity: 0.3, scale: 100, posX: 50, posY: 50 };
+
+function loadBgSettings(): BgSettings {
+  try {
+    const stored = localStorage.getItem(BG_STORAGE_KEY);
+    if (stored) return { ...DEFAULT_BG, ...JSON.parse(stored) };
+  } catch {}
+  return DEFAULT_BG;
+}
+
+function saveBgSettings(settings: BgSettings) {
+  try {
+    localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(settings));
+  } catch {}
+}
 
 const CORE_X = 400;
 const CORE_Y = 300;
@@ -602,6 +630,40 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const panRef = useRef<{ startMouse: { x: number; y: number }; startViewBox: typeof DEFAULT_VIEWBOX } | null>(null);
   const resizeRef = useRef<{ agentId: string; startDist: number; startSize: number } | null>(null);
 
+  // Background image state
+  const [bgSettings, setBgSettings] = useState<BgSettings>(loadBgSettings);
+  const [showBgControls, setShowBgControls] = useState(false);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+
+  const updateBg = useCallback((patch: Partial<BgSettings>) => {
+    setBgSettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveBgSettings(next);
+      return next;
+    });
+  }, []);
+
+  const handleBgUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning("Large image", { description: "Image is over 5MB — may affect performance." });
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      updateBg({ image: dataUrl });
+      setShowBgControls(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }, [updateBg]);
+
+  const removeBgImage = useCallback(() => {
+    updateBg({ image: "" });
+    setShowBgControls(false);
+  }, [updateBg]);
+
   const [killProgress, setKillProgress] = useState(killSwitchActive ? 1 : 0);
   useEffect(() => {
     let raf: number;
@@ -867,6 +929,57 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden">
+      {/* Hidden file input for bg image */}
+      <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
+
+      {/* Background image layer */}
+      {bgSettings.image && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0 rounded-xl overflow-hidden"
+          style={{
+            backgroundImage: `url(${bgSettings.image})`,
+            backgroundSize: `${bgSettings.scale}%`,
+            backgroundPosition: `${bgSettings.posX}% ${bgSettings.posY}%`,
+            backgroundRepeat: "no-repeat",
+            filter: `blur(${bgSettings.blur}px)`,
+            opacity: bgSettings.opacity,
+          }}
+        />
+      )}
+
+      {/* Background image adjustment panel */}
+      {bgSettings.image && showBgControls && (
+        <div className="absolute bottom-3 right-3 z-20 w-52 glass-panel neon-border p-3 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono text-muted-foreground tracking-wider">BG CONTROLS</span>
+            <button onClick={removeBgImage} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Remove background">
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">BLUR ({bgSettings.blur}px)</span>
+              <Slider min={0} max={20} step={1} value={[bgSettings.blur]} onValueChange={([v]) => updateBg({ blur: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">OPACITY ({Math.round(bgSettings.opacity * 100)}%)</span>
+              <Slider min={0} max={1} step={0.05} value={[bgSettings.opacity]} onValueChange={([v]) => updateBg({ opacity: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">SCALE ({bgSettings.scale}%)</span>
+              <Slider min={50} max={200} step={5} value={[bgSettings.scale]} onValueChange={([v]) => updateBg({ scale: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">POS X ({bgSettings.posX}%)</span>
+              <Slider min={0} max={100} step={1} value={[bgSettings.posX]} onValueChange={([v]) => updateBg({ posX: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">POS Y ({bgSettings.posY}%)</span>
+              <Slider min={0} max={100} step={1} value={[bgSettings.posY]} onValueChange={([v]) => updateBg({ posY: v })} />
+            </label>
+          </div>
+        </div>
+      )}
       {/* Connect mode toggle */}
       <TooltipProvider delayDuration={300}>
         <Tooltip open={connectMode ? false : undefined}>
@@ -1004,6 +1117,27 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         >
           <FolderOpen className="w-3.5 h-3.5" />
         </button>
+        <div className="w-full h-px bg-border/20" />
+        <button
+          onClick={() => bgFileRef.current?.click()}
+          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50 transition-colors"
+          title="Upload background image"
+        >
+          <ImagePlus className="w-3.5 h-3.5" />
+        </button>
+        {bgSettings.image && (
+          <button
+            onClick={() => setShowBgControls((v) => !v)}
+            className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
+              showBgControls
+                ? "border-primary/60 bg-primary/20 text-primary hover:bg-primary/30"
+                : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+            }`}
+            title="Background image controls"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Edge kind color legend */}
