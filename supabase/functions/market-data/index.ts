@@ -9,6 +9,12 @@ const corsHeaders = {
 const cache: Record<string, { data: unknown; ts: number }> = {};
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// All futures symbols that need =F suffix for Alpha Vantage
+const FUTURES_SYMBOLS = new Set([
+  "ES", "NQ", "YM", "RTY", "CL", "GC", "SI", "NG", "ZB", "6E",
+  "MES", "MNQ", "ZC", "ZS", "ZW", "HG",
+]);
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,9 +29,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { symbols, cryptoSymbols } = await req.json();
-    const allSymbols = (symbols || []).concat(cryptoSymbols || []);
-    if (!allSymbols || !Array.isArray(allSymbols) || allSymbols.length === 0) {
+    const { symbols } = await req.json();
+    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
       return new Response(JSON.stringify({ error: 'symbols array required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -35,12 +40,7 @@ Deno.serve(async (req) => {
     const results: Record<string, unknown> = {};
     const now = Date.now();
 
-    // Futures symbols that need =F suffix for Alpha Vantage
-    const FUTURES_SYMBOLS = new Set(["ES", "NQ", "YM", "RTY", "CL", "GC", "SI", "NG", "ZB", "6E"]);
-    // Crypto symbols map to Alpha Vantage format (BTC -> BTCUSD, ETH -> ETHUSD, etc.)
-    const CRYPTO_SYMBOLS = new Set(["BTC", "ETH", "SOL"]);
-
-    for (const symbol of allSymbols) {
+    for (const symbol of symbols) {
       const sym = String(symbol).toUpperCase();
 
       // Check cache
@@ -49,14 +49,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Determine query symbol format
-      let querySym = sym;
-      if (FUTURES_SYMBOLS.has(sym)) {
-        querySym = `${sym}=F`;
-      } else if (CRYPTO_SYMBOLS.has(sym)) {
-        // Map crypto to Alpha Vantage format: BTC -> BTCUSD, ETH -> ETHUSD, etc.
-        querySym = `${sym}USD`;
-      }
+      // All symbols are futures — append =F
+      const querySym = FUTURES_SYMBOLS.has(sym) ? `${sym}=F` : sym;
 
       // Fetch GLOBAL_QUOTE for current price data
       const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${querySym}&apikey=${API_KEY}`;

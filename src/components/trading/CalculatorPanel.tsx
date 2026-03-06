@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ALL_INSTRUMENTS } from "@/hooks/useTradingSimulation";
 
-type Mode = "calc" | "possize" | "rr" | "pnl";
+type Mode = "calc" | "tickval" | "rr" | "pnl";
 
 export default function CalculatorPanel() {
   const [mode, setMode] = useState<Mode>("calc");
@@ -12,10 +13,12 @@ export default function CalculatorPanel() {
   const [op, setOp] = useState<string | null>(null);
   const [fresh, setFresh] = useState(true);
 
-  // Quick-calc states
-  const [posSize, setPosSize] = useState({ account: "", riskPct: "", stopDist: "" });
+  // Tick value mode
+  const [tickVal, setTickVal] = useState({ symbol: "ES", ticks: "", contracts: "" });
+  // R:R mode
   const [rr, setRr] = useState({ entry: "", stop: "", target: "" });
-  const [pnl, setPnl] = useState({ entry: "", exit: "", shares: "" });
+  // Futures P/L mode
+  const [pnl, setPnl] = useState({ symbol: "ES", entry: "", exit: "", contracts: "" });
 
   const input = (val: string) => {
     if (fresh) { setDisplay(val === "." ? "0." : val); setFresh(false); }
@@ -58,12 +61,20 @@ export default function CalculatorPanel() {
     }
   };
 
-  const posSizeResult = () => {
-    const acc = parseFloat(posSize.account);
-    const risk = parseFloat(posSize.riskPct);
-    const stop = parseFloat(posSize.stopDist);
-    if (!acc || !risk || !stop) return "—";
-    return Math.floor((acc * (risk / 100)) / stop).toLocaleString();
+  const tickValResult = () => {
+    const inst = ALL_INSTRUMENTS.find((i) => i.symbol === tickVal.symbol);
+    const ticks = parseFloat(tickVal.ticks);
+    const contracts = parseFloat(tickVal.contracts);
+    if (!inst || !ticks || !contracts) return "—";
+    const value = ticks * inst.pointValue * contracts;
+    return `${value >= 0 ? "+" : ""}$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const tickValDetails = () => {
+    const inst = ALL_INSTRUMENTS.find((i) => i.symbol === tickVal.symbol);
+    if (!inst) return null;
+    const tickValue = inst.pointValue * inst.tickSize;
+    return { tickSize: inst.tickSize, pointValue: inst.pointValue, tickDollar: tickValue };
   };
 
   const rrResult = () => {
@@ -77,17 +88,20 @@ export default function CalculatorPanel() {
   };
 
   const pnlResult = () => {
+    const inst = ALL_INSTRUMENTS.find((i) => i.symbol === pnl.symbol);
     const e = parseFloat(pnl.entry);
     const x = parseFloat(pnl.exit);
-    const sh = parseFloat(pnl.shares);
-    if (!e || !x || !sh) return "—";
-    const result = (x - e) * sh;
+    const ct = parseFloat(pnl.contracts);
+    if (!inst || !e || !x || !ct) return "—";
+    // Tick-based: ((exit - entry) / tickSize) * pointValue * contracts
+    const ticks = (x - e) / inst.tickSize;
+    const result = ticks * inst.pointValue * ct;
     return `${result >= 0 ? "+" : ""}$${result.toFixed(2)}`;
   };
 
   const modes: { key: Mode; label: string }[] = [
     { key: "calc", label: "Calc" },
-    { key: "possize", label: "Pos Size" },
+    { key: "tickval", label: "Tick $" },
     { key: "rr", label: "R:R" },
     { key: "pnl", label: "P/L" },
   ];
@@ -98,6 +112,8 @@ export default function CalculatorPanel() {
     ["1", "2", "3", "-"],
     ["0", ".", "%", "+"],
   ];
+
+  const details = tickValDetails();
 
   return (
     <div className="flex-1 flex flex-col gap-2">
@@ -120,12 +136,10 @@ export default function CalculatorPanel() {
 
       {mode === "calc" && (
         <>
-          {/* Display */}
           <div className="bg-secondary/30 rounded-md px-2 py-1.5 text-right font-mono text-sm text-foreground min-h-[32px] border border-border/20 overflow-hidden">
             {op && <span className="text-muted-foreground text-[10px] mr-1">{prev} {op}</span>}
             {display}
           </div>
-          {/* Buttons */}
           <div className="grid grid-cols-4 gap-1">
             <button onClick={clear} className="col-span-2 text-[10px] font-mono py-1.5 rounded bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors">
               AC
@@ -155,12 +169,36 @@ export default function CalculatorPanel() {
         </>
       )}
 
-      {mode === "possize" && (
+      {mode === "tickval" && (
         <div className="space-y-2">
-          <QuickField label="Account Size ($)" value={posSize.account} onChange={(v) => setPosSize((s) => ({ ...s, account: v }))} />
-          <QuickField label="Risk (%)" value={posSize.riskPct} onChange={(v) => setPosSize((s) => ({ ...s, riskPct: v }))} />
-          <QuickField label="Stop Distance ($)" value={posSize.stopDist} onChange={(v) => setPosSize((s) => ({ ...s, stopDist: v }))} />
-          <ResultBox label="Shares" value={posSizeResult()} />
+          <div>
+            <Label className="text-[10px] font-mono text-muted-foreground">Contract</Label>
+            <Select value={tickVal.symbol} onValueChange={(v) => setTickVal((s) => ({ ...s, symbol: v }))}>
+              <SelectTrigger className="h-7 text-xs bg-secondary/30 border-border/20 mt-0.5">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_INSTRUMENTS.map((inst) => (
+                  <SelectItem key={inst.symbol} value={inst.symbol}>
+                    <span className="font-mono">{inst.symbol}</span>
+                    <span className="text-muted-foreground ml-1">— {inst.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {details && (
+            <div className="flex gap-2 text-[9px] font-mono text-muted-foreground">
+              <span>Tick: {details.tickSize}</span>
+              <span>·</span>
+              <span>Pt Val: ${details.pointValue}</span>
+              <span>·</span>
+              <span>$/tick: ${details.tickDollar.toFixed(2)}</span>
+            </div>
+          )}
+          <QuickField label="Ticks" value={tickVal.ticks} onChange={(v) => setTickVal((s) => ({ ...s, ticks: v }))} />
+          <QuickField label="Contracts" value={tickVal.contracts} onChange={(v) => setTickVal((s) => ({ ...s, contracts: v }))} />
+          <ResultBox label="Dollar Value" value={tickValResult()} />
         </div>
       )}
 
@@ -175,10 +213,26 @@ export default function CalculatorPanel() {
 
       {mode === "pnl" && (
         <div className="space-y-2">
+          <div>
+            <Label className="text-[10px] font-mono text-muted-foreground">Contract</Label>
+            <Select value={pnl.symbol} onValueChange={(v) => setPnl((s) => ({ ...s, symbol: v }))}>
+              <SelectTrigger className="h-7 text-xs bg-secondary/30 border-border/20 mt-0.5">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_INSTRUMENTS.map((inst) => (
+                  <SelectItem key={inst.symbol} value={inst.symbol}>
+                    <span className="font-mono">{inst.symbol}</span>
+                    <span className="text-muted-foreground ml-1">— {inst.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <QuickField label="Entry Price" value={pnl.entry} onChange={(v) => setPnl((s) => ({ ...s, entry: v }))} />
           <QuickField label="Exit Price" value={pnl.exit} onChange={(v) => setPnl((s) => ({ ...s, exit: v }))} />
-          <QuickField label="Shares" value={pnl.shares} onChange={(v) => setPnl((s) => ({ ...s, shares: v }))} />
-          <ResultBox label="P/L" value={pnlResult()} />
+          <QuickField label="Contracts" value={pnl.contracts} onChange={(v) => setPnl((s) => ({ ...s, contracts: v }))} />
+          <ResultBox label="P/L (tick-based)" value={pnlResult()} />
         </div>
       )}
     </div>
