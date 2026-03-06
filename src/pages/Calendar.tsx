@@ -127,6 +127,10 @@ export default function Calendar() {
         open={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onUpdateStatus={handleUpdateStatus}
+        onUpdate={async (id, updates) => {
+          await updateJob(id, updates);
+          setSelectedJob((prev) => prev && prev.id === id ? { ...prev, ...updates } : prev);
+        }}
         onDelete={deleteJob}
       />
 
