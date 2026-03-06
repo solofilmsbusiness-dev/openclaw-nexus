@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Activity, CheckCircle, AlertTriangle, XCircle, Settings, Sun, Moon, BarChart3, CalendarDays, Lightbulb } from "lucide-react";
+import { Activity, CheckCircle, AlertTriangle, XCircle, Settings, Sun, Moon, BarChart3, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -70,14 +70,6 @@ export default function MetricsBar({ agents }: { agents: Agent[] }) {
           title="Trading Analytics"
         >
           <BarChart3 className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
-        </button>
-        <div className="h-4 w-px bg-border/30" />
-        <button
-          onClick={() => navigate("/ideas")}
-          className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground hover:text-neon-orange hover:bg-neon-orange/10 transition-all duration-200 group"
-          title="Idea Generator"
-        >
-          <Lightbulb className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
         </button>
         <div className="h-4 w-px bg-border/30" />
         <button

@@ -13,7 +13,6 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Trading from "./pages/Trading";
 import Calendar from "./pages/Calendar";
-import Ideas from "./pages/Ideas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,7 +42,6 @@ function AnimatedRoutes() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/trading" element={<TradingLayoutProvider><Trading /></TradingLayoutProvider>} />
           <Route path="/calendar" element={<Calendar />} />
-          <Route path="/ideas" element={<Ideas />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>
