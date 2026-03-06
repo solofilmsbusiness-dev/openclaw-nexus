@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -61,6 +62,11 @@ export default function Calendar() {
     setSelectedJob((prev) => prev && prev.id === id ? { ...prev, status } : prev);
   };
 
+  const handleReschedule = useCallback(async (jobId: string, newDate: Date) => {
+    await updateJob(jobId, { scheduled_at: newDate.toISOString() });
+    toast.success("Job rescheduled", { description: `Moved to ${newDate.toLocaleString()}` });
+  }, [updateJob]);
+
   if (!authChecked) {
     return (
       <div className="h-screen bg-background flex flex-col items-center justify-center gap-3">
@@ -107,11 +113,11 @@ export default function Calendar() {
               <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
           ) : view === "month" ? (
-            <MonthView currentDate={currentDate} jobs={filteredJobs} onSelectJob={setSelectedJob} onDayClick={handleDayClick} />
+            <MonthView currentDate={currentDate} jobs={filteredJobs} onSelectJob={setSelectedJob} onDayClick={handleDayClick} onReschedule={handleReschedule} />
           ) : view === "week" ? (
-            <WeekView currentDate={currentDate} jobs={filteredJobs} onSelectJob={setSelectedJob} />
+            <WeekView currentDate={currentDate} jobs={filteredJobs} onSelectJob={setSelectedJob} onReschedule={handleReschedule} />
           ) : (
-            <DayView currentDate={currentDate} jobs={filteredJobs} onSelectJob={setSelectedJob} />
+            <DayView currentDate={currentDate} jobs={filteredJobs} onSelectJob={setSelectedJob} onReschedule={handleReschedule} />
           )}
         </motion.div>
       </div>
