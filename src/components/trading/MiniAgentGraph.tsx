@@ -11,8 +11,9 @@ const PIPELINE_AGENTS = [
 type PipelineId = (typeof PIPELINE_AGENTS)[number]["id"];
 
 // Layout constants
-const SVG_W = 400, SVG_H = 140;
+const SVG_W = 400, SVG_H = 160;
 const NODE_W = 76, NODE_H = 52, GAP = 16;
+const STATS_Y_OFFSET = 14;
 const TOTAL_W = PIPELINE_AGENTS.length * NODE_W + (PIPELINE_AGENTS.length - 1) * GAP;
 const START_X = (SVG_W - TOTAL_W) / 2;
 const NODE_Y = (SVG_H - NODE_H) / 2;
