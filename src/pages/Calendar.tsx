@@ -144,6 +144,7 @@ export default function Calendar() {
             scheduled_at: newDate.toISOString(),
             duration_minutes: jobToDuplicate.duration_minutes,
             recurrence: jobToDuplicate.recurrence,
+            status: "scheduled",
           });
           toast.success("Job duplicated", { description: `Scheduled for ${newDate.toLocaleDateString()}` });
         }}
