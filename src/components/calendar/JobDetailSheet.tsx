@@ -248,12 +248,18 @@ export default function JobDetailSheet({ job, open, onClose, onUpdateStatus, onU
                     <Zap className="w-3 h-3" /> Start
                   </Button>
                 )}
-                {job.status === "failed" && (
-                  <Button size="sm" variant="outline" className="text-xs gap-1 h-7"
-                    onClick={() => onUpdateStatus(job.id, "scheduled")}>
-                    <RefreshCw className="w-3 h-3" /> Retry
-                  </Button>
-                )}
+                 {job.status === "failed" && (
+                   <Button size="sm" variant="outline" className="text-xs gap-1 h-7"
+                     onClick={() => onUpdateStatus(job.id, "scheduled")}>
+                     <RefreshCw className="w-3 h-3" /> Retry
+                   </Button>
+                 )}
+                 {onDuplicate && (
+                   <Button size="sm" variant="outline" className="text-xs gap-1 h-7"
+                     onClick={() => { onDuplicate(job); onClose(); }}>
+                     <RefreshCw className="w-3 h-3" /> Duplicate
+                   </Button>
+                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button size="sm" variant="destructive" className="text-xs gap-1 h-7">
