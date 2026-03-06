@@ -78,7 +78,7 @@ export default function JobEventCard({ job, compact = false, onClick, draggable 
           borderLeft: `4px solid ${typeColor}`,
           boxShadow: isRunning ? `0 0 16px ${config.bg}` : undefined,
         }}
-        whileHover={{ scale: 1.01, brightness: 1.1 }}
+        whileHover={{ scale: 1.01 }}
         animate={isRunning ? { boxShadow: [`0 0 8px ${config.bg}`, `0 0 20px ${config.bg}`, `0 0 8px ${config.bg}`] } : {}}
         transition={isRunning ? { duration: 2, repeat: Infinity } : {}}
         layout
