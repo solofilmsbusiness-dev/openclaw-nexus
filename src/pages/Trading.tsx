@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
-  Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, PieChart as PieChartIcon, Trash2, Plus, LayoutGrid,
-  Settings2, Check, Minimize2, Maximize2,
+  Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, Trash2, Plus, LayoutGrid,
+  Settings2, Check, Minimize2, Maximize2, Clock,
 } from "lucide-react";
-import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip } from "recharts";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -49,14 +49,67 @@ const categoryColor: Record<LearningNote["category"], string> = {
   Adjustment: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
   Pattern: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
 };
-const PIE_COLORS = [
-  "hsl(var(--neon-green))",
-  "hsl(var(--neon-blue))",
-  "hsl(var(--neon-orange))",
-  "hsl(var(--neon-cyan))",
-  "hsl(var(--neon-purple))",
-  "hsl(var(--neon-red))",
-];
+
+// --- Session clock helpers ---
+function getFuturesSession(): { label: string; color: string; next: string; countdown: string } {
+  const now = new Date();
+  // Convert to ET
+  const etStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const et = new Date(etStr);
+  const h = et.getHours();
+  const m = et.getMinutes();
+  const day = et.getDay(); // 0=Sun, 6=Sat
+  const mins = h * 60 + m;
+
+  // Weekend: Fri 5PM to Sun 6PM
+  if (day === 6 || (day === 0 && mins < 18 * 60) || (day === 5 && mins >= 17 * 60)) {
+    // Calculate countdown to Sunday 6PM ET
+    const daysUntilSun = day === 6 ? 1 : day === 0 ? 0 : 2;
+    const targetMins = 18 * 60;
+    const currentMins = mins;
+    const remainMins = daysUntilSun * 24 * 60 + (targetMins - currentMins);
+    const rh = Math.floor(remainMins / 60);
+    const rm = remainMins % 60;
+    return { label: "CLOSED", color: "text-neon-red", next: "Globex opens Sun 6PM ET", countdown: `${rh}h ${rm}m` };
+  }
+
+  // RTH: 9:30 AM - 4:00 PM ET (Mon-Fri)
+  const rthOpen = 9 * 60 + 30;
+  const rthClose = 16 * 60;
+
+  if (mins >= rthOpen && mins < rthClose) {
+    const remain = rthClose - mins;
+    const rh = Math.floor(remain / 60);
+    const rm = remain % 60;
+    return { label: "RTH", color: "text-neon-green", next: "Close", countdown: `${rh}h ${rm}m` };
+  }
+
+  // ETH/Globex: 6PM - 9:30AM ET
+  if (mins >= 18 * 60 || mins < rthOpen) {
+    let remain: number;
+    if (mins >= 18 * 60) {
+      remain = (24 * 60 - mins) + rthOpen;
+    } else {
+      remain = rthOpen - mins;
+    }
+    const rh = Math.floor(remain / 60);
+    const rm = remain % 60;
+    return { label: "ETH", color: "text-neon-orange", next: "RTH opens", countdown: `${rh}h ${rm}m` };
+  }
+
+  // Between 4PM and 6PM — brief close
+  const remain = 18 * 60 - mins;
+  const rh = Math.floor(remain / 60);
+  const rm = remain % 60;
+  return { label: "CLOSED", color: "text-neon-red", next: "Globex opens", countdown: `${rh}h ${rm}m` };
+}
+
+const CATEGORY_LABELS: Record<InstrumentInfo["category"], string> = {
+  index: "Index Futures",
+  micro: "Micro Futures",
+  commodity: "Commodities",
+  rates: "Rates & FX",
+};
 
 const Trading = () => {
   const navigate = useNavigate();
@@ -65,6 +118,13 @@ const Trading = () => {
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote, activeSymbols, setActiveSymbols, allInstruments } = sim;
   const layout = useTradingLayout();
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // Session clock
+  const [session, setSession] = useState(getFuturesSession);
+  useEffect(() => {
+    const interval = setInterval(() => setSession(getFuturesSession()), 10_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // New note form state
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -89,7 +149,6 @@ const Trading = () => {
 
   // Panel render map
   const renderPanel = useCallback((panelItem: PanelItem) => {
-    // Custom panel
     if (panelItem.isCustom) {
       const def = layout.customPanels.find((p) => p.id === panelItem.id);
       if (!def) return null;
@@ -149,8 +208,17 @@ const Trading = () => {
         <div className="h-5 w-px bg-border/50" />
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse-glow" />
-          <span className="font-display font-semibold text-xs sm:text-sm tracking-wide text-foreground">Trading Analytics</span>
+          <span className="font-display font-semibold text-xs sm:text-sm tracking-wide text-foreground">Futures Trading</span>
         </div>
+
+        {/* Session clock */}
+        <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2 py-1">
+          <Clock className="w-3 h-3 text-muted-foreground" />
+          <span className={`text-[10px] font-mono font-semibold ${session.color}`}>{session.label}</span>
+          <span className="text-[9px] font-mono text-muted-foreground">→ {session.next}</span>
+          <span className="text-[10px] font-mono text-foreground">{session.countdown}</span>
+        </div>
+
         <div className="h-5 w-px bg-border/50 hidden sm:block" />
 
         <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -199,7 +267,7 @@ const Trading = () => {
         </div>
       </div>
 
-      {/* Main grid - drag-and-drop */}
+      {/* Main grid */}
       <div
         ref={gridRef}
         className={`flex-1 grid gap-3 p-3 min-h-0 overflow-auto auto-rows-min ${
@@ -231,13 +299,11 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
   activeSymbols: string[];
   setActiveSymbols: (syms: string[]) => void;
 }) {
-  const stocks = ALL_INSTRUMENTS.filter((i) => i.type === "stock");
-  const futures = ALL_INSTRUMENTS.filter((i) => i.type === "futures");
-  const crypto = ALL_INSTRUMENTS.filter((i) => i.type === "crypto");
+  const categories: InstrumentInfo["category"][] = ["index", "micro", "commodity", "rates"];
 
   const toggleSymbol = (sym: string) => {
     if (activeSymbols.includes(sym)) {
-      if (activeSymbols.length <= 1) return; // Keep at least one
+      if (activeSymbols.length <= 1) return;
       setActiveSymbols(activeSymbols.filter((s) => s !== sym));
     } else {
       setActiveSymbols([...activeSymbols, sym]);
@@ -248,7 +314,7 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
     <>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-neon-green" />
-        <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Live Market Data</span>
+        <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Futures Market Data</span>
         <Popover>
           <PopoverTrigger asChild>
             <button className="ml-auto p-1 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
@@ -258,49 +324,30 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
           <PopoverContent className="w-64 p-0" align="end">
             <div className="p-3 border-b border-border/30">
               <p className="font-display font-semibold text-xs text-foreground">Manage Instruments</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Toggle tickers to show in the market panel</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Toggle contracts to show in the market panel</p>
             </div>
             <ScrollArea className="max-h-[300px]">
               <div className="p-2">
-                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1">Stocks</p>
-                {stocks.map((inst) => (
-                  <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
-                    <Checkbox
-                      checked={activeSymbols.includes(inst.symbol)}
-                      onCheckedChange={() => toggleSymbol(inst.symbol)}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span className="font-mono text-xs font-semibold text-foreground w-12">{inst.symbol}</span>
-                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
-                    <Badge className="text-[8px] bg-neon-green/10 text-neon-green border-neon-green/30 px-1.5 py-0">STK</Badge>
-                  </label>
-                ))}
-                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1 mt-2">Futures</p>
-                {futures.map((inst) => (
-                  <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
-                    <Checkbox
-                      checked={activeSymbols.includes(inst.symbol)}
-                      onCheckedChange={() => toggleSymbol(inst.symbol)}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span className="font-mono text-xs font-semibold text-foreground w-12">{inst.symbol}</span>
-                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
-                    <Badge className="text-[8px] bg-neon-orange/10 text-neon-orange border-neon-orange/30 px-1.5 py-0">FUT</Badge>
-                  </label>
-                ))}
-                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1 mt-2">Crypto</p>
-                {crypto.map((inst) => (
-                  <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
-                    <Checkbox
-                      checked={activeSymbols.includes(inst.symbol)}
-                      onCheckedChange={() => toggleSymbol(inst.symbol)}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span className="font-mono text-xs font-semibold text-foreground w-12">{inst.symbol}</span>
-                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
-                    <Badge className="text-[8px] bg-neon-purple/10 text-neon-purple border-neon-purple/30 px-1.5 py-0">CRY</Badge>
-                  </label>
-                ))}
+                {categories.map((cat) => {
+                  const instruments = ALL_INSTRUMENTS.filter((i) => i.category === cat);
+                  return (
+                    <div key={cat}>
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-1 mt-1">{CATEGORY_LABELS[cat]}</p>
+                      {instruments.map((inst) => (
+                        <label key={inst.symbol} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
+                          <Checkbox
+                            checked={activeSymbols.includes(inst.symbol)}
+                            onCheckedChange={() => toggleSymbol(inst.symbol)}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span className="font-mono text-xs font-semibold text-foreground w-10">{inst.symbol}</span>
+                          <span className="text-[10px] text-muted-foreground truncate flex-1">{inst.name}</span>
+                          <span className="text-[8px] font-mono text-muted-foreground">{inst.contractMonth}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
           </PopoverContent>
@@ -310,48 +357,50 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
         <Table>
           <TableHeader>
             <TableRow className="border-border/30">
-              <TableHead className="text-[10px] font-mono text-muted-foreground">Symbol</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground">Contract</TableHead>
               <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Price</TableHead>
-              <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Change</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Chg</TableHead>
               <TableHead className="text-[10px] font-mono text-muted-foreground text-right">%</TableHead>
-              <TableHead className="text-[10px] font-mono text-muted-foreground text-right hidden sm:table-cell">Vol</TableHead>
-              <TableHead className="text-[10px] font-mono text-muted-foreground w-20">Trend</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground text-right hidden sm:table-cell">Tick</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground text-right hidden sm:table-cell">Pt Val</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground text-right hidden md:table-cell">Vol</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground w-16">Trend</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tickers.map((t) => (
-              <TableRow key={t.symbol} className="border-border/20 hover:bg-secondary/30">
-                <TableCell className="py-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-semibold text-xs text-foreground">{t.symbol}</span>
-                    <Badge className={`text-[7px] px-1 py-0 leading-tight ${
-                      t.type === "crypto" ? "bg-neon-purple/10 text-neon-purple border-neon-purple/30" :
-                      t.type === "futures" ? "bg-neon-orange/10 text-neon-orange border-neon-orange/30" : "bg-neon-green/10 text-neon-green border-neon-green/30"
-                    }`}>
-                      {t.type === "crypto" ? "CRY" : t.type === "futures" ? "FUT" : "STK"}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="py-2 text-right font-mono text-xs text-foreground">${t.price.toFixed(2)}</TableCell>
-                <TableCell className={`py-2 text-right font-mono text-xs ${t.change >= 0 ? "text-neon-green" : "text-neon-red"}`}>
-                  {t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}
-                </TableCell>
-                <TableCell className={`py-2 text-right font-mono text-xs ${t.changePercent >= 0 ? "text-neon-green" : "text-neon-red"}`}>
-                  <span className="inline-flex items-center gap-0.5">
-                    {t.changePercent >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {Math.abs(t.changePercent).toFixed(2)}%
-                  </span>
-                </TableCell>
-                <TableCell className="py-2 text-right font-mono text-[10px] text-muted-foreground hidden sm:table-cell">{formatVol(t.volume)}</TableCell>
-                <TableCell className="py-2 w-20">
-                  <ResponsiveContainer width="100%" height={24}>
-                    <LineChart data={t.history.map((v, i) => ({ v, i }))}>
-                      <Line type="monotone" dataKey="v" stroke={t.change >= 0 ? "hsl(var(--neon-green))" : "hsl(var(--neon-red))"} strokeWidth={1.5} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </TableCell>
-              </TableRow>
-            ))}
+            {tickers.map((t) => {
+              const inst = ALL_INSTRUMENTS.find((i) => i.symbol === t.symbol);
+              return (
+                <TableRow key={t.symbol} className="border-border/20 hover:bg-secondary/30">
+                  <TableCell className="py-2">
+                    <div className="flex flex-col">
+                      <span className="font-mono font-semibold text-xs text-foreground">{t.symbol}</span>
+                      {inst && <span className="text-[8px] text-muted-foreground">{inst.contractMonth}</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-2 text-right font-mono text-xs text-foreground">${t.price.toFixed(2)}</TableCell>
+                  <TableCell className={`py-2 text-right font-mono text-xs ${t.change >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                    {t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={`py-2 text-right font-mono text-xs ${t.changePercent >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                    <span className="inline-flex items-center gap-0.5">
+                      {t.changePercent >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {Math.abs(t.changePercent).toFixed(2)}%
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-2 text-right font-mono text-[10px] text-muted-foreground hidden sm:table-cell">{inst?.tickSize}</TableCell>
+                  <TableCell className="py-2 text-right font-mono text-[10px] text-muted-foreground hidden sm:table-cell">${inst?.pointValue}</TableCell>
+                  <TableCell className="py-2 text-right font-mono text-[10px] text-muted-foreground hidden md:table-cell">{formatVol(t.volume)}</TableCell>
+                  <TableCell className="py-2 w-16">
+                    <ResponsiveContainer width="100%" height={24}>
+                      <LineChart data={t.history.map((v, i) => ({ v, i }))}>
+                        <Line type="monotone" dataKey="v" stroke={t.change >= 0 ? "hsl(var(--neon-green))" : "hsl(var(--neon-red))"} strokeWidth={1.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </ScrollArea>
@@ -433,7 +482,7 @@ function AgentPanel({ evaluations, considerations, executedTrades }: {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs text-foreground">${t.price.toFixed(2)}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">×{t.quantity}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">×{t.quantity} ct</span>
                     <span className="text-[9px] font-mono text-muted-foreground">{formatTime(t.timestamp)}</span>
                   </div>
                 </div>
@@ -466,7 +515,7 @@ function HistoryPanel({ tradeHistory, deleteTrade }: {
           <TableHeader>
             <TableRow className="border-border/30">
               <TableHead className="text-[10px] font-mono text-muted-foreground">Type</TableHead>
-              <TableHead className="text-[10px] font-mono text-muted-foreground">Asset</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground">Contract</TableHead>
               <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Entry</TableHead>
               <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Exit</TableHead>
               <TableHead className="text-[10px] font-mono text-muted-foreground text-right">P/L</TableHead>
@@ -534,7 +583,6 @@ function JournalPanel({
         </div>
       </div>
 
-      {/* Inline note form */}
       <AnimatePresence>
         {showNoteForm && (
           <motion.div
@@ -607,69 +655,44 @@ function PortfolioPanel({ portfolio }: { portfolio: ReturnType<typeof useTrading
     <>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan" />
-        <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Portfolio Summary</span>
+        <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Margin & Positions</span>
         <Wallet className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
       </div>
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
-          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Total Value</p>
-          <p className="font-mono text-sm font-semibold text-foreground">${portfolio.totalValue.toLocaleString()}</p>
+          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Account Balance</p>
+          <p className="font-mono text-sm font-semibold text-foreground">${portfolio.accountBalance.toLocaleString()}</p>
         </div>
         <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
-          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Cash</p>
-          <p className="font-mono text-sm font-semibold text-foreground">${portfolio.cashBalance.toLocaleString()}</p>
+          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Available Margin</p>
+          <p className={`font-mono text-sm font-semibold ${portfolio.availableMargin >= 0 ? "text-foreground" : "text-neon-red"}`}>${portfolio.availableMargin.toLocaleString()}</p>
         </div>
         <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
-          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">P/L</p>
-          <p className={`font-mono text-sm font-semibold ${portfolio.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
-            {portfolio.totalPnl >= 0 ? "+" : ""}${portfolio.totalPnl.toLocaleString()}
+          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Used Margin</p>
+          <p className="font-mono text-sm font-semibold text-neon-orange">${portfolio.usedMargin.toLocaleString()}</p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/20 text-center">
+          <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Utilization</p>
+          <p className={`font-mono text-sm font-semibold ${portfolio.marginUtilization > 80 ? "text-neon-red" : portfolio.marginUtilization > 50 ? "text-neon-orange" : "text-neon-green"}`}>
+            {portfolio.marginUtilization}%
           </p>
-          <p className={`text-[9px] font-mono ${portfolio.totalPnlPercent >= 0 ? "text-neon-green" : "text-neon-red"}`}>
-            {portfolio.totalPnlPercent >= 0 ? "+" : ""}{portfolio.totalPnlPercent.toFixed(2)}%
-          </p>
+          <Progress value={portfolio.marginUtilization} className="h-1 mt-1" />
         </div>
       </div>
       <div className="flex items-center gap-2 mb-2">
-        <PieChartIcon className="w-3 h-3 text-muted-foreground" />
-        <span className="text-[10px] font-mono text-muted-foreground uppercase">Asset Allocation</span>
-      </div>
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-32 h-32 shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={[...portfolio.holdings.map((h) => ({ name: h.symbol, value: h.value })), { name: "Cash", value: portfolio.cashBalance }]}
-                cx="50%" cy="50%" innerRadius={28} outerRadius={55} paddingAngle={2} dataKey="value" stroke="none"
-              >
-                {portfolio.holdings.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                <Cell fill="hsl(var(--muted-foreground) / 0.3)" />
-              </Pie>
-              <ReTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11, fontFamily: "monospace" }} formatter={(value: number) => [`$${value.toLocaleString()}`, ""]} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex-1 space-y-1">
-          {portfolio.holdings.map((h, i) => (
-            <div key={h.symbol} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-              <span className="font-mono text-[10px] text-foreground w-10">{h.symbol}</span>
-              <span className="font-mono text-[10px] text-muted-foreground">{h.allocation}%</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full shrink-0 bg-muted-foreground/30" />
-            <span className="font-mono text-[10px] text-foreground w-10">Cash</span>
-            <span className="font-mono text-[10px] text-muted-foreground">{Math.round((portfolio.cashBalance / portfolio.totalValue) * 1000) / 10}%</span>
-          </div>
-        </div>
+        <span className="text-[9px] font-mono text-muted-foreground uppercase">
+          P/L: <span className={`font-semibold ${portfolio.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+            {portfolio.totalPnl >= 0 ? "+" : ""}${portfolio.totalPnl.toLocaleString()} ({portfolio.totalPnlPercent >= 0 ? "+" : ""}{portfolio.totalPnlPercent.toFixed(2)}%)
+          </span>
+        </span>
       </div>
       <ScrollArea className="flex-1 max-h-[180px]">
         <Table>
           <TableHeader>
             <TableRow className="border-border/30">
-              <TableHead className="text-[10px] font-mono text-muted-foreground">Asset</TableHead>
-              <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Shares</TableHead>
-              <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Value</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground">Contract</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Cts</TableHead>
+              <TableHead className="text-[10px] font-mono text-muted-foreground text-right">Margin</TableHead>
               <TableHead className="text-[10px] font-mono text-muted-foreground text-right">P/L</TableHead>
             </TableRow>
           </TableHeader>
@@ -677,8 +700,8 @@ function PortfolioPanel({ portfolio }: { portfolio: ReturnType<typeof useTrading
             {portfolio.holdings.map((h) => (
               <TableRow key={h.symbol} className="border-border/20">
                 <TableCell className="py-1.5 font-mono text-xs font-semibold text-foreground">{h.symbol}</TableCell>
-                <TableCell className="py-1.5 text-right font-mono text-xs text-muted-foreground">{h.shares}</TableCell>
-                <TableCell className="py-1.5 text-right font-mono text-xs text-foreground">${h.value.toLocaleString()}</TableCell>
+                <TableCell className="py-1.5 text-right font-mono text-xs text-muted-foreground">{h.contracts}</TableCell>
+                <TableCell className="py-1.5 text-right font-mono text-xs text-foreground">${(h.initialMargin * h.contracts).toLocaleString()}</TableCell>
                 <TableCell className={`py-1.5 text-right font-mono text-xs font-semibold ${h.pnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
                   {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}
                 </TableCell>
