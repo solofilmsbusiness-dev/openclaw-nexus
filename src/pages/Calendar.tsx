@@ -141,7 +141,7 @@ export default function Calendar() {
             agent_id: jobToDuplicate.agent_id,
             agent_name: jobToDuplicate.agent_name,
             job_type: jobToDuplicate.job_type,
-            scheduled_at: newDate,
+            scheduled_at: newDate.toISOString(),
             duration_minutes: jobToDuplicate.duration_minutes,
             recurrence: jobToDuplicate.recurrence,
           });
