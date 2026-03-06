@@ -1007,9 +1007,11 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               {connectMode ? "CONNECTING…" : "CONNECT"}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-[240px] text-center">
-            Click to enter connect mode. Then click a source node, then a target node to create a link. Double-click a node to quick-connect. Press ESC to cancel.
-          </TooltipContent>
+          {!connectMode && (
+            <TooltipContent side="bottom" className="max-w-[240px] text-center">
+              Click to enter connect mode. Then click a source node, then a target node to create a link. Double-click a node to quick-connect. Press ESC to cancel.
+            </TooltipContent>
+          )}
         </Tooltip>
       </TooltipProvider>
 
