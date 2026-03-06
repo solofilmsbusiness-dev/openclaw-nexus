@@ -18,6 +18,22 @@ export interface PanelItem {
   col: number;
 }
 
+export const TOP_BAR_ITEMS = [
+  { id: "session", label: "Session Clock" },
+  { id: "pnl", label: "P/L" },
+  { id: "trades", label: "Trade Count" },
+  { id: "winrate", label: "Win Rate" },
+  { id: "theme", label: "Theme Toggle" },
+  { id: "compact", label: "Compact Mode" },
+  { id: "columns", label: "Column Layout" },
+  { id: "addpanel", label: "Add Panel" },
+  { id: "status", label: "Data Status" },
+] as const;
+
+export type TopBarItemId = typeof TOP_BAR_ITEMS[number]["id"];
+
+const ALL_TOP_BAR_IDS: TopBarItemId[] = TOP_BAR_ITEMS.map((i) => i.id);
+
 interface TradingLayoutContextType {
   panels: PanelItem[];
   customPanels: CustomPanelDef[];
@@ -33,6 +49,10 @@ interface TradingLayoutContextType {
   setColumnCount: (count: 1 | 2 | 3) => void;
   compactMode: boolean;
   setCompactMode: (compact: boolean) => void;
+  topBarItems: TopBarItemId[];
+  setTopBarItems: (items: TopBarItemId[]) => void;
+  isTopBarVisible: (id: TopBarItemId) => boolean;
+  toggleTopBarItem: (id: TopBarItemId) => void;
 }
 
 const STORAGE_KEY = "trading-layout-v2";
@@ -52,6 +72,7 @@ interface LayoutState {
   hiddenBuiltins: string[];
   columnCount: 1 | 2 | 3;
   compactMode: boolean;
+  topBarItems: TopBarItemId[];
 }
 
 function loadState(): LayoutState {
@@ -59,6 +80,10 @@ function loadState(): LayoutState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Migrate: add topBarItems if missing
+      if (!parsed.topBarItems) {
+        parsed.topBarItems = [...ALL_TOP_BAR_IDS];
+      }
       // Migrate from v1 (panels without row/col)
       if (parsed.panels?.length > 0 && parsed.panels[0].row === undefined) {
         const cols = parsed.columnCount || 2;
@@ -83,6 +108,7 @@ function loadState(): LayoutState {
     hiddenBuiltins: [],
     columnCount: 2,
     compactMode: false,
+    topBarItems: [...ALL_TOP_BAR_IDS],
   };
 }
 
@@ -195,6 +221,23 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     setState((s) => ({ ...s, compactMode: compact }));
   }, []);
 
+  const setTopBarItems = useCallback((items: TopBarItemId[]) => {
+    setState((s) => ({ ...s, topBarItems: items }));
+  }, []);
+
+  const isTopBarVisible = useCallback((id: TopBarItemId) => {
+    return state.topBarItems.includes(id);
+  }, [state.topBarItems]);
+
+  const toggleTopBarItem = useCallback((id: TopBarItemId) => {
+    setState((s) => ({
+      ...s,
+      topBarItems: s.topBarItems.includes(id)
+        ? s.topBarItems.filter((i) => i !== id)
+        : [...s.topBarItems, id],
+    }));
+  }, []);
+
   return (
     <TradingLayoutContext.Provider
       value={{
@@ -212,6 +255,10 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
         setColumnCount,
         compactMode: state.compactMode,
         setCompactMode,
+        topBarItems: state.topBarItems,
+        setTopBarItems,
+        isTopBarVisible,
+        toggleTopBarItem,
       }}
     >
       {children}
