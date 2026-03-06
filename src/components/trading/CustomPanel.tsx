@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Globe, CheckSquare, Network, Calculator } from "lucide-react";
+import { Plus, FileText, Globe, CheckSquare, Network, Calculator, ExternalLink } from "lucide-react";
 import type { CustomPanelDef } from "@/contexts/TradingLayoutContext";
 import { useTradingLayout } from "@/contexts/TradingLayoutContext";
 import MiniAgentGraph from "./MiniAgentGraph";
@@ -55,8 +55,45 @@ function NotesContent({ panel, onUpdate }: { panel: CustomPanelDef; onUpdate: (i
 }
 
 function EmbedContent({ panel }: { panel: CustomPanelDef }) {
+  const [failed, setFailed] = useState(false);
+
   if (!panel.content) return <p className="text-xs text-muted-foreground font-mono text-center py-8">No URL set</p>;
-  return <iframe src={panel.content} className="flex-1 rounded-lg border border-border/20 min-h-[200px]" sandbox="allow-scripts allow-same-origin" title={panel.title} />;
+
+  return (
+    <div className="flex-1 flex flex-col gap-1.5 min-h-[200px] relative">
+      {!failed ? (
+        <iframe
+          src={panel.content}
+          className="flex-1 rounded-lg border border-border/20"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          referrerPolicy="no-referrer"
+          title={panel.title}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="flex-1 rounded-lg border border-border/20 bg-secondary/30 flex flex-col items-center justify-center gap-2 p-4">
+          <Globe className="w-6 h-6 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground font-mono text-center">This site doesn't allow embedding.</p>
+          <a
+            href={panel.content}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-mono text-primary hover:underline flex items-center gap-1"
+          >
+            Open in new tab <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+      <a
+        href={panel.content}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[10px] font-mono text-muted-foreground hover:text-primary flex items-center gap-1 self-end transition-colors"
+      >
+        Open in new tab <ExternalLink className="w-3 h-3" />
+      </a>
+    </div>
+  );
 }
 
 function ChecklistContent({ panel, onUpdate }: { panel: CustomPanelDef; onUpdate: (id: string, c: string) => void }) {
