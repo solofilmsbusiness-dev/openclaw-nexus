@@ -226,3 +226,17 @@
     hsl(0 0% 0% / 0.12) 6px
   );
 }
+
+/* Compact panel mode — collapse header rows and reduce spacing */
+.compact-panel > div:first-child {
+  @apply mb-1;
+}
+.compact-panel .font-display.uppercase {
+  @apply text-[9px] leading-tight;
+}
+.compact-panel table th {
+  @apply py-0.5;
+}
+.compact-panel table td {
+  @apply py-1;
+}
