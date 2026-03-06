@@ -929,6 +929,57 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   return (
     <div className="relative w-full h-full glass-panel overflow-hidden">
+      {/* Hidden file input for bg image */}
+      <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
+
+      {/* Background image layer */}
+      {bgSettings.image && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0 rounded-xl overflow-hidden"
+          style={{
+            backgroundImage: `url(${bgSettings.image})`,
+            backgroundSize: `${bgSettings.scale}%`,
+            backgroundPosition: `${bgSettings.posX}% ${bgSettings.posY}%`,
+            backgroundRepeat: "no-repeat",
+            filter: `blur(${bgSettings.blur}px)`,
+            opacity: bgSettings.opacity,
+          }}
+        />
+      )}
+
+      {/* Background image adjustment panel */}
+      {bgSettings.image && showBgControls && (
+        <div className="absolute bottom-3 right-3 z-20 w-52 glass-panel neon-border p-3 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono text-muted-foreground tracking-wider">BG CONTROLS</span>
+            <button onClick={removeBgImage} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Remove background">
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">BLUR ({bgSettings.blur}px)</span>
+              <Slider min={0} max={20} step={1} value={[bgSettings.blur]} onValueChange={([v]) => updateBg({ blur: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">OPACITY ({Math.round(bgSettings.opacity * 100)}%)</span>
+              <Slider min={0} max={1} step={0.05} value={[bgSettings.opacity]} onValueChange={([v]) => updateBg({ opacity: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">SCALE ({bgSettings.scale}%)</span>
+              <Slider min={50} max={200} step={5} value={[bgSettings.scale]} onValueChange={([v]) => updateBg({ scale: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">POS X ({bgSettings.posX}%)</span>
+              <Slider min={0} max={100} step={1} value={[bgSettings.posX]} onValueChange={([v]) => updateBg({ posX: v })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground">POS Y ({bgSettings.posY}%)</span>
+              <Slider min={0} max={100} step={1} value={[bgSettings.posY]} onValueChange={([v]) => updateBg({ posY: v })} />
+            </label>
+          </div>
+        </div>
+      )}
       {/* Connect mode toggle */}
       <TooltipProvider delayDuration={300}>
         <Tooltip open={connectMode ? false : undefined}>
