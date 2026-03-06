@@ -29,6 +29,7 @@ interface JobDetailSheetProps {
   onUpdateStatus: (id: string, status: string) => void;
   onUpdate: (id: string, updates: Partial<ScheduledJob>) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (job: ScheduledJob) => void;
 }
 
 export default function JobDetailSheet({ job, open, onClose, onUpdateStatus, onUpdate, onDelete }: JobDetailSheetProps) {
