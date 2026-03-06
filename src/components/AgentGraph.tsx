@@ -14,6 +14,13 @@ const RADIUS = 250;
 
 const EDGE_KINDS = ["control", "data", "comms", "handoff"] as const;
 
+const EDGE_KIND_COLORS: Record<string, string> = {
+  control: "hsl(195, 80%, 55%)",
+  data: "hsl(152, 70%, 55%)",
+  comms: "hsl(270, 60%, 60%)",
+  handoff: "hsl(38, 75%, 55%)",
+};
+
 const DEFAULT_VIEWBOX = { x: 0, y: 0, w: 800, h: 600 };
 const MIN_W = 200;
 const MAX_W = 2400;
@@ -336,8 +343,9 @@ function AnimatedEdge({
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
   const actualMidY = 0.25 * y1 + 0.5 * midY + 0.25 * y2;
 
-  // Green data color for particles
-  const dataColor = "hsl(152, 70%, 55%)";
+  // Kind-based color for particles
+  const dataColor = EDGE_KIND_COLORS[kind] || EDGE_KIND_COLORS.data;
+  const edgeKindStroke = eitherDown ? "hsl(0, 40%, 35%)" : dataColor;
   const showParticles = !killSwitchActive && !eitherDown;
 
   return (
@@ -351,7 +359,7 @@ function AnimatedEdge({
         id={pathId}
         d={path}
         fill="none"
-        stroke={edgeStrokeColor}
+        stroke={edgeKindStroke}
         strokeWidth={highlighted ? weight * 2 : weight * 1.2}
         opacity={edgeOpacity}
         strokeLinecap="round"
@@ -372,7 +380,7 @@ function AnimatedEdge({
         </path>
       )}
       {highlighted && (
-        <text fontSize="7" fontFamily="JetBrains Mono" fill={edgeStrokeColor} opacity="0.7" letterSpacing="1">
+        <text fontSize="7" fontFamily="JetBrains Mono" fill={dataColor} opacity="0.7" letterSpacing="1">
           <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
             {kind.toUpperCase()}
           </textPath>
@@ -996,6 +1004,21 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         >
           <FolderOpen className="w-3.5 h-3.5" />
         </button>
+      </div>
+
+      {/* Edge kind color legend */}
+      <div className="absolute bottom-3 left-3 z-10 flex items-center gap-3 px-2.5 py-1.5 rounded-lg border border-border/30 bg-secondary/30 backdrop-blur-sm">
+        {EDGE_KINDS.map((kind) => (
+          <div key={kind} className="flex items-center gap-1.5">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: EDGE_KIND_COLORS[kind] }}
+            />
+            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
+              {kind}
+            </span>
+          </div>
+        ))}
       </div>
 
       <svg
