@@ -253,10 +253,27 @@ export default function JobDetailSheet({ job, open, onClose, onUpdateStatus, onU
                     <RefreshCw className="w-3 h-3" /> Retry
                   </Button>
                 )}
-                <Button size="sm" variant="destructive" className="text-xs gap-1 h-7"
-                  onClick={() => { onDelete(job.id); onClose(); }}>
-                  <Trash2 className="w-3 h-3" /> Delete
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="destructive" className="text-xs gap-1 h-7">
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="glass-panel neon-border">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="font-display text-sm">Delete Job</AlertDialogTitle>
+                      <AlertDialogDescription className="text-xs">
+                        This will permanently delete "{job.title}". This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+                      <AlertDialogAction className="text-xs h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { onDelete(job.id); onClose(); }}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           )}
