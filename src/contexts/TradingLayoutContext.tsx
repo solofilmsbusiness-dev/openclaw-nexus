@@ -80,6 +80,10 @@ function loadState(): LayoutState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Migrate: add topBarItems if missing
+      if (!parsed.topBarItems) {
+        parsed.topBarItems = [...ALL_TOP_BAR_IDS];
+      }
       // Migrate from v1 (panels without row/col)
       if (parsed.panels?.length > 0 && parsed.panels[0].row === undefined) {
         const cols = parsed.columnCount || 2;
