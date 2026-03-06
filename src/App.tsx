@@ -13,6 +13,8 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Trading from "./pages/Trading";
 import Calendar from "./pages/Calendar";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,8 @@ function AnimatedRoutes() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/trading" element={<TradingLayoutProvider><Trading /></TradingLayoutProvider>} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>

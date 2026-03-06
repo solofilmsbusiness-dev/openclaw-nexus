@@ -14,6 +14,13 @@ const RADIUS = 250;
 
 const EDGE_KINDS = ["control", "data", "comms", "handoff"] as const;
 
+const EDGE_KIND_COLORS: Record<string, string> = {
+  control: "hsl(195, 80%, 55%)",
+  data: "hsl(152, 70%, 55%)",
+  comms: "hsl(270, 60%, 60%)",
+  handoff: "hsl(38, 75%, 55%)",
+};
+
 const DEFAULT_VIEWBOX = { x: 0, y: 0, w: 800, h: 600 };
 const MIN_W = 200;
 const MAX_W = 2400;
@@ -336,8 +343,9 @@ function AnimatedEdge({
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
   const actualMidY = 0.25 * y1 + 0.5 * midY + 0.25 * y2;
 
-  // Green data color for particles
-  const dataColor = "hsl(152, 70%, 55%)";
+  // Kind-based color for particles
+  const dataColor = EDGE_KIND_COLORS[kind] || EDGE_KIND_COLORS.data;
+  const edgeKindStroke = eitherDown ? "hsl(0, 40%, 35%)" : dataColor;
   const showParticles = !killSwitchActive && !eitherDown;
 
   return (
@@ -351,7 +359,7 @@ function AnimatedEdge({
         id={pathId}
         d={path}
         fill="none"
-        stroke={edgeStrokeColor}
+        stroke={edgeKindStroke}
         strokeWidth={highlighted ? weight * 2 : weight * 1.2}
         opacity={edgeOpacity}
         strokeLinecap="round"
@@ -372,7 +380,7 @@ function AnimatedEdge({
         </path>
       )}
       {highlighted && (
-        <text fontSize="7" fontFamily="JetBrains Mono" fill={edgeStrokeColor} opacity="0.7" letterSpacing="1">
+        <text fontSize="7" fontFamily="JetBrains Mono" fill={dataColor} opacity="0.7" letterSpacing="1">
           <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
             {kind.toUpperCase()}
           </textPath>
