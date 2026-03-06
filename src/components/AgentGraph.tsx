@@ -630,6 +630,40 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const panRef = useRef<{ startMouse: { x: number; y: number }; startViewBox: typeof DEFAULT_VIEWBOX } | null>(null);
   const resizeRef = useRef<{ agentId: string; startDist: number; startSize: number } | null>(null);
 
+  // Background image state
+  const [bgSettings, setBgSettings] = useState<BgSettings>(loadBgSettings);
+  const [showBgControls, setShowBgControls] = useState(false);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+
+  const updateBg = useCallback((patch: Partial<BgSettings>) => {
+    setBgSettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveBgSettings(next);
+      return next;
+    });
+  }, []);
+
+  const handleBgUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning("Large image", { description: "Image is over 5MB — may affect performance." });
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      updateBg({ image: dataUrl });
+      setShowBgControls(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }, [updateBg]);
+
+  const removeBgImage = useCallback(() => {
+    updateBg({ image: "" });
+    setShowBgControls(false);
+  }, [updateBg]);
+
   const [killProgress, setKillProgress] = useState(killSwitchActive ? 1 : 0);
   useEffect(() => {
     let raf: number;
