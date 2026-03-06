@@ -26,7 +26,7 @@ import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
 import PanelWrapper from "@/components/trading/PanelWrapper";
 import CustomPanel from "@/components/trading/CustomPanel";
 import AddPanelDialog from "@/components/trading/AddPanelDialog";
-import { TradingDataProvider } from "@/contexts/TradingDataContext";
+import { TradingDataProvider, useTradingData } from "@/contexts/TradingDataContext";
 
 function formatTime(d: Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -443,11 +443,16 @@ function HistoryPanel({ tradeHistory, deleteTrade }: {
   tradeHistory: ReturnType<typeof useTradingSimulation>["tradeHistory"];
   deleteTrade: (id: string) => void;
 }) {
+  const { selectedAgentId, tradeAgentMap } = useTradingData();
+
   return (
     <>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-neon-orange" />
         <span className="font-display font-semibold text-xs tracking-wide text-muted-foreground uppercase">Trade History</span>
+        {selectedAgentId && (
+          <span className="text-[9px] font-mono text-primary/70 ml-auto">filtered by agent</span>
+        )}
       </div>
       <ScrollArea className="flex-1 max-h-[320px]">
         <Table>
@@ -466,25 +471,29 @@ function HistoryPanel({ tradeHistory, deleteTrade }: {
             {tradeHistory.length === 0 && (
               <TableRow><TableCell colSpan={7} className="text-center text-xs text-muted-foreground font-mono py-4">No trades recorded yet…</TableCell></TableRow>
             )}
-            {tradeHistory.map((t) => (
-              <TableRow key={t.id} className="border-border/20">
-                <TableCell className="py-2">
-                  <Badge className={`text-[9px] ${t.type === "buy" ? "bg-neon-green/15 text-neon-green border-neon-green/30" : "bg-neon-red/15 text-neon-red border-neon-red/30"}`}>{t.type.toUpperCase()}</Badge>
-                </TableCell>
-                <TableCell className="py-2 font-mono text-xs font-semibold text-foreground">{t.asset}</TableCell>
-                <TableCell className="py-2 text-right font-mono text-xs text-foreground">${t.entryPrice.toFixed(2)}</TableCell>
-                <TableCell className="py-2 text-right font-mono text-xs text-muted-foreground">{t.exitPrice ? `$${t.exitPrice.toFixed(2)}` : "—"}</TableCell>
-                <TableCell className={`py-2 text-right font-mono text-xs font-semibold ${t.pnl === null ? "text-muted-foreground" : t.pnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
-                  {t.pnl === null ? "Open" : `${t.pnl >= 0 ? "+" : ""}$${t.pnl.toFixed(2)}`}
-                </TableCell>
-                <TableCell className="py-2 text-right text-[9px] font-mono text-muted-foreground">{formatTime(t.timestamp)}</TableCell>
-                <TableCell className="py-2 w-8">
-                  <button onClick={() => deleteTrade(t.id)} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground/40 hover:text-destructive transition-colors">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {tradeHistory.map((t) => {
+              const isHighlighted = selectedAgentId && tradeAgentMap[t.id] === selectedAgentId;
+              const isDimmed = selectedAgentId && !isHighlighted;
+              return (
+                <TableRow key={t.id} className={`border-border/20 transition-all duration-300 ${isHighlighted ? "bg-primary/10 ring-1 ring-primary/20" : isDimmed ? "opacity-30" : ""}`}>
+                  <TableCell className="py-2">
+                    <Badge className={`text-[9px] ${t.type === "buy" ? "bg-neon-green/15 text-neon-green border-neon-green/30" : "bg-neon-red/15 text-neon-red border-neon-red/30"}`}>{t.type.toUpperCase()}</Badge>
+                  </TableCell>
+                  <TableCell className="py-2 font-mono text-xs font-semibold text-foreground">{t.asset}</TableCell>
+                  <TableCell className="py-2 text-right font-mono text-xs text-foreground">${t.entryPrice.toFixed(2)}</TableCell>
+                  <TableCell className="py-2 text-right font-mono text-xs text-muted-foreground">{t.exitPrice ? `$${t.exitPrice.toFixed(2)}` : "—"}</TableCell>
+                  <TableCell className={`py-2 text-right font-mono text-xs font-semibold ${t.pnl === null ? "text-muted-foreground" : t.pnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                    {t.pnl === null ? "Open" : `${t.pnl >= 0 ? "+" : ""}$${t.pnl.toFixed(2)}`}
+                  </TableCell>
+                  <TableCell className="py-2 text-right text-[9px] font-mono text-muted-foreground">{formatTime(t.timestamp)}</TableCell>
+                  <TableCell className="py-2 w-8">
+                    <button onClick={() => deleteTrade(t.id)} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground/40 hover:text-destructive transition-colors">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </ScrollArea>
