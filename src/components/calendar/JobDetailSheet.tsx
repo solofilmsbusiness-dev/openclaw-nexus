@@ -32,7 +32,7 @@ interface JobDetailSheetProps {
   onDuplicate?: (job: ScheduledJob) => void;
 }
 
-export default function JobDetailSheet({ job, open, onClose, onUpdateStatus, onUpdate, onDelete }: JobDetailSheetProps) {
+export default function JobDetailSheet({ job, open, onClose, onUpdateStatus, onUpdate, onDelete, onDuplicate }: JobDetailSheetProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
