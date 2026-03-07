@@ -359,7 +359,7 @@ function AnimatedEdge({
   const path = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
   
   const eitherDown = fromDown || toDown;
-  if (eitherDown) return null;
+  
   const bothHealthy = !fromDown && !toDown;
   
   // Activity-based: higher weight = faster particles
