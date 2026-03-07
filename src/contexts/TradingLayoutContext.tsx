@@ -89,6 +89,17 @@ function loadState(): LayoutState {
         const cols = parsed.columnCount || 2;
         parsed.panels = computePositions(parsed.panels, cols);
       }
+      // Migrate: add any new builtins not present in panels or hiddenBuiltins
+      const existingIds = new Set([
+        ...(parsed.panels || []).map((p: PanelItem) => p.id),
+        ...(parsed.hiddenBuiltins || []),
+      ]);
+      const newBuiltins = ALL_BUILTINS.filter((id) => !existingIds.has(id));
+      if (newBuiltins.length > 0) {
+        const cols = parsed.columnCount || 2;
+        const newPanelItems = newBuiltins.map((id) => ({ id, isCustom: false, row: 0, col: 0 }));
+        parsed.panels = computePositions([...(parsed.panels || []), ...newPanelItems], cols);
+      }
       return parsed;
     }
     // Try migrating from v1 key
