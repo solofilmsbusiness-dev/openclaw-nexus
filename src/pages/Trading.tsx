@@ -194,7 +194,7 @@ const Trading = () => {
   }, [tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, portfolio, deleteTrade, deleteLearningNote, showNoteForm, noteCategory, noteContent, handleAddNote, layout.customPanels]);
 
   // Compute open positions count
-  const openPositions = useMemo(() => portfolio.filter((p: any) => !p.exitPrice).length, [portfolio]);
+  const openPositions = useMemo(() => portfolio.holdings?.filter((h: any) => h.qty > 0).length ?? 0, [portfolio]);
 
   // Render individual top bar widget content
   const renderTopBarWidget = useCallback((id: string): React.ReactNode => {
