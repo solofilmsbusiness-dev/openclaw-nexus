@@ -982,7 +982,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       )}
       {/* Connect mode toggle */}
       <TooltipProvider delayDuration={300}>
-        <Tooltip open={connectMode ? false : undefined}>
+        <Tooltip>
           <TooltipTrigger asChild>
             <button
               data-tour="graph-connect"
