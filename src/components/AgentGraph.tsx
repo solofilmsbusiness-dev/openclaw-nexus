@@ -368,7 +368,7 @@ function AnimatedEdge({
   
   // Edge opacity based on node health
   const gi = glowIntensity;
-  const edgeOpacity = eitherDown ? 0.04 : (highlighted ? 0.75 * gi : 0.3 * gi);
+  const edgeOpacity = eitherDown ? 0.15 : (highlighted ? 0.75 * gi : 0.3 * gi);
   const edgeStrokeColor = eitherDown ? "hsl(0, 40%, 35%)" : color;
 
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
@@ -618,7 +618,7 @@ interface AgentGraphProps {
 }
 
 export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAgent, onAddEdge, onDeleteEdge, onDeleteAgent, killSwitchActive = false }: AgentGraphProps) {
-  const { killAll, reviveAll, dragOffsets: contextDragOffsets, nodeSizes: contextNodeSizes, setDragOffsets: contextSetDragOffsets, setNodeSizes: contextSetNodeSizes } = useAgents();
+  const { killAll, reviveAll, handleStatusChange, dragOffsets: contextDragOffsets, nodeSizes: contextNodeSizes, setDragOffsets: contextSetDragOffsets, setNodeSizes: contextSetNodeSizes } = useAgents();
   const basePositions = useMemo(() => getNodePositions(agents), [agents]);
   const dragOffsets = contextDragOffsets;
   const setDragOffsets = contextSetDragOffsets;
@@ -865,11 +865,17 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   const handleConfirmEdge = useCallback(() => {
     if (pendingEdge) {
+      // Auto-revive down nodes when explicitly connecting to them
+      const fromAgent = agents.find(a => a.id === pendingEdge.from);
+      const toAgent = agents.find(a => a.id === pendingEdge.to);
+      if (fromAgent?.status === "down") handleStatusChange(fromAgent.id, "degraded");
+      if (toAgent?.status === "down") handleStatusChange(toAgent.id, "degraded");
+
       onAddEdge(pendingEdge.from, pendingEdge.to, selectedKind);
       setPendingEdge(null);
       setSelectedKind("data");
     }
-  }, [pendingEdge, selectedKind, onAddEdge]);
+  }, [pendingEdge, selectedKind, onAddEdge, agents, handleStatusChange]);
 
   const handleCancelEdge = useCallback(() => {
     setPendingEdge(null);
