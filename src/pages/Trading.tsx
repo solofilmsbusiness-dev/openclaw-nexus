@@ -5,9 +5,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, Trash2, Plus, LayoutGrid,
-  Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon,
+  Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon, ShieldAlert, Layers, Percent,
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
+import TopBarWidget from "@/components/trading/TopBarWidget";
 import { useTheme } from "next-themes";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
