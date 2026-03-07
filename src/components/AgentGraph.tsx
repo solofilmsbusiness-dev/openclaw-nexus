@@ -43,10 +43,10 @@ const RADIUS = 250;
 const EDGE_KINDS = ["control", "data", "comms", "handoff"] as const;
 
 const EDGE_KIND_COLORS: Record<string, string> = {
-  control: "hsl(195, 80%, 55%)",
-  data: "hsl(152, 70%, 55%)",
-  comms: "hsl(270, 60%, 60%)",
-  handoff: "hsl(38, 75%, 55%)",
+  control: "hsl(195, 80%, 65%)",
+  data: "hsl(152, 70%, 65%)",
+  comms: "hsl(270, 60%, 70%)",
+  handoff: "hsl(38, 75%, 65%)",
 };
 
 const DEFAULT_VIEWBOX = { x: 0, y: 0, w: 800, h: 600 };
@@ -365,7 +365,7 @@ function AnimatedEdge({
   const dur = baseDur + (1 - weight) * 3; // weight 1 = fast, weight 0 = slow
   
   // Edge opacity based on node health
-  const edgeOpacity = eitherDown ? 0.04 : (highlighted ? 0.5 : 0.12);
+  const edgeOpacity = eitherDown ? 0.04 : (highlighted ? 0.75 : 0.3);
   const edgeStrokeColor = eitherDown ? "hsl(0, 40%, 35%)" : color;
 
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
@@ -388,7 +388,7 @@ function AnimatedEdge({
         d={path}
         fill="none"
         stroke={edgeKindStroke}
-        strokeWidth={highlighted ? weight * 2 : weight * 1.2}
+        strokeWidth={highlighted ? weight * 2.5 : weight * 1.8}
         opacity={edgeOpacity}
         strokeLinecap="round"
         style={{ transition: "opacity 0.4s, stroke-width 0.4s, stroke 0.4s" }}
@@ -399,12 +399,12 @@ function AnimatedEdge({
           d={path}
           fill="none"
           stroke={dataColor}
-          strokeWidth={highlighted ? weight * 3 : weight * 2}
+          strokeWidth={highlighted ? weight * 4 : weight * 3}
           opacity={0}
           strokeLinecap="round"
           filter="url(#particleGlow)"
         >
-          <animate attributeName="opacity" values="0.02;0.06;0.02" dur="4s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.06;0.15;0.06" dur="4s" repeatCount="indefinite" />
         </path>
       )}
       {highlighted && (
@@ -417,18 +417,18 @@ function AnimatedEdge({
       {showParticles && (
         <>
           {/* Primary directional green data orb: from → to */}
-          <circle r={highlighted ? 3 : 2} fill={dataColor} opacity="0" filter="url(#dataGlow)">
+          <circle r={highlighted ? 3.5 : 2.5} fill={dataColor} opacity="0" filter="url(#dataGlow)">
             <animateMotion dur={`${dur}s`} repeatCount="indefinite">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.9 : 0.6};${highlighted ? 0.9 : 0.6};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${highlighted ? 1.0 : 0.85};${highlighted ? 1.0 : 0.85};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
           </circle>
           {/* Comet trail glow for primary */}
           <circle r={highlighted ? 8 : 5} fill={dataColor} opacity="0" filter="url(#particleGlow)">
             <animateMotion dur={`${dur}s`} repeatCount="indefinite">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.12 : 0.05};${highlighted ? 0.12 : 0.05};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.22 : 0.12};${highlighted ? 0.22 : 0.12};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
           </circle>
           {/* Second green orb on high-weight edges */}
           {weight > 0.7 && (
@@ -436,7 +436,7 @@ function AnimatedEdge({
               <animateMotion dur={`${dur * 1.15}s`} begin={`${dur * 0.45}s`} repeatCount="indefinite">
                 <mpath href={`#${pathId}`} />
               </animateMotion>
-              <animate attributeName="opacity" values={`0;${highlighted ? 0.7 : 0.45};${highlighted ? 0.7 : 0.45};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.15}s`} begin={`${dur * 0.45}s`} repeatCount="indefinite" />
+              <animate attributeName="opacity" values={`0;${highlighted ? 0.9 : 0.65};${highlighted ? 0.9 : 0.65};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.15}s`} begin={`${dur * 0.45}s`} repeatCount="indefinite" />
             </circle>
           )}
           {/* Faint reverse particle */}
@@ -444,7 +444,7 @@ function AnimatedEdge({
             <animateMotion dur={`${dur * 1.6}s`} repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.15 : 0.08};${highlighted ? 0.15 : 0.08};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.6}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${highlighted ? 0.25 : 0.15};${highlighted ? 0.25 : 0.15};0`} keyTimes="0;0.1;0.9;1" dur={`${dur * 1.6}s`} repeatCount="indefinite" />
           </circle>
           {/* Arrival pulse at destination */}
           <circle cx={x2} cy={y2} r={3} fill="none" stroke={dataColor} strokeWidth={1} opacity={0}>
