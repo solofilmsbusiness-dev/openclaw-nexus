@@ -346,12 +346,12 @@ function AgentNode({
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive, fromDown, toDown,
+  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive, fromDown, toDown, glowIntensity = 1.0,
 }: {
   x1: number; y1: number; x2: number; y2: number;
   color: string; weight: number; highlighted: boolean; pathId: string; kind: string;
   onDelete?: (edgeId: string) => void; edgeId: string; killSwitchActive?: boolean;
-  fromDown?: boolean; toDown?: boolean;
+  fromDown?: boolean; toDown?: boolean; glowIntensity?: number;
 }) {
   const [hovered, setHovered] = useState(false);
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 15), [x1, x2, y1]);
