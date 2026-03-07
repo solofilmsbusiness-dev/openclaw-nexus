@@ -276,7 +276,7 @@ const Trading = () => {
           <div className="flex items-center gap-1.5">
             <Percent className="w-4 h-4 text-neon-orange" />
             <span className="text-xs text-muted-foreground hidden sm:inline">Margin</span>
-            <span className="font-mono text-sm font-semibold text-neon-orange">{Math.min(openPositions * 12, 100)}%</span>
+            <span className="font-mono text-sm font-semibold text-neon-orange">{portfolio.marginUtilization.toFixed(0)}%</span>
           </div>
         );
       case "theme":
