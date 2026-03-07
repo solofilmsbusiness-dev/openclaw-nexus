@@ -29,11 +29,20 @@ const Index = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/login", { replace: true });
-      } else {
-        setAuthChecked(true);
-        // Auto-load last saved config
-        await loadLastConfig();
+        return;
       }
+      // Guard: only admins can access dashboard
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id);
+      const isAdmin = roles?.some((r) => r.role === "admin");
+      if (!isAdmin) {
+        navigate("/trading", { replace: true });
+        return;
+      }
+      setAuthChecked(true);
+      await loadLastConfig();
     };
     checkAuth();
   }, [navigate, loadLastConfig]);

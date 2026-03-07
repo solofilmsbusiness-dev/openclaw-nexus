@@ -100,10 +100,16 @@ export default function Login() {
         if (error) throw error;
         toast.success("Account created! Check your email to confirm.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Logged in");
-        navigate("/");
+        // Role-based redirect
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", signInData.user.id);
+        const isAdmin = roles?.some((r) => r.role === "admin");
+        navigate(isAdmin ? "/" : "/trading");
       }
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");

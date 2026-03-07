@@ -14,6 +14,7 @@ import WeekView from "@/components/calendar/WeekView";
 import DayView from "@/components/calendar/DayView";
 import JobDetailSheet from "@/components/calendar/JobDetailSheet";
 import AddJobDialog from "@/components/calendar/AddJobDialog";
+import PageNav from "@/components/PageNav";
 
 export default function Calendar() {
   const navigate = useNavigate();
@@ -92,7 +93,9 @@ export default function Calendar() {
     <div className={`h-screen bg-background flex flex-col overflow-hidden ${layout.compactMode ? "text-[0.9em]" : ""}`}>
       {layout.showMetricsBar && <MetricsBar agents={agents} />}
 
-      <div className="glass-panel rounded-none border-x-0">
+      <div className="glass-panel rounded-none border-x-0 flex items-center gap-3 px-4 py-3">
+        <PageNav />
+        <div className="h-5 w-px bg-border/40" />
         <CalendarHeader
           currentDate={currentDate}
           view={view}
