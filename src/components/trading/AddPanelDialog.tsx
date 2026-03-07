@@ -18,6 +18,7 @@ const BUILTIN_LABELS: Record<BuiltinPanelId, string> = {
   portfolio: "Portfolio Summary",
   watchlist: "Watchlist",
   analytics: "Analytics",
+  "ai-evaluator": "AI Evaluator",
 };
 
 interface PremadeTemplate {
