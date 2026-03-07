@@ -863,13 +863,24 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
     setConnectSource(agent.id);
   }, []);
 
+  const { handleStatusChange } = useAgents();
+
   const handleConfirmEdge = useCallback(() => {
     if (pendingEdge) {
+      // Auto-revive down nodes when connecting to/from them
+      const fromAgent = agents.find(a => a.id === pendingEdge.from);
+      const toAgent = agents.find(a => a.id === pendingEdge.to);
+      if (fromAgent?.status === "down") {
+        handleStatusChange(pendingEdge.from, "degraded");
+      }
+      if (toAgent?.status === "down") {
+        handleStatusChange(pendingEdge.to, "degraded");
+      }
       onAddEdge(pendingEdge.from, pendingEdge.to, selectedKind);
       setPendingEdge(null);
       setSelectedKind("data");
     }
-  }, [pendingEdge, selectedKind, onAddEdge]);
+  }, [pendingEdge, selectedKind, onAddEdge, agents, handleStatusChange]);
 
   const handleCancelEdge = useCallback(() => {
     setPendingEdge(null);
