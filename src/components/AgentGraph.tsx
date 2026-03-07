@@ -18,9 +18,10 @@ interface BgSettings {
   scale: number;
   posX: number;
   posY: number;
+  glowIntensity: number;
 }
 
-const DEFAULT_BG: BgSettings = { image: "", blur: 8, opacity: 0.3, scale: 100, posX: 50, posY: 50 };
+const DEFAULT_BG: BgSettings = { image: "", blur: 8, opacity: 0.3, scale: 100, posX: 50, posY: 50, glowIntensity: 1.0 };
 
 function loadBgSettings(): BgSettings {
   try {
@@ -345,12 +346,12 @@ function AgentNode({
 }
 
 function AnimatedEdge({
-  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive, fromDown, toDown,
+  x1, y1, x2, y2, color, weight, highlighted, pathId, kind, onDelete, edgeId, killSwitchActive, fromDown, toDown, glowIntensity = 1.0,
 }: {
   x1: number; y1: number; x2: number; y2: number;
   color: string; weight: number; highlighted: boolean; pathId: string; kind: string;
   onDelete?: (edgeId: string) => void; edgeId: string; killSwitchActive?: boolean;
-  fromDown?: boolean; toDown?: boolean;
+  fromDown?: boolean; toDown?: boolean; glowIntensity?: number;
 }) {
   const [hovered, setHovered] = useState(false);
   const midX = useMemo(() => (x1 + x2) / 2 + (Math.sin(x1 + y1) * 15), [x1, x2, y1]);
@@ -365,7 +366,8 @@ function AnimatedEdge({
   const dur = baseDur + (1 - weight) * 3; // weight 1 = fast, weight 0 = slow
   
   // Edge opacity based on node health
-  const edgeOpacity = eitherDown ? 0.04 : (highlighted ? 0.75 : 0.3);
+  const gi = glowIntensity;
+  const edgeOpacity = eitherDown ? 0.04 : (highlighted ? 0.75 * gi : 0.3 * gi);
   const edgeStrokeColor = eitherDown ? "hsl(0, 40%, 35%)" : color;
 
   const actualMidX = 0.25 * x1 + 0.5 * midX + 0.25 * x2;
@@ -388,7 +390,7 @@ function AnimatedEdge({
         d={path}
         fill="none"
         stroke={edgeKindStroke}
-        strokeWidth={highlighted ? weight * 2.5 : weight * 1.8}
+        strokeWidth={(highlighted ? weight * 2.5 : weight * 1.8) * gi}
         opacity={edgeOpacity}
         strokeLinecap="round"
         style={{ transition: "opacity 0.4s, stroke-width 0.4s, stroke 0.4s" }}
@@ -399,12 +401,12 @@ function AnimatedEdge({
           d={path}
           fill="none"
           stroke={dataColor}
-          strokeWidth={highlighted ? weight * 4 : weight * 3}
+          strokeWidth={(highlighted ? weight * 4 : weight * 3) * gi}
           opacity={0}
           strokeLinecap="round"
           filter="url(#particleGlow)"
         >
-          <animate attributeName="opacity" values="0.06;0.15;0.06" dur="4s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values={`${(0.06 * gi).toFixed(3)};${(0.15 * gi).toFixed(3)};${(0.06 * gi).toFixed(3)}`} dur="4s" repeatCount="indefinite" />
         </path>
       )}
       {highlighted && (
@@ -417,18 +419,18 @@ function AnimatedEdge({
       {showParticles && (
         <>
           {/* Primary directional green data orb: from → to */}
-          <circle r={highlighted ? 3.5 : 2.5} fill={dataColor} opacity="0" filter="url(#dataGlow)">
+          <circle r={(highlighted ? 3.5 : 2.5) * gi} fill={dataColor} opacity="0" filter="url(#dataGlow)">
             <animateMotion dur={`${dur}s`} repeatCount="indefinite">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 1.0 : 0.85};${highlighted ? 1.0 : 0.85};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${Math.min(1, (highlighted ? 1.0 : 0.85) * gi)};${Math.min(1, (highlighted ? 1.0 : 0.85) * gi)};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
           </circle>
           {/* Comet trail glow for primary */}
-          <circle r={highlighted ? 8 : 5} fill={dataColor} opacity="0" filter="url(#particleGlow)">
+          <circle r={(highlighted ? 8 : 5) * gi} fill={dataColor} opacity="0" filter="url(#particleGlow)">
             <animateMotion dur={`${dur}s`} repeatCount="indefinite">
               <mpath href={`#${pathId}`} />
             </animateMotion>
-            <animate attributeName="opacity" values={`0;${highlighted ? 0.22 : 0.12};${highlighted ? 0.22 : 0.12};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
+            <animate attributeName="opacity" values={`0;${Math.min(1, (highlighted ? 0.22 : 0.12) * gi)};${Math.min(1, (highlighted ? 0.22 : 0.12) * gi)};0`} keyTimes="0;0.1;0.9;1" dur={`${dur}s`} repeatCount="indefinite" />
           </circle>
           {/* Second green orb on high-weight edges */}
           {weight > 0.7 && (
@@ -947,36 +949,45 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         />
       )}
 
-      {/* Background image adjustment panel */}
-      {bgSettings.image && showBgControls && (
+      {/* Graph visual settings panel */}
+      {showBgControls && (
         <div className="absolute bottom-3 right-3 z-20 w-52 glass-panel neon-border p-3 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-muted-foreground tracking-wider">BG CONTROLS</span>
-            <button onClick={removeBgImage} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Remove background">
-              <Trash2 className="w-3 h-3" />
-            </button>
-          </div>
+          <span className="text-[10px] font-mono text-muted-foreground tracking-wider">GRAPH VISUALS</span>
           <div className="flex flex-col gap-2.5">
             <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground">BLUR ({bgSettings.blur}px)</span>
-              <Slider min={0} max={20} step={1} value={[bgSettings.blur]} onValueChange={([v]) => updateBg({ blur: v })} />
+              <span className="text-[9px] font-mono text-muted-foreground">GLOW INTENSITY ({Math.round(bgSettings.glowIntensity * 100)}%)</span>
+              <Slider min={0.1} max={2.5} step={0.1} value={[bgSettings.glowIntensity]} onValueChange={([v]) => updateBg({ glowIntensity: v })} />
             </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground">OPACITY ({Math.round(bgSettings.opacity * 100)}%)</span>
-              <Slider min={0} max={1} step={0.05} value={[bgSettings.opacity]} onValueChange={([v]) => updateBg({ opacity: v })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground">SCALE ({bgSettings.scale}%)</span>
-              <Slider min={50} max={200} step={5} value={[bgSettings.scale]} onValueChange={([v]) => updateBg({ scale: v })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground">POS X ({bgSettings.posX}%)</span>
-              <Slider min={0} max={100} step={1} value={[bgSettings.posX]} onValueChange={([v]) => updateBg({ posX: v })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground">POS Y ({bgSettings.posY}%)</span>
-              <Slider min={0} max={100} step={1} value={[bgSettings.posY]} onValueChange={([v]) => updateBg({ posY: v })} />
-            </label>
+            {bgSettings.image && (
+              <>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[10px] font-mono text-muted-foreground tracking-wider">BACKGROUND</span>
+                  <button onClick={removeBgImage} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Remove background">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-mono text-muted-foreground">BLUR ({bgSettings.blur}px)</span>
+                  <Slider min={0} max={20} step={1} value={[bgSettings.blur]} onValueChange={([v]) => updateBg({ blur: v })} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-mono text-muted-foreground">OPACITY ({Math.round(bgSettings.opacity * 100)}%)</span>
+                  <Slider min={0} max={1} step={0.05} value={[bgSettings.opacity]} onValueChange={([v]) => updateBg({ opacity: v })} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-mono text-muted-foreground">SCALE ({bgSettings.scale}%)</span>
+                  <Slider min={50} max={200} step={5} value={[bgSettings.scale]} onValueChange={([v]) => updateBg({ scale: v })} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-mono text-muted-foreground">POS X ({bgSettings.posX}%)</span>
+                  <Slider min={0} max={100} step={1} value={[bgSettings.posX]} onValueChange={([v]) => updateBg({ posX: v })} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-mono text-muted-foreground">POS Y ({bgSettings.posY}%)</span>
+                  <Slider min={0} max={100} step={1} value={[bgSettings.posY]} onValueChange={([v]) => updateBg({ posY: v })} />
+                </label>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1118,19 +1129,17 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
         >
           <ImagePlus className="w-3.5 h-3.5" />
         </button>
-        {bgSettings.image && (
-          <button
-            onClick={() => setShowBgControls((v) => !v)}
-            className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
-              showBgControls
-                ? "border-primary/60 bg-primary/20 text-primary hover:bg-primary/30"
-                : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
-            }`}
-            title="Background image controls"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <button
+          onClick={() => setShowBgControls((v) => !v)}
+          className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
+            showBgControls
+              ? "border-primary/60 bg-primary/20 text-primary hover:bg-primary/30"
+              : "border-border/30 bg-secondary/30 text-muted-foreground hover:border-border/50 hover:bg-secondary/50"
+          }`}
+          title="Graph visual settings"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Edge kind color legend */}
@@ -1223,6 +1232,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               killSwitchActive={killSwitchActive}
               fromDown={agentStatusMap[edge.from] ?? false}
               toDown={agentStatusMap[edge.to] ?? false}
+              glowIntensity={bgSettings.glowIntensity}
             />
           );
         })}
