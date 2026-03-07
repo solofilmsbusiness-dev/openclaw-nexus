@@ -164,6 +164,13 @@ export default function AddPanelDialog() {
   const [embedUrl, setEmbedUrl] = useState("");
 
   const handleTemplate = (tpl: PremadeTemplate) => {
+    // If it's a builtin panel marker, restore it instead of creating a custom one
+    if (tpl.content.startsWith("__builtin__")) {
+      const builtinId = tpl.content.replace("__builtin__", "");
+      restorePanel(builtinId);
+      setOpen(false);
+      return;
+    }
     const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     addCustomPanel({ id, title: tpl.title, type: tpl.type, content: tpl.content });
     setOpen(false);
