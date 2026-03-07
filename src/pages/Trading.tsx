@@ -193,6 +193,143 @@ const Trading = () => {
     }
   }, [tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, portfolio, deleteTrade, deleteLearningNote, showNoteForm, noteCategory, noteContent, handleAddNote, layout.customPanels]);
 
+  // Compute open positions count
+  const openPositions = useMemo(() => portfolio.filter((p: any) => !p.exitPrice).length, [portfolio]);
+
+  // Render individual top bar widget content
+  const renderTopBarWidget = useCallback((id: string): React.ReactNode => {
+    switch (id) {
+      case "pagenav":
+        return <PageNav />;
+      case "session":
+        return (
+          <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2 py-1">
+            <Clock className="w-3 h-3 text-muted-foreground" />
+            <span className={`text-[10px] font-mono font-semibold ${session.color}`}>{session.label}</span>
+            <span className="text-[9px] font-mono text-muted-foreground">→ {session.next}</span>
+            <span className="text-[10px] font-mono text-foreground">{session.countdown}</span>
+          </div>
+        );
+      case "pnl":
+        return (
+          <div className="flex items-center gap-1.5">
+            <DollarSign className={`w-4 h-4 ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`} />
+            <span className="text-xs text-muted-foreground hidden sm:inline">P/L</span>
+            <span className={`font-mono text-sm font-semibold ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+              {stats.totalPnl >= 0 ? "+" : ""}${stats.totalPnl.toFixed(2)}
+            </span>
+          </div>
+        );
+      case "trades":
+        return (
+          <div className="flex items-center gap-1.5">
+            <BarChart3 className="w-4 h-4 text-neon-blue" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Trades</span>
+            <span className="font-mono text-sm font-semibold text-neon-blue">{stats.totalTrades}</span>
+          </div>
+        );
+      case "winrate":
+        return (
+          <div className="flex items-center gap-1.5">
+            <Target className="w-4 h-4 text-neon-cyan" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Win Rate</span>
+            <span className="font-mono text-sm font-semibold text-neon-cyan">{stats.winRate}%</span>
+          </div>
+        );
+      case "maxdd": {
+        // Max drawdown from stats
+        const maxDD = stats.totalPnl < 0 ? Math.abs(stats.totalPnl) : 0;
+        return (
+          <div className="flex items-center gap-1.5">
+            <ShieldAlert className="w-4 h-4 text-neon-red" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Max DD</span>
+            <span className="font-mono text-sm font-semibold text-neon-red">${maxDD.toFixed(2)}</span>
+          </div>
+        );
+      }
+      case "avgwin":
+        return (
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="w-4 h-4 text-neon-green" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Avg Win</span>
+            <span className="font-mono text-sm font-semibold text-neon-green">+${stats.avgWin.toFixed(2)}</span>
+          </div>
+        );
+      case "avgloss":
+        return (
+          <div className="flex items-center gap-1.5">
+            <TrendingDown className="w-4 h-4 text-neon-red" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Avg Loss</span>
+            <span className="font-mono text-sm font-semibold text-neon-red">-${stats.avgLoss.toFixed(2)}</span>
+          </div>
+        );
+      case "openpos":
+        return (
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-4 h-4 text-neon-purple" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Open</span>
+            <span className="font-mono text-sm font-semibold text-neon-purple">{openPositions}</span>
+          </div>
+        );
+      case "margin":
+        return (
+          <div className="flex items-center gap-1.5">
+            <Percent className="w-4 h-4 text-neon-orange" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Margin</span>
+            <span className="font-mono text-sm font-semibold text-neon-orange">{Math.min(openPositions * 12, 100)}%</span>
+          </div>
+        );
+      case "theme":
+        return (
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        );
+      case "compact":
+        return (
+          <button
+            onClick={() => layout.setCompactMode(!layout.compactMode)}
+            className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
+            title={layout.compactMode ? "Expand panels" : "Compact panels"}
+          >
+            {layout.compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+          </button>
+        );
+      case "columns":
+        return (
+          <div className="flex items-center gap-1 bg-secondary/50 rounded-md p-1">
+            {([1, 2, 3] as const).map((cols) => (
+              <button
+                key={cols}
+                onClick={() => layout.setColumnCount(cols)}
+                className={`p-1.5 rounded transition-colors ${layout.columnCount === cols ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                title={`${cols} column${cols > 1 ? "s" : ""}`}
+              >
+                <LayoutGrid className="w-4 h-4" style={{ opacity: cols === 1 ? 1 : 0.6 + cols * 0.2 }} />
+              </button>
+            ))}
+          </div>
+        );
+      case "addpanel":
+        return <AddPanelDialog />;
+      case "status":
+        return (
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
+              {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
+            </span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }, [session, stats, theme, setTheme, layout, dataSource, openPositions, portfolio]);
+
   if (!authChecked) {
     return (
       <div className="h-screen bg-background flex flex-col items-center justify-center gap-3">
