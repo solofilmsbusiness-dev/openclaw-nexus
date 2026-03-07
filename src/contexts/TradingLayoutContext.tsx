@@ -55,7 +55,7 @@ interface TradingLayoutContextType {
   toggleTopBarItem: (id: TopBarItemId) => void;
 }
 
-const STORAGE_KEY = "trading-layout-v2";
+const STORAGE_KEY = "trading-layout-v3";
 const ALL_BUILTINS: BuiltinPanelId[] = ["market", "agent", "history", "journal", "portfolio", "watchlist", "analytics", "ai-evaluator"];
 
 function computePositions(panels: { id: string; isCustom: boolean }[], cols: number): PanelItem[] {
