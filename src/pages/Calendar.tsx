@@ -14,6 +14,7 @@ import WeekView from "@/components/calendar/WeekView";
 import DayView from "@/components/calendar/DayView";
 import JobDetailSheet from "@/components/calendar/JobDetailSheet";
 import AddJobDialog from "@/components/calendar/AddJobDialog";
+import PageNav from "@/components/PageNav";
 
 export default function Calendar() {
   const navigate = useNavigate();

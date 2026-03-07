@@ -7,6 +7,7 @@ import {
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, Trash2, Plus, LayoutGrid,
   Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon,
 } from "lucide-react";
+import PageNav from "@/components/PageNav";
 import { useTheme } from "next-themes";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
