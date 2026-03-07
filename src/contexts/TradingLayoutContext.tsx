@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 
-export type BuiltinPanelId = "market" | "agent" | "history" | "journal" | "portfolio" | "watchlist" | "analytics";
+export type BuiltinPanelId = "market" | "agent" | "history" | "journal" | "portfolio" | "watchlist" | "analytics" | "ai-evaluator";
 
 export type CustomPanelType = "notes" | "embed" | "checklist" | "graph" | "calculator";
 
@@ -56,7 +56,7 @@ interface TradingLayoutContextType {
 }
 
 const STORAGE_KEY = "trading-layout-v2";
-const ALL_BUILTINS: BuiltinPanelId[] = ["market", "agent", "history", "journal", "portfolio", "watchlist", "analytics"];
+const ALL_BUILTINS: BuiltinPanelId[] = ["market", "agent", "history", "journal", "portfolio", "watchlist", "analytics", "ai-evaluator"];
 
 function computePositions(panels: { id: string; isCustom: boolean }[], cols: number): PanelItem[] {
   return panels.map((p, i) => ({

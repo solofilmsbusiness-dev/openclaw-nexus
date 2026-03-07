@@ -29,6 +29,7 @@ import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
 import PanelWrapper from "@/components/trading/PanelWrapper";
 import CustomPanel from "@/components/trading/CustomPanel";
 import AddPanelDialog from "@/components/trading/AddPanelDialog";
+import AIEvaluatorPanel from "@/components/trading/AIEvaluatorPanel";
 import { TradingDataProvider, useTradingData } from "@/contexts/TradingDataContext";
 
 function formatTime(d: Date) {
@@ -186,6 +187,8 @@ const Trading = () => {
         return <WatchlistInner tickers={tickers} activeSymbols={activeSymbols} />;
       case "analytics":
         return <AnalyticsInner stats={stats} tradeHistory={tradeHistory} />;
+      case "ai-evaluator":
+        return <AIEvaluatorPanel />;
       default:
         return null;
     }
