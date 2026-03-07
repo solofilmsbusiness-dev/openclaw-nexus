@@ -43,7 +43,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/trading" element={<TradingLayoutProvider><Trading /></TradingLayoutProvider>} />
+          <Route path="/trading" element={<Trading />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -64,7 +64,9 @@ const App = () => (
         <BrowserRouter>
           <SettingsProvider>
             <AgentProvider>
-              <AnimatedRoutes />
+              <TradingLayoutProvider>
+                <AnimatedRoutes />
+              </TradingLayoutProvider>
             </AgentProvider>
           </SettingsProvider>
         </BrowserRouter>
