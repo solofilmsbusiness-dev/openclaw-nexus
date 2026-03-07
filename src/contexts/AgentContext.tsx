@@ -75,8 +75,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   const handleAddEdge = useCallback((from: string, to: string, kind: string) => {
     setEdges((prev) => {
-      const exists = prev.some((e) => (e.from === from && e.to === to) || (e.from === to && e.to === from));
-      if (exists) return prev;
+      const existingIdx = prev.findIndex((e) => (e.from === from && e.to === to) || (e.from === to && e.to === from));
+      if (existingIdx !== -1) {
+        // Update the kind of the existing edge instead of silently skipping
+        const updated = [...prev];
+        updated[existingIdx] = { ...updated[existingIdx], kind };
+        return updated;
+      }
       return [...prev, createEdge(from, to, kind)];
     });
   }, []);
