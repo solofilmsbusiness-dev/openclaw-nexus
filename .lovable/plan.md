@@ -1,103 +1,21 @@
 
+## Simplify Connect Button Layout
 
-## API Integration Layer for OpenClaw + Topstep/ProjectX
+### Problem
+The connect button (lines 987-1008) is positioned at `top-3 left-3` with a pill shape. When in "CONNECTING..." mode, an adjacent instructional message (lines 1018-1022) positioned at `top-3 left-28` overlaps and cuts off the button text.
 
-### Context
-You're building a full automation pipeline: market data → strategy (via OpenClaw AI agent) → trade execution (via Topstep's ProjectX API) → scheduling (calendar). Currently the app uses simulated data with Alpha Vantage as a fallback. This plan creates a modular API integration layer so everything can connect to real services.
+### Solution
+Remove the separate instructional text divs (lines 1018-1027) entirely. Instead, embed the instruction directly into the button tooltip or button content. Simplify the connect button to:
+- Keep the pill-shaped design with icon + label
+- Use the existing tooltip to show instructions
+- Remove the adjacent "Click source node" and "Click target node" text overlays
+- When `connectMode` is true, optionally show a small badge/indicator on the graph instead of separate text blocks
 
-### Architecture
+### Changes
+**File: `src/components/AgentGraph.tsx`**
+1. Remove lines 1018-1027 (the two instruction text divs)
+2. Enhance the tooltip content (lines 1010-1013) to include dynamic instructions based on connection state
+3. Optionally add a small centered "Instructions" text on the canvas background when in connect mode, positioned away from the button
 
-```text
-┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Frontend   │────▶│  Edge Functions   │────▶│  External APIs  │
-│  (React)    │     │  (Backend proxy)  │     │                 │
-│             │     │                   │     │  • ProjectX API │
-│ Trading.tsx │     │ projectx-trading  │     │  • OpenClaw     │
-│ Calendar    │     │ openclaw-proxy    │     │                 │
-│ Dashboard   │     │ market-data ✓     │     │  (Topstep accts)│
-└─────────────┘     └──────────────────┘     └─────────────────┘
-```
-
-### Phase 1: ProjectX/Topstep Trading API (execute trades + live data)
-
-**New edge function: `supabase/functions/projectx-trading/index.ts`**
-- Handles authentication with ProjectX API (`POST /api/Auth/loginKey` using API key)
-- Proxies order endpoints: place order, cancel order, get positions, get account info
-- Caches the session token and refreshes on expiry
-- Endpoints exposed: `auth`, `place-order`, `positions`, `accounts`, `orders`
-
-**New secrets needed:**
-- `PROJECTX_API_KEY` — Your Topstep/ProjectX API key
-- `PROJECTX_USERNAME` — Your Topstep login username
-
-**New file: `src/services/projectx.ts`**
-- Client-side service layer that calls the edge function
-- Functions: `authenticate()`, `placeOrder()`, `getPositions()`, `getAccounts()`, `cancelOrder()`
-- Typed interfaces matching ProjectX API responses
-
-**New file: `src/hooks/useProjectX.ts`**
-- React hook wrapping the service with state management
-- Tracks connection status, account info, positions
-- Auto-reconnects on token expiry
-- Provides `isConnected`, `accounts`, `positions`, `placeOrder()`, `error`
-
-### Phase 2: OpenClaw Integration (AI strategy agent)
-
-**New edge function: `supabase/functions/openclaw-proxy/index.ts`**
-- Proxies requests to your self-hosted OpenClaw instance
-- Forwards webhook triggers and agent commands
-- Supports: sending prompts, receiving strategy signals, triggering automations
-
-**New secrets needed:**
-- `OPENCLAW_BASE_URL` — Your OpenClaw instance URL
-- `OPENCLAW_API_TOKEN` — Webhook/API token from OpenClaw config
-
-**New file: `src/services/openclaw.ts`**
-- Client-side service: `sendPrompt()`, `triggerWebhook()`, `getAgentStatus()`
-
-**New file: `src/hooks/useOpenClaw.ts`**
-- React hook: manages connection state, sends strategy queries, receives signals
-
-### Phase 3: Wire It Together
-
-**Update `src/pages/Trading.tsx`**
-- Add a "Connections" section in the top bar (toggleable via existing customization)
-- Show ProjectX connection status (connected/disconnected) with account selector
-- Show OpenClaw agent status
-- When connected, real order placement replaces simulated trades
-
-**Update `src/hooks/useTradingSimulation.ts`**
-- Add a `mode` flag: `"simulated"` | `"paper"` | `"live"`
-- In paper/live mode, route `executeTrade()` through `useProjectX.placeOrder()`
-- In paper/live mode, fetch real positions from ProjectX instead of simulating
-
-**Update `src/pages/Calendar.tsx` / `useScheduledJobs.ts`**
-- Add a new job type: `"api-trigger"` that can fire OpenClaw webhooks or ProjectX orders at scheduled times
-- Calendar jobs can reference a strategy template + target account
-
-**New file: `src/components/trading/ConnectionsPanel.tsx`**
-- New panel type for the trading layout showing:
-  - ProjectX auth status + account list
-  - OpenClaw connection status
-  - Quick-connect buttons with credential input
-  - Recent API call log
-
-### Phase 4: Admin Settings
-
-**Update `src/pages/Admin.tsx`**
-- New "API Connections" tab in admin settings
-- Configure ProjectX credentials, OpenClaw URL
-- Test connection buttons
-- Toggle between simulated/paper/live modes globally
-
-### Implementation Order
-1. **Start with secrets** — Prompt for `PROJECTX_API_KEY`, `PROJECTX_USERNAME`, `OPENCLAW_BASE_URL`, `OPENCLAW_API_TOKEN`
-2. **Build ProjectX edge function + service + hook** — Core trading connectivity
-3. **Build OpenClaw edge function + service + hook** — AI agent connectivity
-4. **Add ConnectionsPanel** to trading layout
-5. **Update simulation hook** with mode switching
-6. **Add API-trigger job type** to calendar
-7. **Add admin settings** for connection management
-
-This is a large feature set. I recommend implementing it in stages, starting with Phase 1 (ProjectX) to get live account connectivity working first.
-
+### Result
+Single, clean connect button with no text cutoff. Instructions only visible in tooltip when hovering or via a single instruction area, not overlapping the button itself.
