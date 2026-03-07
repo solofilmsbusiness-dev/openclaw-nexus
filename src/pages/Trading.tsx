@@ -204,11 +204,7 @@ const Trading = () => {
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-3 sm:gap-6 px-4 sm:px-6 py-3 glass-panel rounded-none border-x-0 border-t-0">
-        <button onClick={() => navigate("/")} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-xs font-mono hidden sm:inline">Dashboard</span>
-        </button>
-        <div className="h-5 w-px bg-border/50" />
+        <PageNav />
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse-glow" />
           <span className="font-display font-semibold text-xs sm:text-sm tracking-wide text-foreground">Futures Trading</span>
