@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
-import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator, Search } from "lucide-react";
+import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator, Search, BrainCircuit } from "lucide-react";
 import { useTradingLayout, type CustomPanelType, type BuiltinPanelId } from "@/contexts/TradingLayoutContext";
 import TemplatePreview from "./TemplatePreview";
 
@@ -143,6 +143,14 @@ const PREMADE_TEMPLATES: PremadeTemplate[] = [
     icon: Calculator,
     type: "calculator" as CustomPanelType,
     content: "",
+  },
+  {
+    key: "ai-evaluator",
+    title: "AI Evaluator",
+    description: "AI-powered stock & futures analysis",
+    icon: BrainCircuit,
+    type: "notes" as CustomPanelType,
+    content: "__builtin__ai-evaluator",
   },
 ];
 

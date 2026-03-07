@@ -77,7 +77,9 @@ interface LayoutState {
 
 function loadState(): LayoutState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY)
+      || localStorage.getItem("trading-layout-v2")
+      || localStorage.getItem("trading-layout-v1");
     if (raw) {
       const parsed = JSON.parse(raw);
       // Migrate: add topBarItems if missing
@@ -101,16 +103,6 @@ function loadState(): LayoutState {
         parsed.panels = computePositions([...(parsed.panels || []), ...newPanelItems], cols);
       }
       return parsed;
-    }
-    // Try migrating from v1 key
-    const v1 = localStorage.getItem("trading-layout-v1");
-    if (v1) {
-      const parsed = JSON.parse(v1);
-      const cols = parsed.columnCount || 2;
-      return {
-        ...parsed,
-        panels: computePositions(parsed.panels || ALL_BUILTINS.map((id) => ({ id, isCustom: false })), cols),
-      };
     }
   } catch {}
   return {
