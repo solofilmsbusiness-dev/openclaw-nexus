@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Trading from "./pages/Trading";
 import Calendar from "./pages/Calendar";
+import Profile from "./pages/Profile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ function AnimatedRoutes() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/trading" element={<TradingLayoutProvider><Trading /></TradingLayoutProvider>} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="*" element={<NotFound />} />
