@@ -5,10 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3,
   Target, Brain, BookOpen, Zap, AlertTriangle, Lightbulb, RefreshCw, Eye, Wallet, Trash2, Plus, LayoutGrid,
-  Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon, ShieldAlert, Layers, Percent,
+  Settings2, Check, Minimize2, Maximize2, Clock, Sun, Moon,
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
-import TopBarWidget from "@/components/trading/TopBarWidget";
 import { useTheme } from "next-themes";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -123,7 +122,6 @@ const Trading = () => {
   const layout = useTradingLayout();
   const { theme, setTheme } = useTheme();
   const gridRef = useRef<HTMLDivElement>(null);
-  const topBarRef = useRef<HTMLDivElement>(null);
 
   // Session clock
   const [session, setSession] = useState(getFuturesSession);
@@ -193,143 +191,6 @@ const Trading = () => {
     }
   }, [tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, portfolio, deleteTrade, deleteLearningNote, showNoteForm, noteCategory, noteContent, handleAddNote, layout.customPanels]);
 
-  // Compute open positions count
-  const openPositions = useMemo(() => portfolio.holdings?.filter((h: any) => h.qty > 0).length ?? 0, [portfolio]);
-
-  // Render individual top bar widget content
-  const renderTopBarWidget = useCallback((id: string): React.ReactNode => {
-    switch (id) {
-      case "pagenav":
-        return <PageNav />;
-      case "session":
-        return (
-          <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2 py-1">
-            <Clock className="w-3 h-3 text-muted-foreground" />
-            <span className={`text-[10px] font-mono font-semibold ${session.color}`}>{session.label}</span>
-            <span className="text-[9px] font-mono text-muted-foreground">→ {session.next}</span>
-            <span className="text-[10px] font-mono text-foreground">{session.countdown}</span>
-          </div>
-        );
-      case "pnl":
-        return (
-          <div className="flex items-center gap-1.5">
-            <DollarSign className={`w-4 h-4 ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`} />
-            <span className="text-xs text-muted-foreground hidden sm:inline">P/L</span>
-            <span className={`font-mono text-sm font-semibold ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
-              {stats.totalPnl >= 0 ? "+" : ""}${stats.totalPnl.toFixed(2)}
-            </span>
-          </div>
-        );
-      case "trades":
-        return (
-          <div className="flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4 text-neon-blue" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Trades</span>
-            <span className="font-mono text-sm font-semibold text-neon-blue">{stats.totalTrades}</span>
-          </div>
-        );
-      case "winrate":
-        return (
-          <div className="flex items-center gap-1.5">
-            <Target className="w-4 h-4 text-neon-cyan" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Win Rate</span>
-            <span className="font-mono text-sm font-semibold text-neon-cyan">{stats.winRate}%</span>
-          </div>
-        );
-      case "maxdd": {
-        // Max drawdown from stats
-        const maxDD = stats.totalPnl < 0 ? Math.abs(stats.totalPnl) : 0;
-        return (
-          <div className="flex items-center gap-1.5">
-            <ShieldAlert className="w-4 h-4 text-neon-red" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Max DD</span>
-            <span className="font-mono text-sm font-semibold text-neon-red">${maxDD.toFixed(2)}</span>
-          </div>
-        );
-      }
-      case "avgwin":
-        return (
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="w-4 h-4 text-neon-green" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Avg Win</span>
-            <span className="font-mono text-sm font-semibold text-neon-green">+${stats.avgWin.toFixed(2)}</span>
-          </div>
-        );
-      case "avgloss":
-        return (
-          <div className="flex items-center gap-1.5">
-            <TrendingDown className="w-4 h-4 text-neon-red" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Avg Loss</span>
-            <span className="font-mono text-sm font-semibold text-neon-red">-${stats.avgLoss.toFixed(2)}</span>
-          </div>
-        );
-      case "openpos":
-        return (
-          <div className="flex items-center gap-1.5">
-            <Layers className="w-4 h-4 text-neon-purple" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Open</span>
-            <span className="font-mono text-sm font-semibold text-neon-purple">{openPositions}</span>
-          </div>
-        );
-      case "margin":
-        return (
-          <div className="flex items-center gap-1.5">
-            <Percent className="w-4 h-4 text-neon-orange" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Margin</span>
-            <span className="font-mono text-sm font-semibold text-neon-orange">{portfolio.marginUtilization.toFixed(0)}%</span>
-          </div>
-        );
-      case "theme":
-        return (
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-        );
-      case "compact":
-        return (
-          <button
-            onClick={() => layout.setCompactMode(!layout.compactMode)}
-            className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
-            title={layout.compactMode ? "Expand panels" : "Compact panels"}
-          >
-            {layout.compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-          </button>
-        );
-      case "columns":
-        return (
-          <div className="flex items-center gap-1 bg-secondary/50 rounded-md p-1">
-            {([1, 2, 3] as const).map((cols) => (
-              <button
-                key={cols}
-                onClick={() => layout.setColumnCount(cols)}
-                className={`p-1.5 rounded transition-colors ${layout.columnCount === cols ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                title={`${cols} column${cols > 1 ? "s" : ""}`}
-              >
-                <LayoutGrid className="w-4 h-4" style={{ opacity: cols === 1 ? 1 : 0.6 + cols * 0.2 }} />
-              </button>
-            ))}
-          </div>
-        );
-      case "addpanel":
-        return <AddPanelDialog />;
-      case "status":
-        return (
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
-            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
-              {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
-            </span>
-          </div>
-        );
-      default:
-        return null;
-    }
-  }, [session, stats, theme, setTheme, layout, dataSource, openPositions, portfolio]);
-
   if (!authChecked) {
     return (
       <div className="h-screen bg-background flex flex-col items-center justify-center gap-3">
@@ -343,38 +204,106 @@ const Trading = () => {
     <TradingDataProvider executedTrades={executedTrades} considerations={considerations} evaluations={evaluations}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 glass-panel rounded-none border-x-0 border-t-0 flex-wrap">
-        <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-3 sm:gap-6 px-4 sm:px-6 py-3 glass-panel rounded-none border-x-0 border-t-0">
+        <PageNav />
+        <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse-glow" />
           <span className="font-display font-semibold text-xs sm:text-sm tracking-wide text-foreground">Futures Trading</span>
         </div>
 
-        <div ref={topBarRef} className="flex items-center gap-3 sm:gap-4 flex-wrap flex-1">
-          {layout.topBarItems.map((widgetId, idx) => {
-            if (!layout.isTopBarVisible(widgetId)) return null;
-            const content = renderTopBarWidget(widgetId);
-            if (!content) return null;
-            return (
-              <TopBarWidget key={widgetId} id={widgetId} index={idx} containerRef={topBarRef}>
-                {content}
-              </TopBarWidget>
-            );
-          })}
+        {/* Session clock */}
+        {layout.isTopBarVisible("session") && (
+        <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2 py-1">
+          <Clock className="w-3 h-3 text-muted-foreground" />
+          <span className={`text-[10px] font-mono font-semibold ${session.color}`}>{session.label}</span>
+          <span className="text-[9px] font-mono text-muted-foreground">→ {session.next}</span>
+          <span className="text-[10px] font-mono text-foreground">{session.countdown}</span>
         </div>
+        )}
 
-        {/* Top bar settings */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50 shrink-0" title="Customize top bar">
-              <Settings2 className="w-4 h-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-0" align="end">
-            <div className="p-3 border-b border-border/30">
-              <p className="font-display font-semibold text-xs text-foreground">Top Bar Items</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Show or hide top bar elements</p>
-            </div>
-            <ScrollArea className="max-h-[300px]">
+        {(layout.isTopBarVisible("pnl") || layout.isTopBarVisible("trades") || layout.isTopBarVisible("winrate")) && (
+          <div className="h-5 w-px bg-border/50 hidden sm:block" />
+        )}
+
+        {layout.isTopBarVisible("pnl") && (
+        <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <DollarSign className={`w-4 h-4 ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`} />
+          <span className="text-xs text-muted-foreground hidden sm:inline">P/L</span>
+          <span className={`font-mono text-sm font-semibold ${stats.totalPnl >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+            {stats.totalPnl >= 0 ? "+" : ""}${stats.totalPnl.toFixed(2)}
+          </span>
+        </motion.div>
+        )}
+        {layout.isTopBarVisible("trades") && (
+        <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+          <BarChart3 className="w-4 h-4 text-neon-blue" />
+          <span className="text-xs text-muted-foreground hidden sm:inline">Trades</span>
+          <span className="font-mono text-sm font-semibold text-neon-blue">{stats.totalTrades}</span>
+        </motion.div>
+        )}
+        {layout.isTopBarVisible("winrate") && (
+        <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+          <Target className="w-4 h-4 text-neon-cyan" />
+          <span className="text-xs text-muted-foreground hidden sm:inline">Win Rate</span>
+          <span className="font-mono text-sm font-semibold text-neon-cyan">{stats.winRate}%</span>
+        </motion.div>
+        )}
+
+        <div className="ml-auto flex items-center gap-3">
+          {layout.isTopBarVisible("theme") && (
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          )}
+          {layout.isTopBarVisible("compact") && (
+          <button
+            onClick={() => layout.setCompactMode(!layout.compactMode)}
+            className={`p-1.5 rounded transition-colors ${layout.compactMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
+            title={layout.compactMode ? "Expand panels" : "Compact panels"}
+          >
+            {layout.compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+          </button>
+          )}
+          {layout.isTopBarVisible("columns") && (
+          <div className="flex items-center gap-1 bg-secondary/50 rounded-md p-1">
+            {([1, 2, 3] as const).map((cols) => (
+              <button
+                key={cols}
+                onClick={() => layout.setColumnCount(cols)}
+                className={`p-1.5 rounded transition-colors ${layout.columnCount === cols ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                title={`${cols} column${cols > 1 ? "s" : ""}`}
+              >
+                <LayoutGrid className="w-4 h-4" style={{ opacity: cols === 1 ? 1 : 0.6 + cols * 0.2 }} />
+              </button>
+            ))}
+          </div>
+          )}
+          {layout.isTopBarVisible("addpanel") && <AddPanelDialog />}
+          {layout.isTopBarVisible("status") && (
+          <>
+            <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
+              {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
+            </span>
+          </>
+          )}
+
+          {/* Top bar settings */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50" title="Customize top bar">
+                <Settings2 className="w-4 h-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="end">
+              <div className="p-3 border-b border-border/30">
+                <p className="font-display font-semibold text-xs text-foreground">Top Bar Items</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Show or hide top bar elements</p>
+              </div>
               <div className="p-2 space-y-1">
                 {TOP_BAR_ITEMS.map((item) => (
                   <label key={item.id} className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-secondary/30 cursor-pointer">
@@ -387,9 +316,9 @@ const Trading = () => {
                   </label>
                 ))}
               </div>
-            </ScrollArea>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* Main grid */}
