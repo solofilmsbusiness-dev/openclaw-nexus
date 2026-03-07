@@ -1007,24 +1007,15 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
               {connectMode ? "CONNECTING…" : "CONNECT"}
             </button>
           </TooltipTrigger>
-          {!connectMode && (
-            <TooltipContent side="bottom" className="max-w-[240px] text-center">
-              Click to enter connect mode. Then click a source node, then a target node to create a link. Double-click a node to quick-connect. Press ESC to cancel.
-            </TooltipContent>
-          )}
+          <TooltipContent side="bottom" className="max-w-[240px] text-center">
+            {connectMode
+              ? connectSource
+                ? "Click a target node to complete the link. Press ESC to cancel."
+                : "Click a source node to start. Press ESC to cancel."
+              : "Click to enter connect mode. Then click a source node, then a target node to create a link. Double-click a node to quick-connect. Press ESC to cancel."}
+          </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-
-      {connectMode && !connectSource && !pendingEdge && (
-        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary animate-fade-in">
-          Click source node
-        </div>
-      )}
-      {connectMode && connectSource && !pendingEdge && (
-        <div className="absolute top-3 left-28 z-10 px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-[10px] font-mono text-primary animate-fade-in">
-          Click target node
-        </div>
-      )}
 
       {pendingEdge && (
         <div className="absolute top-14 left-3 z-20 glass-panel neon-border p-3 w-48 animate-fade-in">
