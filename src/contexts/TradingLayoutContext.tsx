@@ -19,10 +19,16 @@ export interface PanelItem {
 }
 
 export const TOP_BAR_ITEMS = [
+  { id: "pagenav", label: "Page Nav" },
   { id: "session", label: "Session Clock" },
   { id: "pnl", label: "P/L" },
   { id: "trades", label: "Trade Count" },
   { id: "winrate", label: "Win Rate" },
+  { id: "maxdd", label: "Max Drawdown" },
+  { id: "avgwin", label: "Avg Win" },
+  { id: "avgloss", label: "Avg Loss" },
+  { id: "openpos", label: "Open Positions" },
+  { id: "margin", label: "Margin Used" },
   { id: "theme", label: "Theme Toggle" },
   { id: "compact", label: "Compact Mode" },
   { id: "columns", label: "Column Layout" },
@@ -53,6 +59,7 @@ interface TradingLayoutContextType {
   setTopBarItems: (items: TopBarItemId[]) => void;
   isTopBarVisible: (id: TopBarItemId) => boolean;
   toggleTopBarItem: (id: TopBarItemId) => void;
+  reorderTopBarItem: (fromIndex: number, toIndex: number) => void;
 }
 
 const STORAGE_KEY = "trading-layout-v2";
@@ -238,6 +245,15 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
     }));
   }, []);
 
+  const reorderTopBarItem = useCallback((fromIndex: number, toIndex: number) => {
+    setState((s) => {
+      const items = [...s.topBarItems];
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, moved);
+      return { ...s, topBarItems: items };
+    });
+  }, []);
+
   return (
     <TradingLayoutContext.Provider
       value={{
@@ -259,6 +275,7 @@ export function TradingLayoutProvider({ children }: { children: React.ReactNode 
         setTopBarItems,
         isTopBarVisible,
         toggleTopBarItem,
+        reorderTopBarItem,
       }}
     >
       {children}
