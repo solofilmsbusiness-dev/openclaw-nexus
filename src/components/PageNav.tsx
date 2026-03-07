@@ -6,6 +6,7 @@ const pages = [
   { path: "/", label: "Dashboard", adminOnly: true },
   { path: "/trading", label: "Trading", adminOnly: false },
   { path: "/calendar", label: "Calendar", adminOnly: false },
+  { path: "/profile", label: "Profile", adminOnly: false },
 ];
 
 export default function PageNav() {
