@@ -123,6 +123,7 @@ const Trading = () => {
   const layout = useTradingLayout();
   const { theme, setTheme } = useTheme();
   const gridRef = useRef<HTMLDivElement>(null);
+  const topBarRef = useRef<HTMLDivElement>(null);
 
   // Session clock
   const [session, setSession] = useState(getFuturesSession);
