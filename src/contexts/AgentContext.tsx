@@ -79,7 +79,7 @@ type AgentEventRow = Tables<"agent_events">;
 type ProjectScheduleRow = Tables<"project_schedule">;
 
 const deriveEventMessage = (row: AgentEventRow): string => {
-  const payload = row.payload;
+  const payload = row.event_payload;
   if (payload && typeof payload === "object" && !Array.isArray(payload)) {
     const record = payload as Record<string, unknown>;
     const candidate = record.message || record.text || record.summary || record.body || record.note;
@@ -87,13 +87,12 @@ const deriveEventMessage = (row: AgentEventRow): string => {
       return candidate;
     }
   }
-  if (row.activity_ref) return row.activity_ref;
   return row.event_type;
 };
 
 const toAgentEvent = (row: AgentEventRow): AgentEvent => {
-  const agentName = row.from_agent ?? row.to_agent ?? "SYSTEM";
-  const agentId = slugifyAgentId(row.from_agent) ?? slugifyAgentId(row.to_agent) ?? "system";
+  const agentName = row.agent_name ?? "SYSTEM";
+  const agentId = slugifyAgentId(row.agent_name) ?? "system";
   return {
     id: row.id,
     agentId,
@@ -366,7 +365,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     const fetchEvents = async () => {
       const { data, error } = await supabase
         .from("agent_events")
-        .select("id, event_type, from_agent, to_agent, payload, activity_ref, created_at")
+        .select("id, event_type, agent_name, event_payload, created_at")
         .order("created_at", { ascending: false })
         .limit(200);
       if (cancelled || error || !data) return;

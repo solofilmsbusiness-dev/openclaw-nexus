@@ -47,6 +47,63 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_health: {
+        Row: {
+          agent_id: string
+          agent_name: string | null
+          created_at: string
+          id: string
+          metrics: Json | null
+          source: string | null
+          status: string
+          status_text: string | null
+        }
+        Insert: {
+          agent_id: string
+          agent_name?: string | null
+          created_at?: string
+          id?: string
+          metrics?: Json | null
+          source?: string | null
+          status: string
+          status_text?: string | null
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string | null
+          created_at?: string
+          id?: string
+          metrics?: Json | null
+          source?: string | null
+          status?: string
+          status_text?: string | null
+        }
+        Relationships: []
+      }
+      agent_events: {
+        Row: {
+          id: string
+          created_at: string
+          event_type: string
+          agent_name: string | null
+          event_payload: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          event_type: string
+          agent_name?: string | null
+          event_payload?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          event_type?: string
+          agent_name?: string | null
+          event_payload?: Json | null
+        }
+        Relationships: []
+      }
       idea_edges: {
         Row: {
           created_at: string
