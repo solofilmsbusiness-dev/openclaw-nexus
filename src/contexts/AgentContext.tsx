@@ -91,6 +91,47 @@ const deriveEventMessage = (row: AgentEventRow): string => {
   return row.event_type;
 };
 
+const METRIC_HISTORY_LENGTH = 24;
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+const METRIC_BASES: Record<AgentStatus, { latency: number; success: number; activity: number }> = {
+  healthy: { latency: 0.28, success: 0.92, activity: 0.75 },
+  active: { latency: 0.35, success: 0.85, activity: 0.88 },
+  degraded: { latency: 0.65, success: 0.55, activity: 0.45 },
+  down: { latency: 0.95, success: 0.05, activity: 0.08 },
+};
+
+const rollSeries = (series: number[] | undefined, sample: number) => {
+  const baseSeries = Array.isArray(series) && series.length ? [...series] : Array(METRIC_HISTORY_LENGTH).fill(sample);
+  const next = [...baseSeries.slice(-(METRIC_HISTORY_LENGTH - 1)), clamp01(sample)];
+  return next;
+};
+
+const jitter = (value: number, variance = 0.05) => clamp01(value + (Math.random() * 2 - 1) * variance);
+
+const getMetricSamples = (status: AgentStatus, backlogCount: number) => {
+  const base = METRIC_BASES[status] ?? METRIC_BASES.active;
+  const backlogLoad = Math.min(backlogCount / 10, 1);
+  const latency = jitter(base.latency + backlogLoad * 0.2, 0.04);
+  const success = jitter(base.success - backlogLoad * 0.3, 0.05);
+  const activity = jitter(base.activity - (status === "down" ? 0.3 : backlogLoad * 0.1), 0.05);
+  return { latency, success, activity };
+};
+
+const applyMetricSample = (agent: Agent, status: AgentStatus): Agent => {
+  const backlog = agent.backlogCount ?? 0;
+  const samples = getMetricSamples(status, backlog);
+  return {
+    ...agent,
+    metrics: {
+      latency: rollSeries(agent.metrics?.latency, samples.latency),
+      successRate: rollSeries(agent.metrics?.successRate, samples.success),
+      activity: rollSeries(agent.metrics?.activity, samples.activity),
+    },
+  };
+};
+
 const toAgentEvent = (row: AgentEventRow): AgentEvent => {
   const agentName = row.agent_name ?? "SYSTEM";
   const agentId = slugifyAgentId(row.agent_name) ?? "system";
@@ -205,7 +246,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         const template = getTemplateForAgent(row.id) || (row.displayName ? getTemplateForAgent(row.displayName) : undefined);
         const fallback = createAgent({ id: row.id, name: row.displayName ?? row.id });
         const base = existing ?? template ?? fallback;
-        return {
+        const built: Agent = {
           ...base,
           id: row.id,
           name: row.displayName ?? base.name,
@@ -217,6 +258,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           currentTask: row.statusText ?? base.currentTask,
           progress: row.status === "down" ? 0 : base.progress,
         };
+        return applyMetricSample(built, row.status);
       };
       const ordered: Agent[] = [];
       prev.forEach((agent) => {
@@ -388,6 +430,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [applyEventRows]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAgents((prev) => prev.map((agent) => applyMetricSample(agent, agent.status)));
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
