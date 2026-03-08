@@ -5,6 +5,15 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+const memoryStorage: Storage = {
+  length: 0,
+  clear: () => {},
+  getItem: () => null,
+  key: () => null,
+  removeItem: () => {},
+  setItem: () => {},
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +26,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 export const supabasePublic = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: memoryStorage,
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
