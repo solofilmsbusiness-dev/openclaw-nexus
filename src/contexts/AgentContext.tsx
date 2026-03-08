@@ -1,8 +1,109 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
+import { AGENT_TEMPLATE_MAP, EDGES, DEFAULT_DRAG_OFFSETS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 import { useSimulation } from "@/hooks/useSimulation";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+type AgentHealthRow = Tables<"agent_health"> & { heartbeat_at?: string | null };
+
+const TEMPLATE_LOOKUP = AGENT_TEMPLATE_MAP;
+
+const GRAPH_LAYOUT_STORAGE_KEY = "agent-graph-layout";
+
+const AUTOSAVE_NAME = "__autosave__";
+const AUTOSAVE_PROJECT = "__default__";
+
+const cloneAgentTemplate = (agent: Agent): Agent => ({
+  ...agent,
+  metrics: {
+    latency: [...agent.metrics.latency],
+    successRate: [...agent.metrics.successRate],
+    activity: [...agent.metrics.activity],
+  },
+});
+
+const getTemplateForAgent = (key: string): Agent | undefined => {
+  const template = TEMPLATE_LOOKUP.get(key) || TEMPLATE_LOOKUP.get(key.toLowerCase());
+  return template ? cloneAgentTemplate(template) : undefined;
+};
+
+const slugifyAgentId = (value?: string | null) => {
+  if (!value) return undefined;
+  const direct = TEMPLATE_LOOKUP.get(value) || TEMPLATE_LOOKUP.get(value.toLowerCase());
+  if (direct) return direct.id;
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+};
+
+const normalizeStatus = (value?: string | null): AgentStatus => {
+  switch ((value ?? "").toLowerCase()) {
+    case "healthy":
+    case "ok":
+    case "online":
+      return "healthy";
+    case "down":
+    case "offline":
+    case "error":
+      return "down";
+    case "degraded":
+    case "warning":
+      return "degraded";
+    case "active":
+    case "running":
+    default:
+      return "active";
+  }
+};
+
+type NormalizedHealth = {
+  id: string;
+  status: AgentStatus;
+  heartbeatAt: string;
+  statusText?: string | null;
+  displayName?: string | null;
+};
+
+const toNormalizedHealth = (row: AgentHealthRow): NormalizedHealth | null => {
+  const id = row.agent_id?.trim() || slugifyAgentId(row.agent_name);
+  if (!id) return null;
+  return {
+    id,
+    status: normalizeStatus(row.status),
+    heartbeatAt: row.heartbeat_at ?? row.created_at ?? new Date().toISOString(),
+    statusText: row.status_text ?? null,
+    displayName: row.agent_name ?? null,
+  };
+};
+
+type AgentEventRow = Tables<"agent_events">;
+type ProjectScheduleRow = Tables<"project_schedule">;
+
+const deriveEventMessage = (row: AgentEventRow): string => {
+  const payload = row.payload;
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const record = payload as Record<string, unknown>;
+    const candidate = record.message || record.text || record.summary || record.body || record.note;
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  if (row.activity_ref) return row.activity_ref;
+  return row.event_type;
+};
+
+const toAgentEvent = (row: AgentEventRow): AgentEvent => {
+  const agentName = row.from_agent ?? row.to_agent ?? "SYSTEM";
+  const agentId = slugifyAgentId(row.from_agent) ?? slugifyAgentId(row.to_agent) ?? "system";
+  return {
+    id: row.id,
+    agentId,
+    agentName,
+    type: row.event_type ?? "event",
+    message: deriveEventMessage(row),
+    ts: row.created_at,
+  };
+};
+
 
 interface LayoutData {
   dragOffsets: Record<string, { x: number; y: number }>;
@@ -39,18 +140,280 @@ interface AgentContextValue {
 const AgentContext = createContext<AgentContextValue | null>(null);
 
 export function AgentProvider({ children }: { children: ReactNode }) {
-  const [agents, setAgents] = useState<Agent[]>(AGENTS);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [edges, setEdges] = useState<Edge[]>(EDGES);
-  const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
+  const [events, setEvents] = useState<AgentEvent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [killSwitchActive, setKillSwitchActive] = useState(false);
-  const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
+  const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({ ...DEFAULT_DRAG_OFFSETS });
   const [nodeSizes, setNodeSizes] = useState<Record<string, number>>({});
+  const [autosaveUserId, setAutosaveUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      setAutosaveUserId(data.user?.id ?? null);
+    };
+    init();
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAutosaveUserId(session?.user?.id ?? null);
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(GRAPH_LAYOUT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed.dragOffsets) setDragOffsets({ ...DEFAULT_DRAG_OFFSETS, ...parsed.dragOffsets });
+      if (parsed.nodeSizes) setNodeSizes(parsed.nodeSizes);
+    } catch {}
+  }, []);
+
+  const [liveDataActive, setLiveDataActive] = useState(false);
+
+  const [liveEventsActive, setLiveEventsActive] = useState(false);
+
+  useEffect(() => {
+    try {
+      const payload = JSON.stringify({ dragOffsets, nodeSizes });
+      localStorage.setItem(GRAPH_LAYOUT_STORAGE_KEY, payload);
+    } catch {}
+  }, [dragOffsets, nodeSizes]);
+
+  const applyHealthRecords = useCallback((rows: AgentHealthRow[]) => {
+    if (!rows.length) return;
+    const seen = new Set<string>();
+    const normalized: NormalizedHealth[] = [];
+    rows.forEach((row) => {
+      const normalizedRow = toNormalizedHealth(row);
+      if (!normalizedRow) return;
+      if (seen.has(normalizedRow.id)) return;
+      seen.add(normalizedRow.id);
+      normalized.push(normalizedRow);
+    });
+    if (!normalized.length) return;
+    setLiveDataActive(true);
+    let nextAgents: Agent[] = [];
+    setAgents((prev) => {
+      const normalizedMap = new Map(normalized.map((row) => [row.id, row]));
+      const used = new Set<string>();
+      const buildAgent = (row: NormalizedHealth, existing?: Agent): Agent => {
+        const template = getTemplateForAgent(row.id) || (row.displayName ? getTemplateForAgent(row.displayName) : undefined);
+        const fallback = createAgent({ id: row.id, name: row.displayName ?? row.id });
+        const base = existing ?? template ?? fallback;
+        return {
+          ...base,
+          id: row.id,
+          name: row.displayName ?? base.name,
+          subtitle: base.subtitle ?? base.type ?? base.name,
+          type: base.type ?? "operations",
+          status: row.status,
+          heartbeatAt: row.heartbeatAt,
+          statusText: row.statusText,
+          currentTask: row.statusText ?? base.currentTask,
+          progress: row.status === "down" ? 0 : base.progress,
+        };
+      };
+      const ordered: Agent[] = [];
+      prev.forEach((agent) => {
+        const row = normalizedMap.get(agent.id);
+        if (!row) return;
+        ordered.push(buildAgent(row, agent));
+        used.add(agent.id);
+      });
+      normalized.forEach((row) => {
+        if (used.has(row.id)) return;
+        ordered.push(buildAgent(row));
+        used.add(row.id);
+      });
+      nextAgents = ordered;
+      return ordered;
+    });
+    const activeIds = new Set(nextAgents.map((agent) => agent.id));
+    setEdges((prevEdges) => {
+      const baseEdges = prevEdges.length ? prevEdges : EDGES;
+      return baseEdges.filter((edge) => activeIds.has(edge.from) && activeIds.has(edge.to));
+    });
+  }, []);
+
+  const applyEventRows = useCallback((rows: AgentEventRow[]) => {
+    if (!rows.length) return;
+    setLiveEventsActive(true);
+    setEvents((prev) => {
+      const merged = new Map<string, AgentEvent>();
+      prev.forEach((event) => merged.set(event.id, event));
+      rows.forEach((row) => {
+        const normalized = toAgentEvent(row);
+        merged.set(normalized.id, normalized);
+      });
+      return Array.from(merged.values())
+        .sort((a, b) => (a.ts < b.ts ? 1 : -1))
+        .slice(0, 200);
+    });
+  }, []);
+
+  const updateBacklogFromSchedule = useCallback((rows: ProjectScheduleRow[]) => {
+    setAgents((prev) => {
+      const nameToId = new Map<string, string>();
+      prev.forEach((agent) => nameToId.set(agent.name.toLowerCase(), agent.id));
+      const backlogMap = new Map<string, number>();
+      rows.forEach((row) => {
+        const ownerKey = row.owner?.toLowerCase();
+        const ownerId = ownerKey ? nameToId.get(ownerKey) : undefined;
+        if (!ownerId) return;
+        if ((row.status ?? "").toLowerCase() === "done") return;
+        backlogMap.set(ownerId, (backlogMap.get(ownerId) ?? 0) + 1);
+      });
+      return prev.map((agent) => {
+        const count = backlogMap.get(agent.id) ?? 0;
+        if (agent.backlogCount === count) return agent;
+        return { ...agent, backlogCount: count };
+      });
+    });
+  }, []);
+
+  const persistLayout = useCallback(async () => {
+    if (!autosaveUserId) return;
+    try {
+      const payloadAgents = JSON.parse(JSON.stringify({ agents, layout: { dragOffsets, nodeSizes } }));
+      const payloadEdges = JSON.parse(JSON.stringify(edges));
+      const { data, error } = await supabase
+        .from("graph_configs")
+        .select("id")
+        .eq("user_id", autosaveUserId)
+        .eq("name", AUTOSAVE_NAME)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") return;
+      if (data?.id) {
+        await supabase
+          .from("graph_configs")
+          .update({
+            project: AUTOSAVE_PROJECT,
+            agents_data: payloadAgents,
+            edges_data: payloadEdges,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id);
+      } else {
+        await supabase.from("graph_configs").insert({
+          user_id: autosaveUserId,
+          name: AUTOSAVE_NAME,
+          project: AUTOSAVE_PROJECT,
+          agents_data: payloadAgents,
+          edges_data: payloadEdges,
+        });
+      }
+    } catch {}
+  }, [autosaveUserId, agents, edges, dragOffsets, nodeSizes]);
+
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!autosaveUserId) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      persistLayout();
+    }, 1500);
+    return () => {
+      if (autosaveTimer.current) {
+        clearTimeout(autosaveTimer.current);
+        autosaveTimer.current = null;
+      }
+    };
+  }, [autosaveUserId, persistLayout]);
 
   const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
   const handleNewEvent = useCallback((event: AgentEvent) => {
     setEvents((prev) => [event, ...prev].slice(0, 50));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchInitial = async () => {
+      const { data, error } = await supabase
+        .from("agent_health")
+        .select("agent_id, agent_name, status, status_text, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (cancelled || error || !data) return;
+      applyHealthRecords(data);
+    };
+
+    fetchInitial();
+
+    const channel = supabase
+      .channel("agent-health-stream")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "agent_health" }, (payload) => {
+        const row = payload.new as AgentHealthRow;
+        applyHealthRecords([row]);
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [applyHealthRecords]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchEvents = async () => {
+      const { data, error } = await supabase
+        .from("agent_events")
+        .select("id, event_type, from_agent, to_agent, payload, activity_ref, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (cancelled || error || !data) return;
+      applyEventRows(data);
+    };
+
+    fetchEvents();
+
+    const channel = supabase
+      .channel("agent-events-stream")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "agent_events" }, (payload) => {
+        const row = payload.new as AgentEventRow;
+        applyEventRows([row]);
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [applyEventRows]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchSchedule = async () => {
+      const { data, error } = await supabase
+        .from("project_schedule")
+        .select("id, owner, status");
+      if (cancelled || error || !data) return;
+      updateBacklogFromSchedule(data);
+    };
+
+    fetchSchedule();
+
+    const channel = supabase
+      .channel("project-schedule-stream")
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_schedule" }, () => {
+        fetchSchedule();
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [updateBacklogFromSchedule]);
 
   const handleStatusChange = useCallback((id: string, status: AgentStatus) => {
     setAgents((prev) =>
@@ -131,7 +494,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setEdges(newEdges);
     setEvents([]);
     setKillSwitchActive(false);
-    setDragOffsets(layout?.dragOffsets || {});
+    setDragOffsets(layout?.dragOffsets ? { ...DEFAULT_DRAG_OFFSETS, ...layout.dragOffsets } : { ...DEFAULT_DRAG_OFFSETS });
     setNodeSizes(layout?.nodeSizes || {});
   }, []);
 
@@ -158,7 +521,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, [loadConfig]);
 
   const { pathname } = useLocation();
-  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive, pathname);
+  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive, pathname, liveDataActive || liveEventsActive);
 
   return (
     <AgentContext.Provider
