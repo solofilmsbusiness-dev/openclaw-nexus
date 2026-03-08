@@ -132,6 +132,33 @@ const applyMetricSample = (agent: Agent, status: AgentStatus): Agent => {
   };
 };
 
+const formatStatusChangeMessage = (prev: Agent | undefined, next: Agent) => {
+  const statusSegment = prev ? `${prev.status.toUpperCase()} → ${next.status.toUpperCase()}` : `${next.status.toUpperCase()}`;
+  const detail = next.statusText ?? prev?.statusText;
+  return detail ? `${next.name} ${statusSegment} — ${detail}` : `${next.name} ${statusSegment}`;
+};
+
+const createDerivedEvent = (prev: Agent | undefined, next: Agent): AgentEvent => ({
+  id: `status-${next.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  agentId: next.id,
+  agentName: next.name,
+  type: "status_change",
+  message: formatStatusChangeMessage(prev, next),
+  ts: new Date().toISOString(),
+});
+
+const publishSystemEvent = async (eventType: string, payload: Record<string, unknown>) => {
+  try {
+    await supabase.from("agent_events").insert({
+      event_type: eventType,
+      agent_name: "Mission Control",
+      event_payload: payload,
+    });
+  } catch (error) {
+    console.error("Failed to publish system event", error);
+  }
+};
+
 const toAgentEvent = (row: AgentEventRow): AgentEvent => {
   const agentName = row.agent_name ?? "SYSTEM";
   const agentId = slugifyAgentId(row.agent_name) ?? "system";
@@ -239,6 +266,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     if (!normalized.length) return;
     setLiveDataActive(true);
     let nextAgents: Agent[] = [];
+    const derivedEvents: AgentEvent[] = [];
     setAgents((prev) => {
       const normalizedMap = new Map(normalized.map((row) => [row.id, row]));
       const used = new Set<string>();
@@ -258,7 +286,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           currentTask: row.statusText ?? base.currentTask,
           progress: row.status === "down" ? 0 : base.progress,
         };
-        return applyMetricSample(built, row.status);
+        const applied = applyMetricSample(built, row.status);
+        if (existing && (existing.status !== applied.status || existing.statusText !== applied.statusText)) {
+          derivedEvents.push(createDerivedEvent(existing, applied));
+        }
+        return applied;
       };
       const ordered: Agent[] = [];
       prev.forEach((agent) => {
@@ -275,6 +307,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       nextAgents = ordered;
       return ordered;
     });
+    if (derivedEvents.length) {
+      setEvents((prevEvents) => [
+        ...derivedEvents,
+        ...prevEvents,
+      ].slice(0, 200));
+    }
     const activeIds = new Set(nextAgents.map((agent) => agent.id));
     setEdges((prevEdges) => {
       const baseEdges = prevEdges.length ? prevEdges : EDGES;
@@ -516,6 +554,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       ts: new Date().toISOString(),
     };
     setEvents((prev) => [killEvent, ...prev].slice(0, 50));
+    void publishSystemEvent("kill_switch", {
+      message: "Kill switch engaged",
+      severity: "critical",
+      triggered_at: new Date().toISOString(),
+    });
   }, []);
 
   const reviveAll = useCallback(() => {
@@ -532,6 +575,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       ts: new Date().toISOString(),
     };
     setEvents((prev) => [reviveEvent, ...prev].slice(0, 50));
+    void publishSystemEvent("kill_switch_reset", {
+      message: "System revived",
+      triggered_at: new Date().toISOString(),
+    });
   }, []);
 
   const renameAgent = useCallback((id: string, name: string) => {

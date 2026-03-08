@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { ConfigManager } from "@/components/ConfigManager";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const BG_STORAGE_KEY = "agent-graph-bg-settings";
 
@@ -62,6 +65,8 @@ const CORE_TAGLINES = [
   "47 tasks processed",
   "all channels open",
 ];
+
+const KILL_SWITCH_PASSWORD = "$olo4Eva1010";
 
 function getNodePositions(agents: Agent[]) {
   const positions: Record<string, { x: number; y: number }> = {
@@ -693,6 +698,49 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
   const [locked, setLocked] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
 
+  const [killPromptOpen, setKillPromptOpen] = useState(false);
+  const [killIntent, setKillIntent] = useState<"kill" | "revive" | null>(null);
+  const [killPassword, setKillPassword] = useState("");
+  const [killPasswordError, setKillPasswordError] = useState("");
+
+  const closeKillPrompt = useCallback(() => {
+    setKillPromptOpen(false);
+    setKillIntent(null);
+    setKillPassword("");
+    setKillPasswordError("");
+  }, []);
+
+  const openKillPrompt = useCallback((intent: "kill" | "revive") => {
+    setKillIntent(intent);
+    setKillPassword("");
+    setKillPasswordError("");
+    setKillPromptOpen(true);
+  }, []);
+
+  const handleKillConfirm = useCallback(() => {
+    if (!killIntent) return;
+    if (killPassword !== KILL_SWITCH_PASSWORD) {
+      setKillPasswordError("Incorrect password");
+      toast.error("Access denied", { description: "Invalid kill-switch password." });
+      return;
+    }
+    if (killIntent === "kill") {
+      killAll();
+      toast.error("Kill switch engaged", { description: "All agents terminated." });
+    } else {
+      reviveAll();
+      toast.success("System revived", { description: "Agents coming back online." });
+    }
+    closeKillPrompt();
+  }, [killIntent, killPassword, closeKillPrompt, killAll, reviveAll]);
+
+  const handleKillPasswordKey = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleKillConfirm();
+    }
+  }, [handleKillConfirm]);
+
   // Build agent status lookup for edges
   const agentStatusMap = useMemo(() => {
     const map: Record<string, boolean> = {};
@@ -941,8 +989,42 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
 
   const zoomPercent = Math.round((DEFAULT_VIEWBOX.w / viewBox.w) * 100);
 
+  const killDialogTitle = killIntent === "kill" ? "Engage Kill Switch" : killIntent === "revive" ? "Revive System" : "Kill Switch Access";
+  const killDialogDescription = killIntent === "kill" ? "Enter the password to shut everything down." : killIntent === "revive" ? "Authenticate to bring the mesh back online." : "Authorize the kill-switch action.";
+
   return (
-    <div className="relative w-full h-full glass-panel overflow-hidden">
+    <>
+      <Dialog open={killPromptOpen} onOpenChange={(open) => { if (!open) closeKillPrompt(); }}>
+        <DialogContent className="sm:max-w-sm border border-border/40 bg-card">
+          <DialogHeader className="gap-1">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.3em]">{killDialogTitle}</DialogTitle>
+            <DialogDescription className="text-[11px] font-mono text-muted-foreground">{killDialogDescription}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="password"
+              value={killPassword}
+              autoFocus
+              placeholder="Password"
+              className="font-mono text-sm"
+              onKeyDown={handleKillPasswordKey}
+              onChange={(e) => {
+                if (killPasswordError) setKillPasswordError("");
+                setKillPassword(e.target.value);
+              }}
+            />
+            {killPasswordError && <p className="text-[10px] font-mono text-destructive">{killPasswordError}</p>}
+          </div>
+          <DialogFooter className="pt-2 gap-2">
+            <Button variant="ghost" size="sm" onClick={closeKillPrompt}>Cancel</Button>
+            <Button size="sm" variant={killIntent === "kill" ? "destructive" : "default"} onClick={handleKillConfirm} disabled={!killIntent}>
+              {killIntent === "kill" ? "Engage Kill Switch" : killIntent === "revive" ? "Revive System" : "Authorize"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="relative w-full h-full glass-panel overflow-hidden">
       {/* Hidden file input for bg image */}
       <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
 
@@ -1116,7 +1198,7 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
           {locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
         </button>
         <button
-          onClick={() => killSwitchActive ? reviveAll() : killAll()}
+          onClick={() => openKillPrompt(killSwitchActive ? "revive" : "kill")}
           className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-colors ${
             killSwitchActive
               ? "border-red-500/60 bg-red-500/20 text-red-400 hover:bg-red-500/30"
@@ -1384,5 +1466,6 @@ export default function AgentGraph({ agents, edges, selectedAgentId, onSelectAge
       {/* Config Manager */}
       <ConfigManager open={configOpen} onOpenChange={setConfigOpen} />
     </div>
+    </>
   );
 }
