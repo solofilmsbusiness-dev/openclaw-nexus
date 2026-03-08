@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { AGENTS, SAMPLE_EVENTS, statusColor, Agent, AgentStatus } from "@/data/agents";
+import { statusColor, type Agent, type AgentStatus, type AgentEvent } from "@/data/agents";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -41,19 +41,17 @@ function Sparkline({ data, color, isDead }: { data: number[]; color: string; isD
 
 type Tab = "agents" | "backlog" | "insights";
 
+interface InsightItem {
+  title: string;
+  detail: string;
+  agent: string;
+  color: string;
+}
+
 const tabs: { id: Tab; label: string; icon: typeof Layers }[] = [
   { id: "agents", label: "Agents", icon: BarChart3 },
   { id: "backlog", label: "Backlog", icon: Layers },
   { id: "insights", label: "Insights", icon: Lightbulb },
-];
-
-const insights = [
-  { title: "Revenue trending up", detail: "OF bundle converting at 23% WoW increase", agent: "Analyst", color: "text-neon-green" },
-  { title: "Content bottleneck detected", detail: "Content Command backlog at 12 — pipeline stalled", agent: "Brain", color: "text-neon-orange" },
-  { title: "FlipEngine offline", detail: "Payment gateway timeout — needs manual restart", agent: "Architect", color: "text-neon-red" },
-  { title: "Trending topic detected", detail: "AI automation trending — Scout recommends pivot", agent: "Scout", color: "text-neon-blue" },
-  { title: "Video pipeline optimal", detail: "45s reel rendered, engagement predicted high", agent: "Videographer", color: "text-neon-green" },
-  { title: "Course enrollment dip", detail: "Skool Master reports 15% drop in signups this week", agent: "Skool Master", color: "text-neon-orange" },
 ];
 
 function ColorPicker({ agent, onColorChange }: { agent: Agent; onColorChange: (color: string | undefined) => void }) {
@@ -90,9 +88,9 @@ function ColorPicker({ agent, onColorChange }: { agent: Agent; onColorChange: (c
   );
 }
 
-function AgentDetailView({ agent, onStatusChange, onColorChange }: { agent: Agent; onStatusChange: (id: string, status: AgentStatus, taskUpdate?: Partial<Agent>) => void; onColorChange: (id: string, color: string | undefined) => void }) {
+function AgentDetailView({ agent, events, onStatusChange, onColorChange }: { agent: Agent; events: AgentEvent[]; onStatusChange: (id: string, status: AgentStatus, taskUpdate?: Partial<Agent>) => void; onColorChange: (id: string, color: string | undefined) => void }) {
   const color = statusColor(agent.status);
-  const recentEvents = SAMPLE_EVENTS.filter(e => e.agentId === agent.id).slice(0, 3);
+  const recentEvents = events.filter(e => e.agentId === agent.id).slice(0, 3);
   const avgLatency = (agent.metrics.latency.reduce((a, b) => a + b, 0) / agent.metrics.latency.length * 100).toFixed(0);
   const avgSuccess = (agent.metrics.successRate.reduce((a, b) => a + b, 0) / agent.metrics.successRate.length * 100).toFixed(0);
   const isDead = agent.status === "down";
@@ -187,9 +185,10 @@ function AgentDetailView({ agent, onStatusChange, onColorChange }: { agent: Agen
 }
 
 function AgentsTab({
-  agents, onReorder, onStatusChange, selectedAgentId, onSelectAgent, onDeleteAgent, onColorChange,
+  agents, events, onReorder, onStatusChange, selectedAgentId, onSelectAgent, onDeleteAgent, onColorChange,
 }: {
   agents: Agent[];
+  events: AgentEvent[];
   onReorder: (newOrder: Agent[]) => void;
   onStatusChange: (id: string, status: AgentStatus, update?: Partial<Agent>) => void;
   selectedAgentId: string | null;
@@ -318,7 +317,7 @@ function AgentsTab({
               </div>
             </div>
             <AnimatePresence>
-              {isExpanded && <AgentDetailView agent={agent} onStatusChange={onStatusChange} onColorChange={onColorChange} />}
+              {isExpanded && <AgentDetailView agent={agent} events={events} onStatusChange={onStatusChange} onColorChange={onColorChange} />}
             </AnimatePresence>
           </Reorder.Item>
         );
@@ -412,7 +411,7 @@ function BacklogTab({ agents }: { agents: Agent[] }) {
   );
 }
 
-function InsightsTab() {
+function InsightsTab({ insights }: { insights: InsightItem[] }) {
   return (
     <div className="space-y-2">
       {insights.map((insight, i) => (
@@ -441,6 +440,7 @@ function InsightsTab() {
 
 interface AgentCardsProps {
   agents: Agent[];
+  events: AgentEvent[];
   onAgentsChange: (agents: Agent[]) => void;
   selectedAgentId: string | null;
   onSelectAgent: (id: string | null) => void;
@@ -450,11 +450,65 @@ interface AgentCardsProps {
 
 const AGENT_TYPES = ["orchestrator", "intelligence", "operations", "design", "content", "web", "comms", "commerce", "media", "analytics", "education"];
 
-export default function AgentCards({ agents, onAgentsChange, selectedAgentId, onSelectAgent, onAddAgent, onDeleteAgent }: AgentCardsProps) {
+export default function AgentCards({ agents, events, onAgentsChange, selectedAgentId, onSelectAgent, onAddAgent, onDeleteAgent }: AgentCardsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("agents");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [newAgent, setNewAgent] = useState({ name: "", subtitle: "", icon: "🤖", type: "operations" });
+
+  const insightsData = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = [];
+    const colorForEvent = (type: string) => {
+      const normalized = type.toLowerCase();
+      if (normalized.includes("kill") || normalized.includes("error")) return "text-neon-red";
+      if (normalized.includes("warn") || normalized.includes("degrade")) return "text-neon-orange";
+      if (normalized.includes("deployment") || normalized.includes("success")) return "text-neon-green";
+      return "text-neon-cyan";
+    };
+
+    const recentEvents = events.slice(0, 4);
+    recentEvents.forEach((event) => {
+      const time = new Date(event.ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      items.push({
+        title: `${event.agentName} • ${time}`,
+        detail: event.message,
+        agent: event.agentName,
+        color: colorForEvent(event.type),
+      });
+    });
+
+    const backlogLeader = [...agents].sort((a, b) => b.backlogCount - a.backlogCount)[0];
+    if (backlogLeader && backlogLeader.backlogCount > 0) {
+      items.unshift({
+        title: `${backlogLeader.name} backlog pressure`,
+        detail: `${backlogLeader.backlogCount} tasks waiting for handoff`,
+        agent: backlogLeader.name,
+        color: "text-neon-orange",
+      });
+    }
+
+    const offlineAgents = agents.filter((agent) => agent.status === "down");
+    if (offlineAgents.length > 0) {
+      const names = offlineAgents.map((a) => a.name).join(", ");
+      items.push({
+        title: `Recovery needed (${offlineAgents.length})`,
+        detail: `${names} awaiting revive`,
+        agent: "Mission Control",
+        color: "text-neon-red",
+      });
+    }
+
+    if (!items.length) {
+      items.push({
+        title: "Awaiting signal",
+        detail: "No recent agent activity yet.",
+        agent: "Mission Control",
+        color: "text-muted-foreground",
+      });
+    }
+
+    return items.slice(0, 6);
+  }, [agents, events]);
 
   const handleStatusChange = useCallback((id: string, status: AgentStatus, update?: Partial<Agent>) => {
     onAgentsChange(agents.map(a => a.id === id ? { ...a, ...update, status } : a));
@@ -591,6 +645,7 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
             {activeTab === "agents" && (
               <AgentsTab
                 agents={filteredAgents}
+                events={events}
                 onReorder={onAgentsChange}
                 onStatusChange={handleStatusChange}
                 selectedAgentId={selectedAgentId}
@@ -600,7 +655,7 @@ export default function AgentCards({ agents, onAgentsChange, selectedAgentId, on
               />
             )}
             {activeTab === "backlog" && <BacklogTab agents={agents} />}
-            {activeTab === "insights" && <InsightsTab />}
+            {activeTab === "insights" && <InsightsTab insights={insightsData} />}
           </motion.div>
         </AnimatePresence>
       </ScrollArea>

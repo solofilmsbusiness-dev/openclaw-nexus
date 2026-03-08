@@ -15,6 +15,29 @@ const AUTOSAVE_NAME = "__autosave__";
 const AUTOSAVE_PROJECT = "__default__";
 const DEFAULT_CONFIG_NAME = "official solo OS 2.6";
 
+const SAMPLE_EVENTS = [
+  {
+    agent_name: "Brain",
+    event_type: "status_ping",
+    event_payload: { message: "Graph synced with Supabase live roster", severity: "info" },
+  },
+  {
+    agent_name: "Scheduler",
+    event_type: "autopost_check",
+    event_payload: { message: "Autopost cadence verified", severity: "info" },
+  },
+  {
+    agent_name: "Architect",
+    event_type: "layout_update",
+    event_payload: { message: "Official Solo OS 2.6 layout locked", severity: "info" },
+  },
+  {
+    agent_name: "Executor",
+    event_type: "deployment",
+    event_payload: { message: "Latest preview deployed", severity: "success" },
+  },
+];
+
 const cloneAgentTemplate = (agent: Agent): Agent => ({
   ...agent,
   metrics: {
@@ -217,6 +240,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [nodeSizes, setNodeSizes] = useState<Record<string, number>>({});
   const [autosaveUserId, setAutosaveUserId] = useState<string | null>(null);
 
+  const seededEventsRef = useRef(false);
+
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
@@ -411,6 +436,23 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setEvents((prev) => [event, ...prev].slice(0, 50));
   }, []);
 
+  const seedInitialEvents = useCallback(async () => {
+    if (seededEventsRef.current) return;
+    try {
+      seededEventsRef.current = true;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const now = Date.now();
+      const payload = SAMPLE_EVENTS.map((event, idx) => ({
+        ...event,
+        created_at: new Date(now - idx * 60_000).toISOString(),
+      }));
+      await supabase.from("agent_events").insert(payload);
+    } catch (error) {
+      console.error("Failed to seed agent events", error);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -449,7 +491,20 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         .select("id, event_type, agent_name, event_payload, created_at")
         .order("created_at", { ascending: false })
         .limit(200);
-      if (cancelled || error || !data) return;
+      if (cancelled || error) return;
+      if (!data || data.length === 0) {
+        await seedInitialEvents();
+        if (cancelled) return;
+        const { data: seededData } = await supabase
+          .from("agent_events")
+          .select("id, event_type, agent_name, event_payload, created_at")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (!cancelled && seededData && seededData.length > 0) {
+          applyEventRows(seededData);
+        }
+        return;
+      }
       applyEventRows(data);
     };
 
@@ -467,7 +522,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [applyEventRows]);
+  }, [applyEventRows, seedInitialEvents]);
 
   useEffect(() => {
     const interval = setInterval(() => {
