@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { useLocation } from "react-router-dom";
 import { AGENT_TEMPLATE_MAP, EDGES, DEFAULT_DRAG_OFFSETS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 import { useSimulation } from "@/hooks/useSimulation";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabasePublic } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 type AgentHealthRow = Tables<"agent_health"> & { heartbeat_at?: string | null };
@@ -486,7 +486,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const fetchEvents = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .from("agent_events")
         .select("id, event_type, agent_name, event_payload, created_at")
         .order("created_at", { ascending: false })
@@ -495,7 +495,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       if (!data || data.length === 0) {
         await seedInitialEvents();
         if (cancelled) return;
-        const { data: seededData } = await supabase
+        const { data: seededData } = await supabasePublic
           .from("agent_events")
           .select("id, event_type, agent_name, event_payload, created_at")
           .order("created_at", { ascending: false })
@@ -510,7 +510,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
     fetchEvents();
 
-    const channel = supabase
+    const channel = supabasePublic
       .channel("agent-events-stream")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "agent_events" }, (payload) => {
         const row = payload.new as AgentEventRow;
