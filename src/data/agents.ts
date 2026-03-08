@@ -37,6 +37,8 @@ export interface Edge {
   weight: number;
 }
 
+const randMetricsEmpty = (len = 20) => Array.from({ length: len }, () => 0);
+
 const formatCurrentTask = (subtitle: string) => {
   const dotParts = subtitle.split("•");
   if (dotParts[1]) return dotParts[1].trim();
@@ -122,8 +124,6 @@ export const statusColor = (status: AgentStatus) => {
       return { bg: "hsl(215, 80%, 60%)", glow: "0 2px 12px hsl(215 80% 60% / 0.25)" };
   }
 };
-
-const randMetricsEmpty = (len = 20) => Array.from({ length: len }, () => 0);
 
 export function createAgent(overrides: Partial<Agent> = {}): Agent {
   return {
