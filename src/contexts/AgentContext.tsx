@@ -13,6 +13,7 @@ const GRAPH_LAYOUT_STORAGE_KEY = "agent-graph-layout";
 
 const AUTOSAVE_NAME = "__autosave__";
 const AUTOSAVE_PROJECT = "__default__";
+const DEFAULT_CONFIG_NAME = "official solo OS 2.6";
 
 const cloneAgentTemplate = (agent: Agent): Agent => ({
   ...agent,
@@ -498,8 +499,34 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadLastConfig = useCallback(async (): Promise<boolean> => {
+    const applyConfig = (config: any) => {
+      if (!config) return false;
+      const agentsData = config.agents_data as any;
+      const edgesData = config.edges_data as any;
+      if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
+        loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout as LayoutData);
+      } else {
+        loadConfig(agentsData as Agent[], edgesData as Edge[]);
+      }
+      return true;
+    };
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
+
+    if (DEFAULT_CONFIG_NAME) {
+      const { data: defaultData, error: defaultError } = await supabase
+        .from("graph_configs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("name", DEFAULT_CONFIG_NAME)
+        .order("updated_at", { ascending: false })
+        .maybeSingle();
+      if (!defaultError && defaultData) {
+        if (applyConfig(defaultData)) return true;
+      }
+    }
+
     const { data, error } = await supabase
       .from("graph_configs")
       .select("*")
@@ -507,16 +534,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       .order("updated_at", { ascending: false })
       .limit(1);
     if (error || !data || data.length === 0) return false;
-    const config = data[0];
-    const agentsData = config.agents_data as any;
-    const edgesData = config.edges_data as any;
-    // Support new wrapped format: { agents: [...], layout: {...} }
-    if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
-      loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout as LayoutData);
-    } else {
-      loadConfig(agentsData as Agent[], edgesData as Edge[]);
-    }
-    return true;
+    return applyConfig(data[0]);
   }, [loadConfig]);
 
   const { pathname } = useLocation();
