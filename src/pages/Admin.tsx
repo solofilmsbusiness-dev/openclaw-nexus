@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAgents } from "@/contexts/AgentContext";
 import { statusColor } from "@/data/agents";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Skull, HeartPulse, Pencil, Check, X, LogOut, ArrowLeft, Zap, Settings, User, Layout, Database, Wrench } from "lucide-react";
+import { Shield, Skull, HeartPulse, Pencil, Check, X, LogOut, ArrowLeft, Zap, Settings, User, Layout, Database, Wrench, Video } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeSettings from "@/components/admin/ThemeSettings";
@@ -15,6 +15,7 @@ import ProfileSettings from "@/components/admin/ProfileSettings";
 import LayoutSettings from "@/components/admin/LayoutSettings";
 import DataManagement from "@/components/admin/DataManagement";
 import CustomToolkit from "@/components/admin/CustomToolkit";
+import HeyGenSettings from "@/components/admin/HeyGenSettings";
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -134,6 +135,9 @@ export default function Admin() {
               </TabsTrigger>
               <TabsTrigger value="users" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">USERS</TabsTrigger>
               <TabsTrigger value="system" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">SYSTEM</TabsTrigger>
+              <TabsTrigger value="heygen" className="text-[10px] font-mono tracking-wider data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Video className="w-3 h-3 mr-1" /> HEYGEN
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile"><ProfileSettings /></TabsContent>
@@ -144,6 +148,7 @@ export default function Admin() {
             <TabsContent value="toolkit"><CustomToolkit /></TabsContent>
             <TabsContent value="users"><UserManagement /></TabsContent>
             <TabsContent value="system"><SystemConfigSettings /></TabsContent>
+            <TabsContent value="heygen"><HeyGenSettings /></TabsContent>
           </Tabs>
         </div>
 

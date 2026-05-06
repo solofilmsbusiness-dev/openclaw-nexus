@@ -3,11 +3,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Globe, CheckSquare, Network, Calculator, ExternalLink } from "lucide-react";
+import { Plus, FileText, Globe, CheckSquare, Network, Calculator, ExternalLink, Clapperboard } from "lucide-react";
 import type { CustomPanelDef } from "@/contexts/TradingLayoutContext";
 import { useTradingLayout } from "@/contexts/TradingLayoutContext";
 import MiniAgentGraph from "./MiniAgentGraph";
 import CalculatorPanel from "./CalculatorPanel";
+import HyperFramesPanel from "./HyperFramesPanel";
 
 interface ChecklistItem {
   id: string;
@@ -24,6 +25,7 @@ export default function CustomPanel({ panel }: { panel: CustomPanelDef }) {
     checklist: <CheckSquare className="w-3.5 h-3.5" />,
     graph: <Network className="w-3.5 h-3.5" />,
     calculator: <Calculator className="w-3.5 h-3.5" />,
+    hyperframes: <Clapperboard className="w-3.5 h-3.5" />,
   };
   const icon = iconMap[panel.type] ?? <FileText className="w-3.5 h-3.5" />;
 
@@ -39,6 +41,7 @@ export default function CustomPanel({ panel }: { panel: CustomPanelDef }) {
       {panel.type === "checklist" && <ChecklistContent panel={panel} onUpdate={updateCustomPanel} />}
       {panel.type === "graph" && <MiniAgentGraph />}
       {panel.type === "calculator" && <CalculatorPanel />}
+      {panel.type === "hyperframes" && <HyperFramesPanel />}
     </>
   );
 }

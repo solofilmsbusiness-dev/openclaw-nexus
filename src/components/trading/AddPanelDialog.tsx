@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
-import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator, Search, BrainCircuit } from "lucide-react";
+import { Plus, FileText, Globe, CheckSquare, RotateCcw, ClipboardList, Shield, PenLine, Target, CalendarDays, TrendingUp, BookOpen, Clock, Link, ChevronRight, Network, Calculator, Search, BrainCircuit, Clapperboard } from "lucide-react";
 import { useTradingLayout, type CustomPanelType, type BuiltinPanelId } from "@/contexts/TradingLayoutContext";
 import TemplatePreview from "./TemplatePreview";
 
@@ -151,6 +151,14 @@ const PREMADE_TEMPLATES: PremadeTemplate[] = [
     icon: BrainCircuit,
     type: "notes" as CustomPanelType,
     content: "__builtin__ai-evaluator",
+  },
+  {
+    key: "hyperframes",
+    title: "HyperFrames",
+    description: "HTML-to-video composer powered by HeyGen",
+    icon: Clapperboard,
+    type: "hyperframes" as CustomPanelType,
+    content: "",
   },
 ];
 

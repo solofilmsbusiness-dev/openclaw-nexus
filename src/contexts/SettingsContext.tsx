@@ -34,6 +34,11 @@ export interface SystemConfig {
   logRetention: number;
 }
 
+export interface HeyGenConfig {
+  apiKey: string;
+  hyperFramesEnabled: boolean;
+}
+
 export interface ProfileSettings {
   displayName: string;
   avatar: string;
@@ -47,6 +52,7 @@ export interface SettingsState {
   layout: LayoutSettings;
   customTools: CustomTool[];
   profile: ProfileSettings;
+  heygen: HeyGenConfig;
 }
 
 interface SettingsContextValue extends SettingsState {
@@ -60,6 +66,7 @@ interface SettingsContextValue extends SettingsState {
   removeCustomTool: (id: string) => void;
   updateCustomTool: (id: string, updates: Partial<CustomTool>) => void;
   setProfile: (p: Partial<ProfileSettings>) => void;
+  setHeyGen: (h: Partial<HeyGenConfig>) => void;
 }
 
 const DEFAULTS: SettingsState = {
@@ -87,6 +94,10 @@ const DEFAULTS: SettingsState = {
   profile: {
     displayName: "",
     avatar: "",
+  },
+  heygen: {
+    apiKey: "",
+    hyperFramesEnabled: true,
   },
 };
 
@@ -128,6 +139,7 @@ function loadSettings(): SettingsState {
         layout: { ...DEFAULTS.layout, ...parsed.layout },
         profile: { ...DEFAULTS.profile, ...parsed.profile },
         customTools: parsed.customTools || [],
+        heygen: { ...DEFAULTS.heygen, ...parsed.heygen },
       };
     }
   } catch {}
@@ -203,12 +215,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setState((p) => ({ ...p, profile: { ...p.profile, ...partial } }));
   }, []);
 
+  const setHeyGen = useCallback((partial: Partial<HeyGenConfig>) => {
+    setState((p) => ({ ...p, heygen: { ...p.heygen, ...partial } }));
+  }, []);
+
   return (
     <SettingsContext.Provider
       value={{
         ...state,
         setAccentColor, setFontSize, setNotifications, setSystemConfig,
         setLayout, setLayoutPreset, addCustomTool, removeCustomTool, updateCustomTool, setProfile,
+        setHeyGen,
       }}
     >
       {children}
