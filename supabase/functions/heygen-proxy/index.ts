@@ -8,11 +8,41 @@ const corsHeaders = {
 
 const HEYGEN_BASE = "https://api.heygen.com";
 
+const DEFAULT_AVATAR_ID = "Angela-inblackskirt-20220820";
+const DEFAULT_VOICE_ID = "2d5b0e6cf36f460aa7fc47e3eee4ba54";
+
+interface Scene {
+  html?: string;
+  script?: string;
+  duration?: number;
+  avatarId?: string;
+  voiceId?: string;
+}
+
 function heygenHeaders(apiKey: string) {
   return {
     "X-Api-Key": apiKey,
     "Content-Type": "application/json",
     Accept: "application/json",
+  };
+}
+
+function sceneToVideoInput(scene: Scene) {
+  return {
+    character: {
+      type: "avatar",
+      avatar_id: scene.avatarId || DEFAULT_AVATAR_ID,
+      avatar_style: "normal",
+    },
+    voice: {
+      type: "text",
+      input_text: scene.script || "Hello from HyperFrames!",
+      voice_id: scene.voiceId || DEFAULT_VOICE_ID,
+    },
+    background: scene.html
+      ? { type: "html", html: scene.html }
+      : { type: "color", value: "#0a0a0f" },
+    ...(scene.duration ? { duration: scene.duration } : {}),
   };
 }
 
@@ -73,36 +103,22 @@ serve(async (req) => {
       }
 
       case "generate_video": {
-        const { title, avatarId, voiceId, script, backgroundHtml, width, height, duration } = body;
-
-        const videoPayload: Record<string, unknown> = {
-          video_inputs: [
-            {
-              character: {
-                type: "avatar",
-                avatar_id: avatarId || "Angela-inblackskirt-20220820",
-                avatar_style: "normal",
-              },
-              voice: {
-                type: "text",
-                input_text: script || "Hello from HyperFrames!",
-                voice_id: voiceId || "2d5b0e6cf36f460aa7fc47e3eee4ba54",
-              },
-              background: backgroundHtml
-                ? { type: "html", html: backgroundHtml }
-                : { type: "color", value: "#0a0a0f" },
-            },
-          ],
-          dimension: {
-            width: width || 1280,
-            height: height || 720,
-          },
-          title: title || "HyperFrames Video",
+        const { title, scenes, width, height } = body as {
+          title?: string;
+          scenes?: Scene[];
+          width?: number;
+          height?: number;
         };
 
-        if (duration) {
-          (videoPayload.video_inputs as Record<string, unknown>[])[0].duration = duration;
-        }
+        const sceneList: Scene[] = scenes && scenes.length > 0
+          ? scenes
+          : [{ html: body.backgroundHtml, script: body.script }];
+
+        const videoPayload = {
+          video_inputs: sceneList.map(sceneToVideoInput),
+          dimension: { width: width || 1280, height: height || 720 },
+          title: title || "HyperFrames Video",
+        };
 
         const res = await fetch(`${HEYGEN_BASE}/v2/video/generate`, {
           method: "POST",
