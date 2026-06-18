@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_config: {
+        Row: {
+          account_balance: number
+          auto_trade: boolean
+          avoid_news_minutes: number
+          created_at: string
+          daily_loss_limit: number
+          daily_profit_target: number
+          data_provider: string
+          data_proxy_symbol: string
+          htf_timeframe: string
+          id: string
+          ltf_timeframe: string
+          max_hold_minutes: number
+          min_rr: number
+          min_zone_touches: number
+          one_setup_per_zone_session: boolean
+          paper_symbol: string
+          point_value: number
+          profit_lock_rr: number
+          profit_lock_ticks: number
+          require_volume_expansion: boolean
+          risk_per_trade_pct: number
+          symbol: string
+          tick_size: number
+          updated_at: string
+        }
+        Insert: {
+          account_balance?: number
+          auto_trade?: boolean
+          avoid_news_minutes?: number
+          created_at?: string
+          daily_loss_limit?: number
+          daily_profit_target?: number
+          data_provider?: string
+          data_proxy_symbol?: string
+          htf_timeframe?: string
+          id?: string
+          ltf_timeframe?: string
+          max_hold_minutes?: number
+          min_rr?: number
+          min_zone_touches?: number
+          one_setup_per_zone_session?: boolean
+          paper_symbol?: string
+          point_value?: number
+          profit_lock_rr?: number
+          profit_lock_ticks?: number
+          require_volume_expansion?: boolean
+          risk_per_trade_pct?: number
+          symbol?: string
+          tick_size?: number
+          updated_at?: string
+        }
+        Update: {
+          account_balance?: number
+          auto_trade?: boolean
+          avoid_news_minutes?: number
+          created_at?: string
+          daily_loss_limit?: number
+          daily_profit_target?: number
+          data_provider?: string
+          data_proxy_symbol?: string
+          htf_timeframe?: string
+          id?: string
+          ltf_timeframe?: string
+          max_hold_minutes?: number
+          min_rr?: number
+          min_zone_touches?: number
+          one_setup_per_zone_session?: boolean
+          paper_symbol?: string
+          point_value?: number
+          profit_lock_rr?: number
+          profit_lock_ticks?: number
+          require_volume_expansion?: boolean
+          risk_per_trade_pct?: number
+          symbol?: string
+          tick_size?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agent_decisions: {
+        Row: {
+          created_at: string
+          decision: string
+          entry: number | null
+          htf_bias: string | null
+          id: string
+          reason: string | null
+          rr: number | null
+          snapshot: Json | null
+          steps_passed: Json
+          stop: number | null
+          symbol: string
+          target: number | null
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          entry?: number | null
+          htf_bias?: string | null
+          id?: string
+          reason?: string | null
+          rr?: number | null
+          snapshot?: Json | null
+          steps_passed?: Json
+          stop?: number | null
+          symbol: string
+          target?: number | null
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          entry?: number | null
+          htf_bias?: string | null
+          id?: string
+          reason?: string | null
+          rr?: number | null
+          snapshot?: Json | null
+          steps_passed?: Json
+          stop?: number | null
+          symbol?: string
+          target?: number | null
+        }
+        Relationships: []
+      }
       graph_configs: {
         Row: {
           agents_data: Json
@@ -212,6 +338,77 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      paper_positions: {
+        Row: {
+          closed_at: string | null
+          contracts: number
+          decision_id: string | null
+          entry_price: number
+          exit_price: number | null
+          exit_reason: string | null
+          id: string
+          initial_stop: number
+          lock_active: boolean
+          opened_at: string
+          pnl: number | null
+          session_date: string
+          side: string
+          status: string
+          stop_price: number
+          symbol: string
+          target_price: number
+          zone_key: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          contracts?: number
+          decision_id?: string | null
+          entry_price: number
+          exit_price?: number | null
+          exit_reason?: string | null
+          id?: string
+          initial_stop: number
+          lock_active?: boolean
+          opened_at?: string
+          pnl?: number | null
+          session_date?: string
+          side: string
+          status?: string
+          stop_price: number
+          symbol: string
+          target_price: number
+          zone_key?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          contracts?: number
+          decision_id?: string | null
+          entry_price?: number
+          exit_price?: number | null
+          exit_reason?: string | null
+          id?: string
+          initial_stop?: number
+          lock_active?: boolean
+          opened_at?: string
+          pnl?: number | null
+          session_date?: string
+          side?: string
+          status?: string
+          stop_price?: number
+          symbol?: string
+          target_price?: number
+          zone_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paper_positions_decision_id_fkey"
+            columns: ["decision_id"]
+            isOneToOne: false
+            referencedRelation: "agent_decisions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_jobs: {
         Row: {
