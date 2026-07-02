@@ -156,7 +156,9 @@ export function useTradingSimulation() {
           if (valid.length > 0) return valid;
         }
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Could not read active symbols from localStorage:", e);
+    }
     return DEFAULT_ACTIVE;
   });
 
@@ -477,19 +479,9 @@ export function useTradingSimulation() {
         pnl,
         timestamp: new Date(),
       };
+      // Simulated trades stay in memory only — persisting them grew the DB
+      // unboundedly (one row every 10s per open session).
       setTradeHistory((prev) => [tradeEntry, ...prev].slice(0, 50));
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        supabase.from("trade_history").insert({
-          user_id: session.user.id,
-          type: action,
-          asset: inst.symbol,
-          entry_price: tradeEntry.entryPrice,
-          exit_price: exitPrice,
-          pnl,
-        }).then(() => {});
-      }
     }, 10000);
     return () => clearInterval(interval);
   }, [dbLoaded, activeSymbols]);
@@ -501,16 +493,8 @@ export function useTradingSimulation() {
       const idx = noteIndexRef.current % LEARNING_TEMPLATES.length;
       noteIndexRef.current++;
       const note = { id: uid(), ...LEARNING_TEMPLATES[idx], timestamp: new Date() };
+      // Simulated notes stay in memory only (see trade simulation above).
       setLearningNotes((prev) => [note, ...prev].slice(0, 20));
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        supabase.from("learning_notes").insert({
-          user_id: session.user.id,
-          category: note.category,
-          content: note.content,
-        }).then(() => {});
-      }
     }, 15000);
     return () => clearInterval(interval);
   }, [dbLoaded]);
@@ -637,12 +621,14 @@ export function useTradingSimulation() {
 
   const deleteTrade = useCallback(async (id: string) => {
     setTradeHistory((prev) => prev.filter((t) => t.id !== id));
-    await supabase.from("trade_history").delete().eq("id", id);
+    const { error } = await supabase.from("trade_history").delete().eq("id", id);
+    if (error) console.error("Failed to delete trade:", error.message);
   }, []);
 
   const deleteLearningNote = useCallback(async (id: string) => {
     setLearningNotes((prev) => prev.filter((n) => n.id !== id));
-    await supabase.from("learning_notes").delete().eq("id", id);
+    const { error } = await supabase.from("learning_notes").delete().eq("id", id);
+    if (error) console.error("Failed to delete note:", error.message);
   }, []);
 
   const addLearningNote = useCallback(async (category: LearningNote["category"], content: string) => {
@@ -650,12 +636,13 @@ export function useTradingSimulation() {
     setLearningNotes((prev) => [note, ...prev].slice(0, 20));
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      await supabase.from("learning_notes").insert({
+      const { error } = await supabase.from("learning_notes").insert({
         id: note.id,
         user_id: session.user.id,
         category: note.category,
         content: note.content,
       });
+      if (error) console.error("Failed to save note:", error.message);
     }
   }, []);
 

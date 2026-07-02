@@ -104,7 +104,9 @@ function loadState(): LayoutState {
       }
       return parsed;
     }
-  } catch {}
+  } catch (e) {
+    console.warn("Corrupted trading layout in localStorage — resetting to defaults:", e);
+    localStorage.removeItem(STORAGE_KEY);}
   return {
     panels: computePositions(ALL_BUILTINS.map((id) => ({ id, isCustom: false })), 2),
     customPanels: [],

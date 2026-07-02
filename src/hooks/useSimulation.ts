@@ -60,7 +60,9 @@ export function useSimulation(
       if (parsed.system?.simulationSpeed) simulationSpeed = parsed.system.simulationSpeed;
       if (parsed.system?.logRetention) logRetention = parsed.system.logRetention;
     }
-  } catch {}
+  } catch (e) {
+    console.warn("Could not read simulation settings from localStorage:", e);
+  }
 
   const agentsRef = useRef(agents);
   agentsRef.current = agents;

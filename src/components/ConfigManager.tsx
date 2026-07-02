@@ -85,10 +85,10 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
   };
 
   const handleLoad = (config: GraphConfig) => {
-    const agentsData = config.agents_data as any;
-    const edgesData = config.edges_data as any;
+    const agentsData = config.agents_data as unknown as { agents?: Agent[]; layout?: unknown } | Agent[];
+    const edgesData = config.edges_data as unknown as Edge[];
     if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
-      loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout);
+      loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout as Parameters<typeof loadConfig>[2]);
     } else {
       loadConfig(agentsData as Agent[], edgesData as Edge[]);
     }

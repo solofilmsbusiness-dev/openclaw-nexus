@@ -46,11 +46,18 @@ Deno.serve(async (req) => {
     if (action === "add") {
       if (!email) return new Response(JSON.stringify({ error: "Email required" }), { status: 400, headers: corsHeaders });
 
-      // Look up user by email
-      const { data: { users }, error: listErr } = await serviceClient.auth.admin.listUsers();
-      if (listErr) throw listErr;
-
-      const user = users?.find((u: any) => u.email === email);
+      // Look up user by email (paginated — listUsers only returns 50/page by default)
+      let user: { id: string; email?: string } | undefined;
+      let page = 1;
+      const perPage = 1000;
+      while (!user) {
+        const { data, error: listErr } = await serviceClient.auth.admin.listUsers({ page, perPage });
+        if (listErr) throw listErr;
+        const users = data?.users ?? [];
+        user = users.find((u: { id: string; email?: string }) => u.email?.toLowerCase() === String(email).toLowerCase());
+        if (users.length < perPage) break; // last page reached
+        page++;
+      }
       if (!user) {
         return new Response(JSON.stringify({ error: "User not found — they must sign up first" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -85,6 +92,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: corsHeaders });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    console.error("manage-admin error:", e);
+    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

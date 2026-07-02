@@ -192,7 +192,7 @@ const Trading = () => {
       default:
         return null;
     }
-  }, [tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, portfolio, deleteTrade, deleteLearningNote, showNoteForm, noteCategory, noteContent, handleAddNote, layout.customPanels]);
+  }, [tickers, activeSymbols, setActiveSymbols, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, portfolio, deleteTrade, deleteLearningNote, showNoteForm, noteCategory, noteContent, handleAddNote, layout.customPanels]);
 
   if (!authChecked) {
     return (

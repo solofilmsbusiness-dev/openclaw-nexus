@@ -146,8 +146,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       .limit(1);
     if (error || !data || data.length === 0) return false;
     const config = data[0];
-    const agentsData = config.agents_data as any;
-    const edgesData = config.edges_data as any;
+    const agentsData = config.agents_data as unknown as { agents?: Agent[]; layout?: unknown } | Agent[];
+    const edgesData = config.edges_data as unknown as Edge[];
     // Support new wrapped format: { agents: [...], layout: {...} }
     if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
       loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout as LayoutData);

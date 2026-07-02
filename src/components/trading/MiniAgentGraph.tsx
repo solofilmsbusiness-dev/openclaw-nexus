@@ -94,7 +94,9 @@ export default function MiniAgentGraph() {
     try {
       const saved = localStorage.getItem(LS_SCALES_KEY);
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch {
+      // Ignore corrupted localStorage; fall back to defaults
+    }
     return { researcher: 1, analyst: 1, strategist: 1, executor: 1 };
   });
 
@@ -134,7 +136,7 @@ export default function MiniAgentGraph() {
   const getNodeH = useCallback((id: PipelineId) => BASE_NODE_H * nodeScales[id], [nodeScales]);
 
   const nodePositions = useMemo(() => {
-    const positions: Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }> = {} as any;
+    const positions = {} as Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }>;
     // Calculate total width
     let totalW = 0;
     PIPELINE_AGENTS.forEach((a, i) => {
@@ -215,8 +217,13 @@ export default function MiniAgentGraph() {
   const phaseTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const advancePhase = useCallback((agentId: PipelineId, maxPhase: number, extras: Record<string, string>, symbol: string) => {
-    // Clear existing timer
-    if (phaseTimers.current[agentId]) clearTimeout(phaseTimers.current[agentId]);
+    // Clear ALL existing timers for this agent (main + per-phase keys)
+    for (const key of Object.keys(phaseTimers.current)) {
+      if (key === agentId || key.startsWith(`${agentId}-`)) {
+        clearTimeout(phaseTimers.current[key]);
+        delete phaseTimers.current[key];
+      }
+    }
 
     setNodePhases((prev) => ({
       ...prev,
@@ -246,6 +253,14 @@ export default function MiniAgentGraph() {
     }, idleDelay);
   }, []);
 
+  // Clean up all phase timers on unmount
+  useEffect(() => {
+    const timers = phaseTimers.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
   // Trigger Researcher + Analyst on new evaluations
   const prevEvalCount = useRef(evaluations.length);
   useEffect(() => {
@@ -257,12 +272,14 @@ export default function MiniAgentGraph() {
         value: ind?.value || "—",
       }, e.symbol);
       // Analyst starts 2s after researcher
-      setTimeout(() => {
+      const analystTimer = setTimeout(() => {
         advancePhase("analyst", 3, {
           indicator: ind?.name || "MACD",
           value: ind?.value || "—",
         }, e.symbol);
       }, 2000);
+      prevEvalCount.current = evaluations.length;
+      return () => clearTimeout(analystTimer);
     }
     prevEvalCount.current = evaluations.length;
   }, [evaluations.length, evaluations, advancePhase]);
@@ -347,14 +364,16 @@ export default function MiniAgentGraph() {
     // Burst on connector 0-1 when new eval
     if (evaluations.length > 0) {
       setBurstConnectors(new Set([0]));
-      setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.add(1); return n; }), 2000);
-      setTimeout(() => setBurstConnectors(new Set()), 4000);
+      const t1 = setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.add(1); return n; }), 2000);
+      const t2 = setTimeout(() => setBurstConnectors(new Set()), 4000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [evaluations.length]);
   useEffect(() => {
     if (considerations.length > 0) {
       setBurstConnectors((prev) => new Set(prev).add(2));
-      setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.delete(2); return n; }), 2500);
+      const t = setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.delete(2); return n; }), 2500);
+      return () => clearTimeout(t);
     }
   }, [considerations.length]);
 

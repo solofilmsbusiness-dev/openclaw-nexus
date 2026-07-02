@@ -27,14 +27,18 @@ function loadBgSettings(): BgSettings {
   try {
     const stored = localStorage.getItem(BG_STORAGE_KEY);
     if (stored) return { ...DEFAULT_BG, ...JSON.parse(stored) };
-  } catch {}
+  } catch {
+    // Ignore corrupted localStorage; fall back to defaults
+  }
   return DEFAULT_BG;
 }
 
 function saveBgSettings(settings: BgSettings) {
   try {
     localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(settings));
-  } catch {}
+  } catch {
+    // Storage may be full or unavailable — non-fatal
+  }
 }
 
 const CORE_X = 400;

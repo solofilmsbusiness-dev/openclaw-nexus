@@ -130,7 +130,10 @@ function loadSettings(): SettingsState {
         customTools: parsed.customTools || [],
       };
     }
-  } catch {}
+  } catch (e) {
+    console.warn("Corrupted settings in localStorage — resetting to defaults:", e);
+    localStorage.removeItem(STORAGE_KEY);
+  }
   return DEFAULTS;
 }
 

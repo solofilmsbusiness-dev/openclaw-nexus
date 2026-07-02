@@ -37,6 +37,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Cap request size to prevent quota abuse / DoS
+    if (symbols.length > 20) {
+      return new Response(JSON.stringify({ error: 'Maximum 20 symbols per request' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Only allow well-formed ticker symbols
+    const SYMBOL_RE = /^[A-Za-z0-9.=-]{1,10}$/;
+    const invalid = symbols.filter((s: unknown) => typeof s !== 'string' || !SYMBOL_RE.test(s));
+    if (invalid.length > 0) {
+      return new Response(JSON.stringify({ error: 'Invalid symbol format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const results: Record<string, unknown> = {};
     const now = Date.now();
 
@@ -53,7 +71,7 @@ Deno.serve(async (req) => {
       const querySym = FUTURES_SYMBOLS.has(sym) ? `${sym}=F` : sym;
 
       // Fetch GLOBAL_QUOTE for current price data
-      const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${querySym}&apikey=${API_KEY}`;
+      const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(querySym)}&apikey=${API_KEY}`;
       const quoteRes = await fetch(quoteUrl);
       const quoteJson = await quoteRes.json();
 

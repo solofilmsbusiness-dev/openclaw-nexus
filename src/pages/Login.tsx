@@ -111,8 +111,8 @@ export default function Login() {
         const isAdmin = roles?.some((r) => r.role === "admin");
         navigate(isAdmin ? "/" : "/trading");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }

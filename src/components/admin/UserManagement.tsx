@@ -38,8 +38,8 @@ export default function UserManagement() {
       toast.success(`Admin added: ${email.trim()}`);
       setEmail("");
       fetchAdmins();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to add admin");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to add admin");
     }
     setAdding(false);
   };
@@ -54,8 +54,8 @@ export default function UserManagement() {
       toast.success("Admin removed");
       setRemoveConfirm(null);
       fetchAdmins();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to remove admin");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to remove admin");
     }
   };
 

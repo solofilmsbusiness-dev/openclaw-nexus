@@ -1,10 +1,10 @@
 project_id = "zlsxhwflmzhbcwgxnldp"
 
 [functions.manage-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.market-data]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-evaluate]
-verify_jwt = false
+verify_jwt = true

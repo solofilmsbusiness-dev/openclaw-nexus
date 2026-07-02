@@ -8,15 +8,24 @@ import { AgentProvider } from "@/contexts/AgentContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { TradingLayoutProvider } from "@/contexts/TradingLayoutContext";
 import { AnimatePresence, motion } from "framer-motion";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Admin from "./pages/Admin";
-import Trading from "./pages/Trading";
-import Calendar from "./pages/Calendar";
-import Profile from "./pages/Profile";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import NotFound from "./pages/NotFound";
+import { lazy, Suspense } from "react";
+
+// Route-level code splitting keeps the initial bundle small
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Trading = lazy(() => import("./pages/Trading"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Profile = lazy(() => import("./pages/Profile"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const RouteLoader = () => (
+  <div className="h-screen bg-background flex items-center justify-center">
+    <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -39,6 +48,7 @@ function AnimatedRoutes() {
         transition={{ duration: 0.2 }}
         className="h-full"
       >
+        <Suspense fallback={<RouteLoader />}>
         <Routes location={location}>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
@@ -50,6 +60,7 @@ function AnimatedRoutes() {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );

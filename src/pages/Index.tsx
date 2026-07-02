@@ -22,7 +22,11 @@ const Index = () => {
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const { loadLastConfig } = useAgents();
+  const {
+    agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
+    handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
+    handleAddEdge, handleDeleteEdge, loadLastConfig,
+  } = useAgents();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -31,12 +35,11 @@ const Index = () => {
         navigate("/login", { replace: true });
         return;
       }
-      // Guard: only admins can access dashboard
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-      const isAdmin = roles?.some((r) => r.role === "admin");
+      // Guard: only admins can access dashboard (has_role RPC, consistent with other pages)
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: session.user.id,
+        _role: "admin",
+      });
       if (!isAdmin) {
         navigate("/trading", { replace: true });
         return;
@@ -55,12 +58,6 @@ const Index = () => {
       </div>
     );
   }
-
-  const {
-    agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
-    handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
-    handleAddEdge, handleDeleteEdge,
-  } = useAgents();
 
   return (
     <div className={`h-screen bg-background flex flex-col overflow-hidden ${layout.compactMode ? "text-[0.9em]" : ""}`}>
