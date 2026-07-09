@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 
 export type BuiltinPanelId = "market" | "agent" | "history" | "journal" | "portfolio" | "watchlist" | "analytics" | "ai-evaluator";
 
-export type CustomPanelType = "notes" | "embed" | "checklist" | "graph" | "calculator";
+export type CustomPanelType = "notes" | "embed" | "checklist" | "graph" | "calculator" | "hyperframes";
 
 export interface CustomPanelDef {
   id: string;
