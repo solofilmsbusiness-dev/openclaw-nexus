@@ -19,11 +19,12 @@ export default function PageNav() {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-      setIsAdmin(roles?.some((r) => r.role === "admin") ?? false);
+      const { data, error } = await supabase.rpc("has_role", {
+        _user_id: session.user.id,
+        _role: "admin",
+      });
+      if (error) console.error("Failed to verify admin role:", error);
+      setIsAdmin(data === true);
     })();
   }, []);
 
