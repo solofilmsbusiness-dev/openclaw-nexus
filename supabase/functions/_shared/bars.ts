@@ -167,12 +167,12 @@ export async function fetchBars(proxySymbol: string, timeframe: string): Promise
 
 async function alphavantage(symbol: string, tf: string): Promise<Bar[]> {
   if (tf === "1d" || tf === "daily") {
-    return await av({ function: "TIME_SERIES_DAILY", symbol: proxySymbol, outputsize: "compact" });
+    return await av({ function: "TIME_SERIES_DAILY", symbol, outputsize: "compact" });
   }
   if (tf === "4h") {
     const hourly = await av({
       function: "TIME_SERIES_INTRADAY",
-      symbol: proxySymbol,
+      symbol,
       interval: "60min",
       outputsize: "full",
     });
@@ -181,10 +181,43 @@ async function alphavantage(symbol: string, tf: string): Promise<Bar[]> {
   const interval = tf === "5m" ? "5min" : tf === "15m" ? "15min" : tf === "1h" ? "60min" : "5min";
   return await av({
     function: "TIME_SERIES_INTRADAY",
-    symbol: proxySymbol,
+    symbol,
     interval,
     outputsize: "full",
   });
+}
+
+/**
+ * Adapter registry. Swap providers by setting agent_config.data_provider
+ * (or the DATA_PROVIDER env var) to a key below — no other code changes needed.
+ */
+export const PROVIDERS: Record<string, BarProvider> = {
+  yahoo,
+  polygon,
+  alphavantage,
+};
+
+let providerOverride: string | null = null;
+
+/** Called once per tick with agent_config.data_provider. */
+export function setProvider(name?: string | null) {
+  providerOverride = name && PROVIDERS[name] ? name : null;
+}
+
+function providerFor(_tf: string): BarProvider {
+  const name =
+    providerOverride ??
+    (Deno.env.get("DATA_PROVIDER") && PROVIDERS[Deno.env.get("DATA_PROVIDER")!]
+      ? Deno.env.get("DATA_PROVIDER")!
+      : null);
+  if (name) {
+    const chosen = PROVIDERS[name];
+    if (name === "polygon" && !Deno.env.get("POLYGON_API_KEY")) return yahoo;
+    if (name === "alphavantage" && !Deno.env.get("ALPHA_VANTAGE_API_KEY")) return yahoo;
+    return chosen;
+  }
+  // Keyless default.
+  return yahoo;
 }
 
 export function lastPrice(bars: Bar[]): number | null {
