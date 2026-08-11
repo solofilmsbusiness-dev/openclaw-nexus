@@ -241,6 +241,7 @@ export default function MarketChart({ compact = false, className = "", height }:
       volumeRef.current.setData(vols);
     }
 
+    (window as unknown as Record<string, unknown>).__mc = { chart: chartRef.current, candle, n: candles.length, first: candles[0], last: candles[candles.length-1] };
     if (!fittedRef.current) {
       chartRef.current?.timeScale().fitContent();
       fittedRef.current = true;
