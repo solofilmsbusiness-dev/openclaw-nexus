@@ -169,7 +169,8 @@ export default function MarketChart({ compact = false, className = "", height }:
         horzLine: { color: "rgba(148,163,184,0.5)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#1e293b" },
       },
       localization: {
-        timeFormatter: (t: number) => new Date((t as number) * 1000).toLocaleString(undefined, { hour12: false }),
+        locale: "en-US",
+        timeFormatter: (t: number) => new Date((t as number) * 1000).toLocaleString("en-US", { hour12: false }),
       },
       width: el.clientWidth || 600,
       height: el.clientHeight || 400,
