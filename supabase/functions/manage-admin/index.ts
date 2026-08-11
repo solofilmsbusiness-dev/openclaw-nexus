@@ -46,11 +46,17 @@ Deno.serve(async (req) => {
     if (action === "add") {
       if (!email) return new Response(JSON.stringify({ error: "Email required" }), { status: 400, headers: corsHeaders });
 
-      // Look up user by email
-      const { data: { users }, error: listErr } = await serviceClient.auth.admin.listUsers();
-      if (listErr) throw listErr;
-
-      const user = users?.find((u: any) => u.email === email);
+      // Look up user by email — paginate past the default 50-user page
+      const target = String(email).trim().toLowerCase();
+      let user: { id: string; email?: string } | undefined;
+      const perPage = 200;
+      for (let page = 1; page <= 50 && !user; page++) {
+        const { data: pageData, error: listErr } = await serviceClient.auth.admin.listUsers({ page, perPage });
+        if (listErr) throw listErr;
+        const users = pageData?.users ?? [];
+        user = users.find((u: any) => (u.email ?? "").toLowerCase() === target);
+        if (users.length < perPage) break;
+      }
       if (!user) {
         return new Response(JSON.stringify({ error: "User not found — they must sign up first" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -85,6 +91,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: corsHeaders });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    console.error("manage-admin error:", e instanceof Error ? e.message : e);
+    return new Response(JSON.stringify({ error: "Request failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -15,9 +15,20 @@ const FUTURES_SYMBOLS = new Set([
   "MES", "MNQ", "ZC", "ZS", "ZW", "HG",
 ]);
 
+const MAX_SYMBOLS = 20;
+const SYMBOL_RE = /^[A-Z0-9]{1,6}$/;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   const API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
@@ -36,12 +47,23 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    if (symbols.length > MAX_SYMBOLS) {
+      return new Response(JSON.stringify({ error: `Too many symbols (max ${MAX_SYMBOLS})` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const results: Record<string, unknown> = {};
     const now = Date.now();
 
     for (const symbol of symbols) {
       const sym = String(symbol).toUpperCase();
+
+      if (!SYMBOL_RE.test(sym)) {
+        results[sym] = { error: 'Invalid symbol', symbol: sym };
+        continue;
+      }
 
       // Check cache
       if (cache[sym] && now - cache[sym].ts < CACHE_TTL_MS) {
@@ -53,7 +75,7 @@ Deno.serve(async (req) => {
       const querySym = FUTURES_SYMBOLS.has(sym) ? `${sym}=F` : sym;
 
       // Fetch GLOBAL_QUOTE for current price data
-      const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${querySym}&apikey=${API_KEY}`;
+      const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(querySym)}&apikey=${encodeURIComponent(API_KEY)}`;
       const quoteRes = await fetch(quoteUrl);
       const quoteJson = await quoteRes.json();
 
@@ -97,7 +119,7 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('market-data error:', msg);
-    return new Response(JSON.stringify({ error: msg }), {
+    return new Response(JSON.stringify({ error: 'Request failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
