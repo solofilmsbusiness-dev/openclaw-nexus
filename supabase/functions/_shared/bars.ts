@@ -9,6 +9,62 @@ export interface Bar {
 
 const AV = "https://www.alphavantage.co/query";
 const POLY = "https://api.polygon.io";
+const YF = "https://query1.finance.yahoo.com/v8/finance/chart";
+
+/**
+ * Pluggable market-data adapters.
+ * Each adapter takes (symbol, timeframe) and returns ascending OHLCV bars.
+ * Selection order: agent_config.data_provider -> yahoo (keyless default).
+ */
+export type BarProvider = (symbol: string, tf: string) => Promise<Bar[]>;
+
+function tfToYahoo(tf: string): { interval: string; range: string; agg: number } {
+  switch (tf) {
+    case "1d":
+    case "daily":
+      return { interval: "1d", range: "2y", agg: 1 };
+    case "4h":
+      return { interval: "1h", range: "60d", agg: 4 };
+    case "1h":
+      return { interval: "1h", range: "60d", agg: 1 };
+    case "15m":
+      return { interval: "15m", range: "30d", agg: 1 };
+    case "1m":
+      return { interval: "1m", range: "5d", agg: 1 };
+    default:
+      return { interval: "5m", range: "20d", agg: 1 };
+  }
+}
+
+/** Yahoo Finance chart API — no API key required. Supports NQ=F directly. */
+async function yahoo(symbol: string, tf: string): Promise<Bar[]> {
+  const { interval, range, agg } = tfToYahoo(tf);
+  const url = `${YF}/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&includePrePost=true`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) throw new Error(`yahoo error ${res.status}`);
+  const body = await res.json();
+  const err = body?.chart?.error;
+  if (err) throw new Error(`yahoo error: ${err?.description ?? JSON.stringify(err)}`);
+  const result = body?.chart?.result?.[0];
+  const ts: number[] = result?.timestamp ?? [];
+  const q = result?.indicators?.quote?.[0];
+  if (!ts.length || !q) throw new Error("yahoo returned no bars");
+  const bars: Bar[] = [];
+  for (let i = 0; i < ts.length; i++) {
+    const o = q.open?.[i], h = q.high?.[i], l = q.low?.[i], c = q.close?.[i];
+    if (![o, h, l, c].every((n) => typeof n === "number" && Number.isFinite(n))) continue;
+    bars.push({ t: ts[i] * 1000, o, h, l, c, v: Number(q.volume?.[i] ?? 0) });
+  }
+  if (!bars.length) throw new Error("yahoo returned no usable bars");
+  bars.sort((a, b) => a.t - b.t);
+  return aggregate(bars, agg);
+}
 
 function tfToPoly(tf: string): { mult: number; span: string; agg: number; days: number } {
   switch (tf) {
@@ -106,15 +162,10 @@ export function aggregate(bars: Bar[], factor: number): Bar[] {
  */
 export async function fetchBars(proxySymbol: string, timeframe: string): Promise<Bar[]> {
   const tf = timeframe.toLowerCase();
+  return await providerFor(tf)(proxySymbol, tf);
+}
 
-  if (Deno.env.get("POLYGON_API_KEY")) {
-    try {
-      return await polygon(proxySymbol, tf);
-    } catch (err) {
-      console.warn("polygon fetch failed, falling back to alphavantage:", String(err));
-    }
-  }
-
+async function alphavantage(symbol: string, tf: string): Promise<Bar[]> {
   if (tf === "1d" || tf === "daily") {
     return await av({ function: "TIME_SERIES_DAILY", symbol: proxySymbol, outputsize: "compact" });
   }
