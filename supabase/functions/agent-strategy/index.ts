@@ -247,17 +247,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, ...hold(`daily loss limit hit (${realized.toFixed(2)})`, {}, bias) });
     }
 
-    /* ---------- one position at a time ---------- */
-    const { data: open } = await sb
-      .from("paper_positions")
-      .select("id")
-      .eq("status", "OPEN")
-      .limit(1);
-    if (open && open.length) {
-      return json({ ok: true, ...hold("position already open — never add to a trade", {}, bias) });
-    }
-
-    /* ---------- TradingView signals ---------- */
+    /* ---------- TradingView signals (any timeframe: 5m, 30m, ...) ---------- */
     const ttlCutoff = new Date(Date.now() - cfg.tv_signal_ttl_minutes * 60_000).toISOString();
     const { data: sigs } = await sb
       .from("tradingview_signals")
@@ -275,7 +265,104 @@ Deno.serve(async (req) => {
         .update({ consumed: true, consumed_at: new Date().toISOString(), consume_reason: "expired" })
         .in("id", stale.map((s) => s.id));
     }
-    const tv = relevant.find((s) => s.received_at >= ttlCutoff) ?? null;
+
+    const consume = async (ids: string | string[], reason: string) => {
+      const list = Array.isArray(ids) ? ids : [ids];
+      if (!list.length) return;
+      await sb.from("tradingview_signals")
+        .update({ consumed: true, consumed_at: new Date().toISOString(), consume_reason: reason })
+        .in("id", list);
+    };
+
+    // Fresh (in-TTL) signals, newest first. Both 5m and 30m alerts are valid triggers.
+    const fresh = relevant.filter((s) => s.received_at >= ttlCutoff);
+    const tfOf = (s: any) => String(s?.timeframe ?? "unknown");
+
+    /* ---------- one position at a time + reversal warnings ---------- */
+    const { data: openPositions } = await sb
+      .from("paper_positions")
+      .select("*")
+      .eq("status", "OPEN");
+
+    if (openPositions && openPositions.length) {
+      const pos: any = openPositions[0];
+      const posDir: Dir = pos.side === "LONG" ? "long" : "short";
+      const opposite = fresh.filter((s) => (s.direction === "buy" ? "long" : "short") !== posDir);
+
+      if (opposite.length) {
+        const price = Number(research.proxyPrice ?? NaN);
+        const newest = opposite[0];
+        const tfs = opposite.map(tfOf).join(",");
+        await consume(opposite.map((s) => s.id), "reversal-warning (not traded)");
+
+        const inProfit = Number.isFinite(price) &&
+          (posDir === "long" ? price > Number(pos.entry_price) : price < Number(pos.entry_price));
+
+        if (inProfit) {
+          const pts = posDir === "long"
+            ? price - Number(pos.entry_price)
+            : Number(pos.entry_price) - price;
+          const pnl = pts * Number(cfg.point_value) * Number(pos.contracts);
+          await sb.from("paper_positions").update({
+            status: "CLOSED",
+            exit_price: price,
+            exit_reason: "reversal-warning: banked profit on opposite signal",
+            pnl,
+            closed_at: new Date().toISOString(),
+          }).eq("id", pos.id).eq("status", "OPEN");
+          await logEvent(sb, pos.id, "REVERSAL_CLOSE",
+            `reversal-warning: opposite ${newest.direction} signal (${tfs}) while in profit — closed at market`,
+            { price, pnl, tv_signal_ids: opposite.map((s) => s.id), timeframes: opposite.map(tfOf) });
+          return json({
+            ok: true,
+            ...hold(
+              `reversal-warning: opposite ${newest.direction} signal (${tfs}) while in profit — position closed at ${price} for ${pnl.toFixed(2)}`,
+              {}, bias,
+              { source: "reversal-warning", tv_signal_id: newest.id, tv_timeframe: tfOf(newest) } as any,
+            ),
+          });
+        }
+
+        // Not in profit: tighten the stop toward entry, never widen.
+        const entry = Number(pos.entry_price);
+        const cur = Number(pos.stop_price);
+        const tightened = posDir === "long" ? Math.max(cur, entry) : Math.min(cur, entry);
+        if (tightened !== cur) {
+          await sb.from("paper_positions").update({ stop_price: tightened })
+            .eq("id", pos.id).eq("status", "OPEN");
+        }
+        await logEvent(sb, pos.id, "REVERSAL_WARNING",
+          `reversal-warning: stop tightened ${cur} -> ${tightened}`,
+          { from: cur, to: tightened, price, tv_signal_ids: opposite.map((s) => s.id), timeframes: opposite.map(tfOf) });
+        return json({
+          ok: true,
+          ...hold(
+            `reversal-warning: stop tightened (${cur} -> ${tightened}) after opposite ${newest.direction} signal (${tfs})`,
+            {}, bias,
+            { source: "reversal-warning", tv_signal_id: newest.id, tv_timeframe: tfOf(newest) } as any,
+          ),
+        });
+      }
+
+      return json({ ok: true, ...hold("position already open — never add to a trade", {}, bias) });
+    }
+
+    /* ---------- conflicting fresh signals ---------- */
+    const hasBuy = fresh.some((s) => s.direction === "buy");
+    const hasSell = fresh.some((s) => s.direction === "sell");
+    if (hasBuy && hasSell) {
+      await consume(fresh.map((s) => s.id), "conflicting signals");
+      return json({
+        ok: true,
+        ...hold(
+          `conflicting fresh TradingView signals (${fresh.map((s) => `${s.direction}@${tfOf(s)}`).join(", ")}) — standing aside`,
+          {}, bias, { tv_timeframe: fresh.map(tfOf).join(",") } as any,
+        ),
+      });
+    }
+    // Signals agree (or there is only one): use the most recent one.
+    const tv = fresh[0] ?? null;
+    const tvTimeframe = tv ? tfOf(tv) : null;
 
     /* ---------- BRT deterministic gate ---------- */
     const setups: any[] = research.setups ?? [];
