@@ -6,6 +6,7 @@ import {
   closeContract,
   modifyOrder,
   placeBracket,
+  realizedPnl,
   resolveAccount,
   resolveContract,
 } from "../_shared/topstepx.ts";
@@ -99,12 +100,17 @@ Deno.serve(async (req) => {
           cancels.push({ orderId: oid, ok: c.ok, body: c.body });
         }
       }
+      // Realized P/L straight from TopstepX fills (authoritative when present).
+      const since = String(body.opened_at ?? new Date(Date.now() - 24 * 3600_000).toISOString());
+      const fills = await realizedPnl(account.id, contract.id, since).catch(() => ({
+        pnl: null, fills: 0, lastPrice: null,
+      }));
       if (positionId) {
         await logEvent(sb, positionId, "TOPSTEP_CLOSED",
           `TopstepX flattened ${contract.name} (${body.reason ?? "n/a"})`,
-          { closed: closed.body, cancels, ...base });
+          { closed: closed.body, cancels, fills, ...base });
       }
-      return json({ ok: closed.ok, action, closed: closed.body, cancels });
+      return json({ ok: closed.ok, action, closed: closed.body, cancels, fills });
     }
 
     return json({ ok: false, error: `unknown action "${action}"` });
