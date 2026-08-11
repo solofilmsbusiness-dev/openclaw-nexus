@@ -8,3 +8,21 @@ verify_jwt = false
 
 [functions.ai-evaluate]
 verify_jwt = false
+
+[functions.agent-cron]
+verify_jwt = false
+
+[functions.agent-tick]
+verify_jwt = false
+
+[functions.agent-research]
+verify_jwt = false
+
+[functions.agent-strategy]
+verify_jwt = false
+
+[functions.agent-execute]
+verify_jwt = false
+
+[functions.tradingview-webhook]
+verify_jwt = false
