@@ -156,9 +156,9 @@ export function aggregate(bars: Bar[], factor: number): Bar[] {
 }
 
 /**
- * NQ intraday futures candles are not available from the configured provider,
- * so the agent reads the highly-correlated proxy symbol (default QQQ) for
- * structure and rescales it onto the futures price when a quote is available.
+ * Fetch OHLCV bars for a symbol on a timeframe using the active adapter.
+ * Default adapter is Yahoo Finance, which serves NQ=F futures candles with
+ * no API key. Call setProvider() first to honour agent_config.data_provider.
  */
 export async function fetchBars(proxySymbol: string, timeframe: string): Promise<Bar[]> {
   const tf = timeframe.toLowerCase();
