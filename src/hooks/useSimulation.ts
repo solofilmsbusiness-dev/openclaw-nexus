@@ -60,7 +60,10 @@ export function useSimulation(
       if (parsed.system?.simulationSpeed) simulationSpeed = parsed.system.simulationSpeed;
       if (parsed.system?.logRetention) logRetention = parsed.system.logRetention;
     }
-  } catch {}
+  } catch (err) {
+    console.error('Corrupted localStorage for "solo-os-settings" — using defaults:', err);
+    try { localStorage.removeItem("solo-os-settings"); } catch { /* storage unavailable */ }
+  }
 
   const agentsRef = useRef(agents);
   agentsRef.current = agents;

@@ -72,7 +72,7 @@ export default function Calendar() {
     renameAgent(agentId, newName);
     const { error } = await supabase
       .from("scheduled_jobs")
-      .update({ agent_name: newName, updated_at: new Date().toISOString() } as any)
+      .update({ agent_name: newName, updated_at: new Date().toISOString() } as unknown as never)
       .eq("agent_id", agentId);
     if (!error) {
       fetchJobs();

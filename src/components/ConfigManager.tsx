@@ -85,8 +85,8 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
   };
 
   const handleLoad = (config: GraphConfig) => {
-    const agentsData = config.agents_data as any;
-    const edgesData = config.edges_data as any;
+    const agentsData = config.agents_data as unknown as { agents?: Agent[]; layout?: LayoutData } | Agent[];
+    const edgesData = config.edges_data as unknown as Edge[];
     if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
       loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout);
     } else {

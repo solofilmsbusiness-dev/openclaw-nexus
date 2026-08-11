@@ -137,7 +137,7 @@ export default function MiniAgentGraph() {
   const getNodeH = useCallback((id: PipelineId) => BASE_NODE_H * nodeScales[id], [nodeScales]);
 
   const nodePositions = useMemo(() => {
-    const positions: Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }> = {} as any;
+    const positions: Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }> = {} as Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }>;
     // Calculate total width
     let totalW = 0;
     PIPELINE_AGENTS.forEach((a, i) => {
