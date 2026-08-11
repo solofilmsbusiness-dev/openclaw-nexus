@@ -4,20 +4,28 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { AgentProvider } from "@/contexts/AgentContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { TradingLayoutProvider } from "@/contexts/TradingLayoutContext";
 import { AnimatePresence, motion } from "framer-motion";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Admin from "./pages/Admin";
-import Trading from "./pages/Trading";
-import Agent from "./pages/Agent";
-import Calendar from "./pages/Calendar";
-import Profile from "./pages/Profile";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import NotFound from "./pages/NotFound";
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Trading = lazy(() => import("./pages/Trading"));
+const Agent = lazy(() => import("./pages/Agent"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Profile = lazy(() => import("./pages/Profile"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const RouteFallback = () => (
+  <div className="h-screen bg-background flex flex-col items-center justify-center gap-3">
+    <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+    <span className="font-mono text-xs text-muted-foreground tracking-wider">Loading…</span>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -40,6 +48,7 @@ function AnimatedRoutes() {
         transition={{ duration: 0.2 }}
         className="h-full"
       >
+        <Suspense fallback={<RouteFallback />}>
         <Routes location={location}>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
@@ -52,6 +61,7 @@ function AnimatedRoutes() {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );
