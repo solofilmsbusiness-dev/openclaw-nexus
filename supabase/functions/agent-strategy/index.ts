@@ -336,6 +336,39 @@ Deno.serve(async (req) => {
     // Prefer a fresh, HTF-aligned TradingView bracket when present.
     if (tv && tvDir && tvBiasOk) {
       const entry = Number(tv.entry ?? research.proxyPrice);
+      const triggerOnly = isTriggerOnly(tv);
+
+      if (triggerOnly) {
+        if (!Number.isFinite(entry) || entry <= 0) {
+          await consume(tv.id, "trigger-only signal without usable entry price");
+          return json({ ok: true, ...hold("TradingView trigger-only signal has no usable entry price", steps, bias, { tv_signal_id: tv.id }) });
+        }
+        const built = bracketFromBrt(cfg, research, tvDir, entry);
+        if (!built) {
+          return json({ ok: true, ...hold("TradingView trigger-only signal: no IFVG or ATR available to size a stop", steps, bias, { tv_signal_id: tv.id }) });
+        }
+        const berr = validateBracket(cfg, tvDir, entry, built.stop, built.target);
+        if (berr) {
+          await consume(tv.id, `trigger-only bracket invalid: ${berr}`);
+          return json({ ok: true, ...hold(`TradingView trigger-only bracket rejected: ${berr}`, steps, bias, { tv_signal_id: tv.id }) });
+        }
+        return json({
+          ok: true,
+          decision: tvDir === "long" ? "BUY" : "SELL",
+          reason: `TradingView trigger-only signal aligned with HTF bias ${bias}; stop from ${built.basis}, target at >= ${cfg.min_rr}R`,
+          steps_passed: steps,
+          htf_bias: bias,
+          entry,
+          stop: built.stop,
+          target: built.target,
+          rr: rr(entry, built.stop, built.target, tvDir),
+          source: "tradingview-trigger-only",
+          tv_signal_id: tv.id,
+          zone_key: zoneKey,
+          ai_note: verdict?.note ?? null,
+        });
+      }
+
       const stop = Number(tv.sl);
       const target = Number(tv.tp);
       const err = validateBracket(cfg, tvDir, entry, stop, target);
