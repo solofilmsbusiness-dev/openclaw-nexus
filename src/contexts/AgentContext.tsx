@@ -4,7 +4,7 @@ import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type
 import { useSimulation } from "@/hooks/useSimulation";
 import { supabase } from "@/integrations/supabase/client";
 
-interface LayoutData {
+export interface LayoutData {
   dragOffsets: Record<string, { x: number; y: number }>;
   nodeSizes: Record<string, number>;
 }
