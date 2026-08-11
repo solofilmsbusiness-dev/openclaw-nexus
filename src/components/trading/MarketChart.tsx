@@ -171,7 +171,8 @@ export default function MarketChart({ compact = false, className = "", height }:
       localization: {
         timeFormatter: (t: number) => new Date((t as number) * 1000).toLocaleString(undefined, { hour12: false }),
       },
-      autoSize: true,
+      width: el.clientWidth || 600,
+      height: el.clientHeight || 400,
     });
 
     const candle = chart.addSeries(CandlestickSeries, {
@@ -198,6 +199,17 @@ export default function MarketChart({ compact = false, className = "", height }:
       volumeRef.current = vol;
     }
 
+    // Size from layout box (clientWidth/Height) rather than autoSize: ancestor
+    // transforms (page transition scale) corrupt getBoundingClientRect-based sizing.
+    const resize = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      if (w > 0 && h > 0) chart.resize(w, h, true);
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(el);
+    const t1 = window.setTimeout(resize, 300);
+    const t2 = window.setTimeout(resize, 900);
+
     const onMove = chart.subscribeCrosshairMove;
     chart.subscribeCrosshairMove((param) => {
       const d = param.seriesData.get(candle) as CandlestickData<Time> | undefined;
@@ -210,6 +222,9 @@ export default function MarketChart({ compact = false, className = "", height }:
     void onMove;
 
     return () => {
+      ro.disconnect();
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
       chart.remove();
       chartRef.current = null;
       candleRef.current = null;
@@ -241,7 +256,6 @@ export default function MarketChart({ compact = false, className = "", height }:
       volumeRef.current.setData(vols);
     }
 
-    (window as unknown as Record<string, unknown>).__mc = { chart: chartRef.current, candle, n: candles.length, first: candles[0], last: candles[candles.length-1] };
     if (!fittedRef.current) {
       chartRef.current?.timeScale().fitContent();
       fittedRef.current = true;
