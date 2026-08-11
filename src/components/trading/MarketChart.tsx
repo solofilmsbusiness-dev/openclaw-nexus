@@ -91,6 +91,8 @@ export default function MarketChart({ compact = false, className = "", height }:
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
   const [hover, setHover] = useState<Bar | null>(null);
+  // Bumped whenever the chart instance is (re)created so data effects re-apply.
+  const [chartEpoch, setChartEpoch] = useState(0);
 
   const openPosition = useMemo(() => positions.find((p) => p.status === "OPEN") ?? null, [positions]);
   const lastPrice = bars.length ? bars[bars.length - 1].c : null;
@@ -184,6 +186,7 @@ export default function MarketChart({ compact = false, className = "", height }:
     chartRef.current = chart;
     candleRef.current = candle;
     markersRef.current = createSeriesMarkers(candle, []);
+    fittedRef.current = false;
 
     if (!compact) {
       const vol = chart.addSeries(HistogramSeries, {
@@ -216,6 +219,9 @@ export default function MarketChart({ compact = false, className = "", height }:
     };
   }, [compact]);
 
+  // Signal to the data effects that a fresh chart instance is ready.
+  useEffect(() => { setChartEpoch((n) => n + 1); }, [compact]);
+
   // Apply bar data in place (no re-create)
   useEffect(() => {
     const candle = candleRef.current;
@@ -225,7 +231,6 @@ export default function MarketChart({ compact = false, className = "", height }:
       open: b.o, high: b.h, low: b.l, close: b.c,
     }));
     candle.setData(candles);
-    console.log('[MarketChart] applied bars', candles.length, candles[candles.length-1]);
 
     if (volumeRef.current) {
       const vols: HistogramData<Time>[] = bars.map((b) => ({
@@ -240,7 +245,7 @@ export default function MarketChart({ compact = false, className = "", height }:
       chartRef.current?.timeScale().fitContent();
       fittedRef.current = true;
     }
-  }, [bars]);
+  }, [bars, chartEpoch]);
 
   // Markers: position entries/exits + signal arrows
   useEffect(() => {
@@ -285,7 +290,7 @@ export default function MarketChart({ compact = false, className = "", height }:
 
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     plugin.setMarkers(markers);
-  }, [positions, signals, bars]);
+  }, [positions, signals, bars, chartEpoch]);
 
   // Price lines: open position bracket + recent signal plot levels
   useEffect(() => {
@@ -319,7 +324,7 @@ export default function MarketChart({ compact = false, className = "", height }:
         }));
       }
     }
-  }, [openPosition, signals, lastPrice, compact]);
+  }, [openPosition, signals, lastPrice, compact, chartEpoch]);
 
   const chartHeight = height ?? (compact ? 260 : Math.round(window.innerHeight * 0.65));
 
