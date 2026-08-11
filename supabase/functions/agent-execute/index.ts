@@ -40,10 +40,11 @@ async function topstep(sb: SB, cfg: any, positionId: string | null, payload: Rec
 /** Flatten the mirrored TopstepX position and cancel its bracket orders. */
 async function topstepClose(sb: SB, cfg: any, p: Position, reason: string) {
   const ids = (p.topstep_position_ids ?? {}) as Record<string, any>;
-  if (!ids.entryOrderId || ids.flattened) return;
+  if (!ids.entryOrderId || ids.flattened) return null;
   const res = await topstep(sb, cfg, p.id, {
     action: "close",
     reason,
+    opened_at: p.opened_at,
     topstep_position_ids: ids,
   });
   if (res?.ok) {
@@ -51,6 +52,7 @@ async function topstepClose(sb: SB, cfg: any, p: Position, reason: string) {
       .update({ topstep_position_ids: { ...ids, flattened: true, flattened_at: new Date().toISOString() } })
       .eq("id", p.id);
   }
+  return res;
 }
 
 function pnlFor(cfg: AgentConfig, p: Position, exit: number) {
@@ -61,17 +63,23 @@ function pnlFor(cfg: AgentConfig, p: Position, exit: number) {
 async function closePosition(
   sb: SB, cfg: AgentConfig, p: Position, exit: number, reason: string,
 ) {
-  const pnl = pnlFor(cfg, p, exit);
+  // Flatten on TopstepX first — it is the only execution venue; the internal
+  // row is the ledger and is written to match the venue's fills.
+  const ts = await topstepClose(sb, cfg as any, p, reason);
+  const fills = (ts as any)?.fills ?? null;
+  const exitPrice = Number.isFinite(Number(fills?.lastPrice)) ? Number(fills.lastPrice) : exit;
+  const pnl = Number.isFinite(Number(fills?.pnl)) ? Number(fills.pnl) : pnlFor(cfg, p, exitPrice);
   await sb.from("paper_positions").update({
     status: "CLOSED",
-    exit_price: exit,
+    exit_price: exitPrice,
     exit_reason: reason,
     pnl,
     closed_at: new Date().toISOString(),
   }).eq("id", p.id).eq("status", "OPEN");
-  await logEvent(sb, p.id, "CLOSED", reason, { exit, pnl });
-  await topstepClose(sb, cfg as any, p, reason);
-  return { id: p.id, action: "CLOSED", reason, exit, pnl };
+  await logEvent(sb, p.id, "CLOSED", reason, {
+    exit: exitPrice, pnl, pnl_source: Number.isFinite(Number(fills?.pnl)) ? "topstep-fills" : "computed",
+  });
+  return { id: p.id, action: "CLOSED", reason, exit: exitPrice, pnl };
 }
 
 /**
@@ -217,31 +225,59 @@ Deno.serve(async (req) => {
     const perContract = risk * Number(cfg.point_value);
     const contracts = Math.max(1, Math.min(10, Math.floor(riskDollars / Math.max(perContract, 1))));
 
+    // TopstepX is the ONLY execution venue: place the live SIM order FIRST.
+    // No fill on TopstepX => no ledger row, signal stays unconsumed for retry.
+    if (!(cfg as any).topstep_enabled) {
+      return json({ ok: true, opened: null, blocked: "topstep_enabled=false", guardActions });
+    }
+    const size = Math.max(1, Number((cfg as any).contracts_per_trade ?? 1));
+    const topstepRes = await topstep(sb, cfg as any, null, {
+      action: "open",
+      side,
+      size,
+      stop_price: Number(d.stop),
+      target_price: Number(d.target),
+    });
+    if (!topstepRes?.ok || !topstepRes?.entryOrderId) {
+      await logEvent(sb, null, "TOPSTEP_ERROR",
+        `entry aborted — TopstepX order not placed: ${topstepRes?.error ?? "no response"}`,
+        { side, size, entry: d.entry, stop: d.stop, target: d.target, tv_signal_id: d.tv_signal_id ?? null });
+      return json({
+        ok: true, opened: null,
+        blocked: `topstep order failed: ${topstepRes?.error ?? "no response"}`,
+        guardActions,
+      });
+    }
+
     const { data: inserted, error } = await sb.from("paper_positions").insert({
       symbol: cfg.paper_symbol,
       side,
-      contracts,
+      contracts: size,
       entry_price: Number(d.entry),
       stop_price: Number(d.stop),
       target_price: Number(d.target),
       initial_stop: Number(d.stop),
       zone_key: d.zone_key ?? null,
       decision_id: body.decision_id ?? null,
+      topstep_order_id: String(topstepRes.entryOrderId),
+      topstep_position_ids: {
+        accountId: topstepRes.account?.id,
+        accountName: topstepRes.account?.name,
+        contractId: topstepRes.contract?.id,
+        entryOrderId: topstepRes.entryOrderId,
+        stopOrderId: topstepRes.stopOrderId ?? null,
+        targetOrderId: topstepRes.targetOrderId ?? null,
+        syncedStop: Number(d.stop),
+      },
     }).select("id").single();
     if (error) throw new Error(`open failed: ${error.message}`);
 
-    await logEvent(sb, inserted.id, "OPENED", `${side} ${contracts} ${cfg.paper_symbol} (${d.source})`, {
-      entry: d.entry, stop: d.stop, target: d.target, rr: d.rr, source: d.source, tv_signal_id: d.tv_signal_id,
-    });
-
-    // Mirror onto TopstepX (practice account only — enforced inside the executor).
-    const topstepRes = await topstep(sb, cfg as any, inserted.id, {
-      action: "open",
-      side,
-      size: Math.max(1, Number((cfg as any).contracts_per_trade ?? 1)),
-      stop_price: Number(d.stop),
-      target_price: Number(d.target),
-    });
+    await logEvent(sb, inserted.id, "OPENED",
+      `${side} ${size} ${topstepRes.contract?.name ?? cfg.paper_symbol} on ${topstepRes.account?.name} (${d.source})`, {
+        entry: d.entry, stop: d.stop, target: d.target, rr: d.rr, source: d.source,
+        tv_signal_id: d.tv_signal_id, topstep: topstepRes,
+        risk_sized_contracts: contracts,
+      });
 
     if (d.tv_signal_id) {
       await sb.from("tradingview_signals")
@@ -251,8 +287,13 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
-      opened: { id: inserted.id, side, contracts },
-      topstep: topstepRes ? { ok: topstepRes.ok, entryOrderId: topstepRes.entryOrderId ?? null, error: topstepRes.error ?? null } : null,
+      opened: { id: inserted.id, side, contracts: size },
+      topstep: {
+        account: topstepRes.account, contract: topstepRes.contract,
+        entryOrderId: topstepRes.entryOrderId,
+        stopOrderId: topstepRes.stopOrderId ?? null,
+        targetOrderId: topstepRes.targetOrderId ?? null,
+      },
       guardActions,
     });
   } catch (e) {

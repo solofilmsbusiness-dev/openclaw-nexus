@@ -150,6 +150,35 @@ export async function closeContract(accountId: number, contractId: string) {
   return await tsPost("/api/Position/closeContract", { accountId, contractId });
 }
 
+/**
+ * Realized P/L from actual TopstepX fills for a contract since a timestamp.
+ * Returns null when the venue gives us nothing usable.
+ */
+export async function realizedPnl(
+  accountId: number,
+  contractId: string,
+  sinceIso: string,
+): Promise<{ pnl: number | null; fills: number; lastPrice: number | null }> {
+  const r = await tsPost<{ trades?: any[] }>("/api/Trade/search", {
+    accountId,
+    startTimestamp: sinceIso,
+    endTimestamp: new Date(Date.now() + 60_000).toISOString(),
+  });
+  const trades = (r.body?.trades ?? []).filter(
+    (t) => !contractId || String(t.contractId ?? "") === contractId,
+  );
+  if (!r.ok || !trades.length) return { pnl: null, fills: 0, lastPrice: null };
+  const values = trades
+    .map((t) => Number(t.profitAndLoss ?? t.pnl ?? NaN))
+    .filter((n) => Number.isFinite(n));
+  const last = trades[trades.length - 1];
+  return {
+    pnl: values.length ? values.reduce((a, b) => a + b, 0) : null,
+    fills: trades.length,
+    lastPrice: Number.isFinite(Number(last?.price)) ? Number(last.price) : null,
+  };
+}
+
 /** Market entry + protective stop + limit target. Returns whatever succeeded. */
 export async function placeBracket(opts: {
   accountId: number;
