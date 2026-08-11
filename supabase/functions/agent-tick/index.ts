@@ -51,6 +51,10 @@ Deno.serve(async (req) => {
       steps_passed: {},
       source: "brt",
     });
-    return json({ ok: false, error: message }, 200);
+    // The risk guard must run every tick even when research/strategy fail,
+    // otherwise a stalled data feed could let a position exceed max hold.
+    const exec = await callFn<any>("agent-execute", { decision: null, price: null })
+      .catch((err) => ({ ok: false, error: String(err) }));
+    return json({ ok: false, error: message, exec }, 200);
   }
 });
