@@ -76,7 +76,7 @@ type Decision = {
   stop: number | null;
   target: number | null;
   rr: number | null;
-  source: "brt" | "tradingview" | "confluence" | "none";
+  source: "brt" | "tradingview" | "tradingview-trigger-only" | "confluence" | "none";
   tv_signal_id: string | null;
   zone_key: string | null;
 };
@@ -114,6 +114,64 @@ function validateBracket(
   const ratio = rr(entry, stop, target, dir);
   if (ratio < Number(cfg.min_rr)) return `R:R ${ratio.toFixed(2)} < min_rr ${cfg.min_rr}`;
   return null;
+}
+
+/** A TV signal is "trigger only" when it carries no usable tp/sl. */
+function isTriggerOnly(tv: { tp: unknown; sl: unknown }): boolean {
+  const ok = (v: unknown) => v != null && Number.isFinite(Number(v)) && Number(v) > 0;
+  return !(ok(tv.tp) && ok(tv.sl));
+}
+
+/**
+ * Build a stop/target for a trigger-only TV signal using the BRT engine:
+ * stop beyond the nearest active IFVG edge, else an ATR-based stop.
+ * Both are capped at max_stop_ticks. Target aims at structure liquidity
+ * when it beats min_rr, otherwise the exact min_rr level.
+ */
+function bracketFromBrt(
+  cfg: AgentConfig,
+  research: any,
+  dir: Dir,
+  entry: number,
+): { stop: number; target: number; basis: string } | null {
+  const tick = Number(cfg.tick_size) || 0.25;
+  const maxDist = Math.max(tick, cfg.max_stop_ticks * tick);
+
+  let stopDist: number | null = null;
+  let basis = "";
+
+  const candidates = (research.setups ?? [])
+    .filter((s: any) => s?.ifvg && s?.brk?.dir === dir)
+    .map((s: any) => s.ifvg)
+    .sort((a: any, b: any) => Math.abs(a.mid - entry) - Math.abs(b.mid - entry));
+  const ifvg = candidates[0] ?? null;
+  if (ifvg) {
+    const pad = (ifvg.high - ifvg.low) * 0.1 + tick;
+    const raw = dir === "long" ? entry - (ifvg.low - pad) : (ifvg.high + pad) - entry;
+    if (Number.isFinite(raw) && raw > 0) {
+      stopDist = raw;
+      basis = "nearest IFVG edge";
+    }
+  }
+  if (stopDist == null) {
+    const a = Number(research?.atr?.ltf ?? research?.atr?.structure ?? NaN);
+    if (!Number.isFinite(a) || a <= 0) return null;
+    stopDist = a * 1.5;
+    basis = "ATR(14) x1.5";
+  }
+
+  stopDist = Math.min(stopDist, maxDist);
+  stopDist = Math.max(stopDist, tick * 4);
+  const stop = dir === "long" ? entry - stopDist : entry + stopDist;
+
+  const minRr = Number(cfg.min_rr) || 2;
+  const minTarget = dir === "long" ? entry + stopDist * minRr : entry - stopDist * minRr;
+  const liq = Number(research?.liquidity?.[dir === "long" ? "long" : "short"] ?? NaN);
+  const target = Number.isFinite(liq) && (dir === "long" ? liq > minTarget : liq < minTarget)
+    ? liq
+    : minTarget;
+
+  return { stop, target, basis };
 }
 
 Deno.serve(async (req) => {
