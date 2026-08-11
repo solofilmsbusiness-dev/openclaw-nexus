@@ -97,6 +97,16 @@ Deno.serve(async (req) => {
       htfBias: bias,
       zones,
       setups,
+      atr: {
+        ltf: atr(ltfEntry, 14),
+        structure: atr(ltfStructure, 14),
+      },
+      liquidity: price != null
+        ? {
+          long: nextLiquidity(ltfStructure, price, "long"),
+          short: nextLiquidity(ltfStructure, price, "short"),
+        }
+        : { long: null, short: null },
       bars: { htf: summarize(htf), ltf: summarize(ltfEntry), structure: summarize(ltfStructure) },
     });
   } catch (e) {
