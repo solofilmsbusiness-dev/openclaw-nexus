@@ -11,6 +11,20 @@ const num = (v: unknown): number | null => {
 const str = (v: unknown, max = 64): string | null =>
   typeof v === "string" && v.trim().length ? v.trim().slice(0, max) : null;
 
+/** Parse the indicator "plots" object: string values, possibly "NaN"/"" -> null. */
+function parsePlots(v: unknown): Record<string, number | null> | null {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return null;
+  const out: Record<string, number | null> = {};
+  let count = 0;
+  for (const [k, raw] of Object.entries(v as Record<string, unknown>)) {
+    if (count++ >= 40) break;
+    const key = k.slice(0, 32);
+    const n = typeof raw === "string" ? Number(raw.trim()) : typeof raw === "number" ? raw : NaN;
+    out[key] = Number.isFinite(n) ? n : null;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 /** Public TradingView alert receiver. Shared-secret authenticated. */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -53,6 +67,8 @@ Deno.serve(async (req) => {
   }
 
   const { secret: _omit, ...safePayload } = payload;
+  const plots = parsePlots(payload.plots);
+  if (plots) safePayload.plots = plots;
 
   const { error } = await sb.from("tradingview_signals").insert({
     symbol: symbol.toUpperCase(),

@@ -123,6 +123,43 @@ function isTriggerOnly(tv: { tp: unknown; sl: unknown }): boolean {
 }
 
 /**
+ * Derive a bracket from the indicator's plotted levels carried in raw_payload.plots.
+ * BUY: stop = nearest valid plot BELOW entry, target = nearest valid plot ABOVE entry
+ * that still meets min_rr. SELL mirrors. Plots > 3% away from entry are ignored.
+ */
+function bracketFromPlots(
+  cfg: AgentConfig,
+  raw: any,
+  dir: Dir,
+  entry: number,
+): { stop: number; target: number; basis: string } | null {
+  const plots = raw?.plots;
+  if (!plots || typeof plots !== "object") return null;
+  const tick = Number(cfg.tick_size) || 0.25;
+  const maxAway = entry * 0.03;
+  const levels = Object.values(plots as Record<string, unknown>)
+    .map((v) => (typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN))
+    .filter((n) => Number.isFinite(n) && n > 0 && Math.abs(n - entry) <= maxAway && Math.abs(n - entry) >= tick) as number[];
+  if (!levels.length) return null;
+
+  const below = levels.filter((n) => n < entry).sort((a, b) => b - a);
+  const above = levels.filter((n) => n > entry).sort((a, b) => a - b);
+
+  const stop = dir === "long" ? below[0] : above[0];
+  if (stop == null) return null;
+
+  const risk = Math.abs(entry - stop);
+  if (!(risk > 0)) return null;
+  const minRr = Number(cfg.min_rr) || 2;
+  const minTarget = dir === "long" ? entry + risk * minRr : entry - risk * minRr;
+  const pool = dir === "long" ? above : below;
+  const target = pool.find((n) => (dir === "long" ? n >= minTarget : n <= minTarget));
+  if (target == null) return null;
+
+  return { stop, target, basis: "indicator plots" };
+}
+
+/**
  * Build a stop/target for a trigger-only TV signal using the BRT engine:
  * stop beyond the nearest active IFVG edge, else an ATR-based stop.
  * Both are capped at max_stop_ticks. Target aims at structure liquidity
@@ -343,7 +380,9 @@ Deno.serve(async (req) => {
           await consume(tv.id, "trigger-only signal without usable entry price");
           return json({ ok: true, ...hold("TradingView trigger-only signal has no usable entry price", steps, bias, { tv_signal_id: tv.id }) });
         }
-        const built = bracketFromBrt(cfg, research, tvDir, entry);
+        const fromPlots = bracketFromPlots(cfg, tv.raw_payload, tvDir, entry);
+        const built = fromPlots ?? bracketFromBrt(cfg, research, tvDir, entry);
+        const bracketSource = fromPlots ? "indicator-plots" : "brt-engine";
         if (!built) {
           return json({ ok: true, ...hold("TradingView trigger-only signal: no IFVG or ATR available to size a stop", steps, bias, { tv_signal_id: tv.id }) });
         }
@@ -355,7 +394,7 @@ Deno.serve(async (req) => {
         return json({
           ok: true,
           decision: tvDir === "long" ? "BUY" : "SELL",
-          reason: `TradingView trigger-only signal aligned with HTF bias ${bias}; stop from ${built.basis}, target at >= ${cfg.min_rr}R`,
+          reason: `TradingView trigger-only signal aligned with HTF bias ${bias}; bracket source ${bracketSource} (stop from ${built.basis}), target at >= ${cfg.min_rr}R`,
           steps_passed: steps,
           htf_bias: bias,
           entry,
@@ -363,6 +402,7 @@ Deno.serve(async (req) => {
           target: built.target,
           rr: rr(entry, built.stop, built.target, tvDir),
           source: "tradingview-trigger-only",
+          bracket_source: bracketSource,
           tv_signal_id: tv.id,
           zone_key: zoneKey,
           ai_note: verdict?.note ?? null,
