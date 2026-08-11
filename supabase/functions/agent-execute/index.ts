@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, json } from "../_shared/cors.ts";
-import { admin, loadConfig, logEvent, type AgentConfig } from "../_shared/db.ts";
+import { admin, callFn, loadConfig, logEvent, type AgentConfig } from "../_shared/db.ts";
 
 type SB = ReturnType<typeof admin>;
 
@@ -16,6 +16,41 @@ interface Position {
   lock_active: boolean;
   opened_at: string;
   zone_key: string | null;
+  topstep_order_id?: string | null;
+  topstep_position_ids?: Record<string, any> | null;
+}
+
+/** Fire a topstepx-executor action. Never throws — TopstepX must not break paper trading. */
+async function topstep(sb: SB, cfg: any, positionId: string | null, payload: Record<string, unknown>) {
+  if (!cfg.topstep_enabled) return null;
+  try {
+    const res: any = await callFn("topstepx-executor", { position_id: positionId, ...payload });
+    if (!res?.ok) {
+      await logEvent(sb, positionId, "TOPSTEP_ERROR",
+        `${payload.action}: ${res?.error ?? "unknown error"}`, { payload, res });
+    }
+    return res;
+  } catch (e) {
+    await logEvent(sb, positionId, "TOPSTEP_ERROR",
+      `${payload.action}: ${String((e as Error).message ?? e)}`, { payload });
+    return null;
+  }
+}
+
+/** Flatten the mirrored TopstepX position and cancel its bracket orders. */
+async function topstepClose(sb: SB, cfg: any, p: Position, reason: string) {
+  const ids = (p.topstep_position_ids ?? {}) as Record<string, any>;
+  if (!ids.entryOrderId || ids.flattened) return;
+  const res = await topstep(sb, cfg, p.id, {
+    action: "close",
+    reason,
+    topstep_position_ids: ids,
+  });
+  if (res?.ok) {
+    await sb.from("paper_positions")
+      .update({ topstep_position_ids: { ...ids, flattened: true, flattened_at: new Date().toISOString() } })
+      .eq("id", p.id);
+  }
 }
 
 function pnlFor(cfg: AgentConfig, p: Position, exit: number) {
@@ -35,7 +70,46 @@ async function closePosition(
     closed_at: new Date().toISOString(),
   }).eq("id", p.id).eq("status", "OPEN");
   await logEvent(sb, p.id, "CLOSED", reason, { exit, pnl });
+  await topstepClose(sb, cfg as any, p, reason);
   return { id: p.id, action: "CLOSED", reason, exit, pnl };
+}
+
+/**
+ * Keep TopstepX in lockstep with internal state, retrying on every tick:
+ *  - any internal position closed elsewhere (reversal, manual) gets flattened
+ *  - any stop price drift gets pushed to the TopstepX stop order
+ */
+async function reconcileTopstep(sb: SB, cfg: any) {
+  if (!cfg.topstep_enabled) return;
+  // 1. Closed internally but still mirrored -> flatten.
+  const { data: stale } = await sb
+    .from("paper_positions").select("*")
+    .eq("status", "CLOSED")
+    .not("topstep_order_id", "is", null)
+    .order("closed_at", { ascending: false }).limit(10);
+  for (const raw of (stale ?? []) as Position[]) {
+    const ids = (raw.topstep_position_ids ?? {}) as Record<string, any>;
+    if (ids.entryOrderId && !ids.flattened) {
+      await topstepClose(sb, cfg, raw, raw as any && "reconcile: internal position closed");
+    }
+  }
+}
+
+/** Push a new stop price to the mirrored TopstepX stop order (idempotent). */
+async function syncTopstepStop(sb: SB, cfg: any, p: Position, newStop: number) {
+  const ids = (p.topstep_position_ids ?? {}) as Record<string, any>;
+  if (!ids.stopOrderId || ids.flattened) return;
+  if (Number(ids.syncedStop) === newStop) return;
+  const res = await topstep(sb, cfg, p.id, {
+    action: "sync_stop",
+    stop_order_id: ids.stopOrderId,
+    stop_price: newStop,
+  });
+  if (res?.ok) {
+    await sb.from("paper_positions")
+      .update({ topstep_position_ids: { ...ids, syncedStop: newStop } })
+      .eq("id", p.id);
+  }
 }
 
 /**
@@ -46,10 +120,13 @@ async function closePosition(
  */
 async function riskGuard(sb: SB, cfg: AgentConfig, price: number | null) {
   const actions: unknown[] = [];
+  await reconcileTopstep(sb, cfg as any);
   const { data: positions } = await sb
     .from("paper_positions").select("*").eq("status", "OPEN");
   for (const raw of (positions ?? []) as Position[]) {
     const p = raw;
+    // Retry any pending stop sync (e.g. a reversal tighten applied by agent-strategy).
+    await syncTopstepStop(sb, cfg as any, p, Number(p.stop_price));
     // 1. Optional max-hold flatten. 0 / null / negative = DISABLED (no time exit).
     const maxHold = Number(cfg.max_hold_minutes);
     if (Number.isFinite(maxHold) && maxHold > 0) {
@@ -102,6 +179,7 @@ async function riskGuard(sb: SB, cfg: AgentConfig, price: number | null) {
     await sb.from("paper_positions")
       .update({ stop_price: newStop, lock_active: true })
       .eq("id", p.id).eq("status", "OPEN");
+    await syncTopstepStop(sb, cfg as any, p, newStop);
     await logEvent(
       sb, p.id, p.lock_active ? "STOP_TRAILED" : "PROFIT_LOCKED",
       `stop ${p.stop_price} -> ${newStop} at ${openR.toFixed(2)}R`,
