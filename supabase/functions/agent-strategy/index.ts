@@ -444,12 +444,6 @@ Deno.serve(async (req) => {
     const tvDir: Dir | null = tv ? (tv.direction === "buy" ? "long" : "short") : null;
     const tvBiasOk = tvDir ? (tvDir === "long" && bias === "up") || (tvDir === "short" && bias === "down") : false;
 
-    const consume = async (id: string, reason: string) => {
-      await sb.from("tradingview_signals")
-        .update({ consumed: true, consumed_at: new Date().toISOString(), consume_reason: reason })
-        .eq("id", id);
-    };
-
     if (cfg.tv_confluence_required) {
       if (!brtReady) return json({ ok: true, ...hold(`confluence mode: ${brtReason}`, steps, bias) });
       if (!tv) return json({ ok: true, ...hold("confluence mode: no fresh TradingView signal", steps, bias) });
