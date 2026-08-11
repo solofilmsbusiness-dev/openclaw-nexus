@@ -40,10 +40,11 @@ async function topstep(sb: SB, cfg: any, positionId: string | null, payload: Rec
 /** Flatten the mirrored TopstepX position and cancel its bracket orders. */
 async function topstepClose(sb: SB, cfg: any, p: Position, reason: string) {
   const ids = (p.topstep_position_ids ?? {}) as Record<string, any>;
-  if (!ids.entryOrderId || ids.flattened) return;
+  if (!ids.entryOrderId || ids.flattened) return null;
   const res = await topstep(sb, cfg, p.id, {
     action: "close",
     reason,
+    opened_at: p.opened_at,
     topstep_position_ids: ids,
   });
   if (res?.ok) {
@@ -51,6 +52,7 @@ async function topstepClose(sb: SB, cfg: any, p: Position, reason: string) {
       .update({ topstep_position_ids: { ...ids, flattened: true, flattened_at: new Date().toISOString() } })
       .eq("id", p.id);
   }
+  return res;
 }
 
 function pnlFor(cfg: AgentConfig, p: Position, exit: number) {
@@ -61,17 +63,23 @@ function pnlFor(cfg: AgentConfig, p: Position, exit: number) {
 async function closePosition(
   sb: SB, cfg: AgentConfig, p: Position, exit: number, reason: string,
 ) {
-  const pnl = pnlFor(cfg, p, exit);
+  // Flatten on TopstepX first — it is the only execution venue; the internal
+  // row is the ledger and is written to match the venue's fills.
+  const ts = await topstepClose(sb, cfg as any, p, reason);
+  const fills = (ts as any)?.fills ?? null;
+  const exitPrice = Number.isFinite(Number(fills?.lastPrice)) ? Number(fills.lastPrice) : exit;
+  const pnl = Number.isFinite(Number(fills?.pnl)) ? Number(fills.pnl) : pnlFor(cfg, p, exitPrice);
   await sb.from("paper_positions").update({
     status: "CLOSED",
-    exit_price: exit,
+    exit_price: exitPrice,
     exit_reason: reason,
     pnl,
     closed_at: new Date().toISOString(),
   }).eq("id", p.id).eq("status", "OPEN");
-  await logEvent(sb, p.id, "CLOSED", reason, { exit, pnl });
-  await topstepClose(sb, cfg as any, p, reason);
-  return { id: p.id, action: "CLOSED", reason, exit, pnl };
+  await logEvent(sb, p.id, "CLOSED", reason, {
+    exit: exitPrice, pnl, pnl_source: Number.isFinite(Number(fills?.pnl)) ? "topstep-fills" : "computed",
+  });
+  return { id: p.id, action: "CLOSED", reason, exit: exitPrice, pnl };
 }
 
 /**
