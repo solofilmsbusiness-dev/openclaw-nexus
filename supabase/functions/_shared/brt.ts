@@ -275,6 +275,21 @@ export function rr(entry: number, stop: number, target: number, dir: Dir): numbe
 }
 
 /* ------------------------------------------------------------------ *
+ * ATR (Wilder-ish simple average of true range) over the last n bars
+ * ------------------------------------------------------------------ */
+export function atr(bars: Bar[], n = 14): number | null {
+  if (!bars || bars.length < n + 1) return null;
+  const slice = bars.slice(-(n + 1));
+  let sum = 0;
+  for (let i = 1; i < slice.length; i++) {
+    const p = slice[i - 1], b = slice[i];
+    sum += Math.max(b.h - b.l, Math.abs(b.h - p.c), Math.abs(b.l - p.c));
+  }
+  const v = sum / n;
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+/* ------------------------------------------------------------------ *
  * News windows — high-impact US releases (CPI / FOMC / NFP)
  * ------------------------------------------------------------------ */
 export function inNewsWindow(now: Date, bufferMinutes: number): boolean {
