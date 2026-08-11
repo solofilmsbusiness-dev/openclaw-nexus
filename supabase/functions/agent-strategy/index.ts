@@ -461,7 +461,7 @@ Deno.serve(async (req) => {
       if (triggerOnly) {
         if (!Number.isFinite(entry) || entry <= 0) {
           await consume(tv.id, "trigger-only signal without usable entry price");
-          return json({ ok: true, ...hold("TradingView trigger-only signal has no usable entry price", steps, bias, { tv_signal_id: tv.id }) });
+          return json({ ok: true, ...hold("TradingView trigger-only signal has no usable entry price", steps, bias, { tv_signal_id: tv.id, tv_timeframe: tvTimeframe }) });
         }
         const fromPlots = bracketFromPlots(cfg, tv.raw_payload, tvDir, entry);
         const built = fromPlots ?? bracketFromBrt(cfg, research, tvDir, entry);
@@ -487,6 +487,7 @@ Deno.serve(async (req) => {
           source: "tradingview-trigger-only",
           bracket_source: bracketSource,
           tv_signal_id: tv.id,
+          tv_timeframe: tvTimeframe,
           zone_key: zoneKey,
           ai_note: verdict?.note ?? null,
         });
@@ -511,6 +512,7 @@ Deno.serve(async (req) => {
         rr: rr(entry, stop, target, tvDir),
         source: cfg.tv_confluence_required ? "confluence" : "tradingview",
         tv_signal_id: tv.id,
+        tv_timeframe: tvTimeframe,
         zone_key: zoneKey,
         ai_note: verdict?.note ?? null,
       });
@@ -538,6 +540,7 @@ Deno.serve(async (req) => {
       rr: rr(brtEntry!, brtStop!, brtTarget!, brtDir!),
       source: "brt",
       tv_signal_id: null,
+      tv_timeframe: null,
       zone_key: zoneKey,
       ai_note: verdict?.note ?? null,
     });
