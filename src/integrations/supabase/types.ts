@@ -19,6 +19,7 @@ export type Database = {
           account_balance: number
           auto_trade: boolean
           avoid_news_minutes: number
+          contracts_per_trade: number
           created_at: string
           daily_loss_limit: number
           daily_profit_target: number
@@ -41,6 +42,10 @@ export type Database = {
           risk_per_trade_pct: number
           symbol: string
           tick_size: number
+          topstep_account_search: string
+          topstep_allow_non_practice: boolean
+          topstep_contract_search: string
+          topstep_enabled: boolean
           tv_confluence_required: boolean
           tv_signal_ttl_minutes: number
           updated_at: string
@@ -49,6 +54,7 @@ export type Database = {
           account_balance?: number
           auto_trade?: boolean
           avoid_news_minutes?: number
+          contracts_per_trade?: number
           created_at?: string
           daily_loss_limit?: number
           daily_profit_target?: number
@@ -71,6 +77,10 @@ export type Database = {
           risk_per_trade_pct?: number
           symbol?: string
           tick_size?: number
+          topstep_account_search?: string
+          topstep_allow_non_practice?: boolean
+          topstep_contract_search?: string
+          topstep_enabled?: boolean
           tv_confluence_required?: boolean
           tv_signal_ttl_minutes?: number
           updated_at?: string
@@ -79,6 +89,7 @@ export type Database = {
           account_balance?: number
           auto_trade?: boolean
           avoid_news_minutes?: number
+          contracts_per_trade?: number
           created_at?: string
           daily_loss_limit?: number
           daily_profit_target?: number
@@ -101,6 +112,10 @@ export type Database = {
           risk_per_trade_pct?: number
           symbol?: string
           tick_size?: number
+          topstep_account_search?: string
+          topstep_allow_non_practice?: boolean
+          topstep_contract_search?: string
+          topstep_enabled?: boolean
           tv_confluence_required?: boolean
           tv_signal_ttl_minutes?: number
           updated_at?: string
@@ -384,6 +399,8 @@ export type Database = {
           stop_price: number
           symbol: string
           target_price: number
+          topstep_order_id: string | null
+          topstep_position_ids: Json
           zone_key: string | null
         }
         Insert: {
@@ -404,6 +421,8 @@ export type Database = {
           stop_price: number
           symbol: string
           target_price: number
+          topstep_order_id?: string | null
+          topstep_position_ids?: Json
           zone_key?: string | null
         }
         Update: {
@@ -424,6 +443,8 @@ export type Database = {
           stop_price?: number
           symbol?: string
           target_price?: number
+          topstep_order_id?: string | null
+          topstep_position_ids?: Json
           zone_key?: string | null
         }
         Relationships: [
