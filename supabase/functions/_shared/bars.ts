@@ -8,6 +8,46 @@ export interface Bar {
 }
 
 const AV = "https://www.alphavantage.co/query";
+const POLY = "https://api.polygon.io";
+
+function tfToPoly(tf: string): { mult: number; span: string; agg: number; days: number } {
+  switch (tf) {
+    case "1d":
+    case "daily":
+      return { mult: 1, span: "day", agg: 1, days: 400 };
+    case "4h":
+      return { mult: 1, span: "hour", agg: 4, days: 120 };
+    case "1h":
+      return { mult: 1, span: "hour", agg: 1, days: 60 };
+    case "15m":
+      return { mult: 15, span: "minute", agg: 1, days: 20 };
+    default:
+      return { mult: 5, span: "minute", agg: 1, days: 10 };
+  }
+}
+
+/** Polygon.io aggregates — preferred provider when POLYGON_API_KEY is configured. */
+async function polygon(symbol: string, tf: string): Promise<Bar[]> {
+  const key = Deno.env.get("POLYGON_API_KEY");
+  if (!key) throw new Error("POLYGON_API_KEY not configured");
+  const { mult, span, agg, days } = tfToPoly(tf);
+  const to = new Date();
+  const from = new Date(to.getTime() - days * 864e5);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const url =
+    `${POLY}/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/${mult}/${span}/${iso(from)}/${iso(to)}` +
+    `?adjusted=true&sort=asc&limit=50000&apiKey=${key}`;
+  const res = await fetch(url);
+  const body = await res.json();
+  if (res.status === 429) throw new Error("market data throttled: polygon rate limit");
+  if (!res.ok) throw new Error(`polygon error ${res.status}: ${body?.error ?? body?.message ?? ""}`);
+  const rows: Array<Record<string, number>> = body?.results ?? [];
+  if (!rows.length) throw new Error("polygon returned no bars");
+  const bars = rows
+    .map((r) => ({ t: r.t, o: r.o, h: r.h, l: r.l, c: r.c, v: r.v ?? 0 }))
+    .filter((b) => Number.isFinite(b.t) && Number.isFinite(b.c));
+  return aggregate(bars, agg);
+}
 
 function parseSeries(obj: Record<string, Record<string, string>>): Bar[] {
   return Object.entries(obj)
@@ -66,6 +106,15 @@ export function aggregate(bars: Bar[], factor: number): Bar[] {
  */
 export async function fetchBars(proxySymbol: string, timeframe: string): Promise<Bar[]> {
   const tf = timeframe.toLowerCase();
+
+  if (Deno.env.get("POLYGON_API_KEY")) {
+    try {
+      return await polygon(proxySymbol, tf);
+    } catch (err) {
+      console.warn("polygon fetch failed, falling back to alphavantage:", String(err));
+    }
+  }
+
   if (tf === "1d" || tf === "daily") {
     return await av({ function: "TIME_SERIES_DAILY", symbol: proxySymbol, outputsize: "compact" });
   }
