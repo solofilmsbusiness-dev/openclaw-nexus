@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { admin, loadConfig } from "../_shared/db.ts";
-import { fetchBars, lastPrice, type Bar } from "../_shared/bars.ts";
+import { fetchBars, lastPrice, setProvider, type Bar } from "../_shared/bars.ts";
 import {
   detectBreak,
   detectIFVG,
@@ -23,7 +23,8 @@ Deno.serve(async (req) => {
     const sb = admin();
     const cfg = await loadConfig(sb);
 
-    const proxy = cfg.data_proxy_symbol || "QQQ";
+    setProvider(cfg.data_provider);
+    const proxy = cfg.data_proxy_symbol || "NQ=F";
     const [htf, ltfEntry, ltfStructure] = await Promise.all([
       fetchBars(proxy, cfg.htf_timeframe || "4h"),
       fetchBars(proxy, cfg.ltf_timeframe || "5m"),
