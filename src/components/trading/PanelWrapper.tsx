@@ -61,7 +61,7 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
     return { row, col, panelId: targetPanel?.id ?? null };
   }, [gridRef, layout.columnCount, layout.panels, item.id]);
 
-  const handleDragEnd = useCallback((_: any, info: { point: { x: number; y: number } }) => {
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: { point: { x: number; y: number } }) => {
     setIsDragging(false);
     setHoverTarget(null);
     const target = getCellFromPoint(info.point.x, info.point.y);
@@ -74,7 +74,7 @@ export default function PanelWrapper({ item, onRemove, children, className = "",
     }
   }, [getCellFromPoint, layout, item.id]);
 
-  const handleDrag = useCallback((_: any, info: { point: { x: number; y: number } }) => {
+  const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: { point: { x: number; y: number } }) => {
     const target = getCellFromPoint(info.point.x, info.point.y);
     setHoverTarget(target?.panelId ?? null);
   }, [getCellFromPoint]);

@@ -42,7 +42,7 @@ export default function Watchlist({ tickers, availableSymbols }: WatchlistProps)
         .select("*")
         .order("created_at", { ascending: true });
       if (data) {
-        setItems(data.map((d: any) => ({
+        setItems(data.map((d) => ({
           id: d.id,
           symbol: d.symbol,
           alertAbove: d.alert_above != null ? Number(d.alert_above) : null,

@@ -104,7 +104,10 @@ function loadState(): LayoutState {
       }
       return parsed;
     }
-  } catch {}
+  } catch (err) {
+    console.error(`Corrupted localStorage for "${STORAGE_KEY}" — resetting layout to defaults:`, err);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage unavailable */ }
+  }
   return {
     panels: computePositions(ALL_BUILTINS.map((id) => ({ id, isCustom: false })), 2),
     customPanels: [],

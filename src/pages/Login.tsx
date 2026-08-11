@@ -104,15 +104,15 @@ export default function Login() {
         if (error) throw error;
         toast.success("Logged in");
         // Role-based redirect
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", signInData.user.id);
-        const isAdmin = roles?.some((r) => r.role === "admin");
+        const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
+          _user_id: signInData.user.id,
+          _role: "admin",
+        });
+        if (roleErr) console.error("Failed to verify admin role:", roleErr);
         navigate(isAdmin ? "/" : "/trading");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }

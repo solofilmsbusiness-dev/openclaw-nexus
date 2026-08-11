@@ -60,7 +60,7 @@ export function useScheduledJobs() {
         const seeds = generateSeedJobs(user.id);
         const { error: insertErr } = await supabase
           .from("scheduled_jobs")
-          .insert(seeds as any);
+          .insert(seeds as unknown as never);
         if (!insertErr) {
           const { data: seeded } = await supabase
             .from("scheduled_jobs")
@@ -94,7 +94,7 @@ export function useScheduledJobs() {
     if (!user) return null;
     const { data, error } = await supabase
       .from("scheduled_jobs")
-      .insert({ ...job, user_id: user.id } as any)
+      .insert({ ...job, user_id: user.id } as unknown as never)
       .select()
       .single();
     if (!error && data) {
@@ -107,7 +107,7 @@ export function useScheduledJobs() {
   const updateJob = useCallback(async (id: string, updates: Partial<ScheduledJob>) => {
     const { error } = await supabase
       .from("scheduled_jobs")
-      .update({ ...updates, updated_at: new Date().toISOString() } as any)
+      .update({ ...updates, updated_at: new Date().toISOString() } as unknown as never)
       .eq("id", id);
     if (!error) {
       setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, ...updates } : j)));

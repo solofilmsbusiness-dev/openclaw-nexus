@@ -94,7 +94,10 @@ export default function MiniAgentGraph() {
     try {
       const saved = localStorage.getItem(LS_SCALES_KEY);
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch (err) {
+      console.error(`Corrupted localStorage for "${LS_SCALES_KEY}" — resetting to defaults:`, err);
+      try { localStorage.removeItem(LS_SCALES_KEY); } catch { /* storage unavailable */ }
+    }
     return { researcher: 1, analyst: 1, strategist: 1, executor: 1 };
   });
 
@@ -134,7 +137,7 @@ export default function MiniAgentGraph() {
   const getNodeH = useCallback((id: PipelineId) => BASE_NODE_H * nodeScales[id], [nodeScales]);
 
   const nodePositions = useMemo(() => {
-    const positions: Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }> = {} as any;
+    const positions: Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }> = {} as Record<PipelineId, { x: number; y: number; w: number; h: number; cx: number; cy: number }>;
     // Calculate total width
     let totalW = 0;
     PIPELINE_AGENTS.forEach((a, i) => {
@@ -213,6 +216,23 @@ export default function MiniAgentGraph() {
     executor: defaultPhase(),
   });
   const phaseTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Any other one-off timers (cascades, bursts, delayed phase kickoffs)
+  const auxTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const track = useCallback((t: ReturnType<typeof setTimeout>) => {
+    auxTimers.current.add(t);
+    return t;
+  }, []);
+
+  // Clean up every pending timer on unmount
+  useEffect(() => {
+    const phases = phaseTimers.current;
+    const aux = auxTimers.current;
+    return () => {
+      Object.values(phases).forEach(clearTimeout);
+      aux.forEach(clearTimeout);
+      aux.clear();
+    };
+  }, []);
 
   const advancePhase = useCallback((agentId: PipelineId, maxPhase: number, extras: Record<string, string>, symbol: string) => {
     // Clear existing timer
@@ -257,15 +277,15 @@ export default function MiniAgentGraph() {
         value: ind?.value || "—",
       }, e.symbol);
       // Analyst starts 2s after researcher
-      setTimeout(() => {
+      track(setTimeout(() => {
         advancePhase("analyst", 3, {
           indicator: ind?.name || "MACD",
           value: ind?.value || "—",
         }, e.symbol);
-      }, 2000);
+      }, 2000));
     }
     prevEvalCount.current = evaluations.length;
-  }, [evaluations.length, evaluations, advancePhase]);
+  }, [evaluations.length, evaluations, advancePhase, track]);
 
   // Trigger Strategist on new considerations
   const prevConsCount = useRef(considerations.length);
@@ -294,14 +314,14 @@ export default function MiniAgentGraph() {
       // Flash cascade
       const ids: PipelineId[] = ["researcher", "analyst", "strategist", "executor"];
       ids.forEach((id, i) => {
-        setTimeout(() => {
+        track(setTimeout(() => {
           setFlashNodes((prev) => new Set(prev).add(id));
-          setTimeout(() => setFlashNodes((prev) => { const n = new Set(prev); n.delete(id); return n; }), 600);
-        }, i * 300);
+          track(setTimeout(() => setFlashNodes((prev) => { const n = new Set(prev); n.delete(id); return n; }), 600));
+        }, i * 300));
       });
     }
     prevTradeCount.current = executedTrades.length;
-  }, [executedTrades.length, executedTrades, setTradeAgentMap, advancePhase]);
+  }, [executedTrades.length, executedTrades, setTradeAgentMap, advancePhase, track]);
 
   // Activity feed
   const activityFeed = useMemo(() => {
@@ -347,14 +367,16 @@ export default function MiniAgentGraph() {
     // Burst on connector 0-1 when new eval
     if (evaluations.length > 0) {
       setBurstConnectors(new Set([0]));
-      setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.add(1); return n; }), 2000);
-      setTimeout(() => setBurstConnectors(new Set()), 4000);
+      const t1 = setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.add(1); return n; }), 2000);
+      const t2 = setTimeout(() => setBurstConnectors(new Set()), 4000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [evaluations.length]);
   useEffect(() => {
     if (considerations.length > 0) {
       setBurstConnectors((prev) => new Set(prev).add(2));
-      setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.delete(2); return n; }), 2500);
+      const t = setTimeout(() => setBurstConnectors((prev) => { const n = new Set(prev); n.delete(2); return n; }), 2500);
+      return () => clearTimeout(t);
     }
   }, [considerations.length]);
 

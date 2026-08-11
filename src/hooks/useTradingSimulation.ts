@@ -156,7 +156,10 @@ export function useTradingSimulation() {
           if (valid.length > 0) return valid;
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error(`Corrupted localStorage for "${LS_KEY}" — resetting to defaults:`, err);
+      try { localStorage.removeItem(LS_KEY); } catch { /* storage unavailable */ }
+    }
     return DEFAULT_ACTIVE;
   });
 
@@ -272,15 +275,7 @@ export function useTradingSimulation() {
         }));
         setLearningNotes(seedNotes);
         noteIndexRef.current = 3;
-
-        for (const note of seedNotes) {
-          await supabase.from("learning_notes").insert({
-            id: note.id,
-            user_id: session.user.id,
-            category: note.category,
-            content: note.content,
-          });
-        }
+        // Seed notes are demo content — kept in memory only, never persisted.
       }
 
       setDbLoaded(true);
@@ -443,7 +438,7 @@ export function useTradingSimulation() {
   // Executed trades every 10s — tick-based P&L
   useEffect(() => {
     if (!dbLoaded) return;
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       if (activeInstruments.length === 0) return;
       const inst = pickRandom(activeInstruments);
       const action = pickRandom(["buy", "sell"] as const);
@@ -478,18 +473,7 @@ export function useTradingSimulation() {
         timestamp: new Date(),
       };
       setTradeHistory((prev) => [tradeEntry, ...prev].slice(0, 50));
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        supabase.from("trade_history").insert({
-          user_id: session.user.id,
-          type: action,
-          asset: inst.symbol,
-          entry_price: tradeEntry.entryPrice,
-          exit_price: exitPrice,
-          pnl,
-        }).then(() => {});
-      }
+      // Simulated trade — in-memory only, never persisted to the database.
     }, 10000);
     return () => clearInterval(interval);
   }, [dbLoaded, activeSymbols]);
@@ -497,20 +481,12 @@ export function useTradingSimulation() {
   // Learning notes every 15s
   useEffect(() => {
     if (!dbLoaded) return;
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       const idx = noteIndexRef.current % LEARNING_TEMPLATES.length;
       noteIndexRef.current++;
       const note = { id: uid(), ...LEARNING_TEMPLATES[idx], timestamp: new Date() };
       setLearningNotes((prev) => [note, ...prev].slice(0, 20));
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        supabase.from("learning_notes").insert({
-          user_id: session.user.id,
-          category: note.category,
-          content: note.content,
-        }).then(() => {});
-      }
+      // Simulated learning note — in-memory only, never persisted to the database.
     }, 15000);
     return () => clearInterval(interval);
   }, [dbLoaded]);
@@ -637,12 +613,14 @@ export function useTradingSimulation() {
 
   const deleteTrade = useCallback(async (id: string) => {
     setTradeHistory((prev) => prev.filter((t) => t.id !== id));
-    await supabase.from("trade_history").delete().eq("id", id);
+    const { error } = await supabase.from("trade_history").delete().eq("id", id);
+    if (error) console.error("Failed to delete trade:", error);
   }, []);
 
   const deleteLearningNote = useCallback(async (id: string) => {
     setLearningNotes((prev) => prev.filter((n) => n.id !== id));
-    await supabase.from("learning_notes").delete().eq("id", id);
+    const { error } = await supabase.from("learning_notes").delete().eq("id", id);
+    if (error) console.error("Failed to delete learning note:", error);
   }, []);
 
   const addLearningNote = useCallback(async (category: LearningNote["category"], content: string) => {
@@ -650,12 +628,13 @@ export function useTradingSimulation() {
     setLearningNotes((prev) => [note, ...prev].slice(0, 20));
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      await supabase.from("learning_notes").insert({
+      const { error } = await supabase.from("learning_notes").insert({
         id: note.id,
         user_id: session.user.id,
         category: note.category,
         content: note.content,
       });
+      if (error) console.error("Failed to save learning note:", error);
     }
   }, []);
 

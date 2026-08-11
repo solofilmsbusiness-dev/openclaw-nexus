@@ -27,14 +27,19 @@ function loadBgSettings(): BgSettings {
   try {
     const stored = localStorage.getItem(BG_STORAGE_KEY);
     if (stored) return { ...DEFAULT_BG, ...JSON.parse(stored) };
-  } catch {}
+  } catch (err) {
+    console.error(`Corrupted localStorage for "${BG_STORAGE_KEY}" — resetting to defaults:`, err);
+    try { localStorage.removeItem(BG_STORAGE_KEY); } catch { /* storage unavailable */ }
+  }
   return DEFAULT_BG;
 }
 
 function saveBgSettings(settings: BgSettings) {
   try {
     localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(settings));
-  } catch {}
+  } catch (err) {
+    console.error("Failed to persist background settings:", err);
+  }
 }
 
 const CORE_X = 400;
