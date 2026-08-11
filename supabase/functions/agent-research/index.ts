@@ -3,6 +3,7 @@ import { corsHeaders, json } from "../_shared/cors.ts";
 import { admin, loadConfig } from "../_shared/db.ts";
 import { fetchBars, lastPrice, setProvider, type Bar } from "../_shared/bars.ts";
 import {
+  atr,
   detectBreak,
   detectIFVG,
   detectRetest,
