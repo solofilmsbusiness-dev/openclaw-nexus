@@ -195,10 +195,7 @@ export function detectIFVG(bars: Bar[], fromIdx: number, wantDir: Dir): IFVG | n
     const c2 = bars[i - 1];
     const c3 = bars[i];
 
-    // Bullish gap: c1.high below c3.low, middle wick does not fill it.
-    if (c1.h < c3.l && c2.l > c1.h && c2.h < c3.l === false) {
-      // middle candle must not close the gap with its wick
-    }
+    // Gap between the outer candles that the middle candle's wick never fills.
     let low: number | null = null;
     let high: number | null = null;
     let gapDir: Dir | null = null;
