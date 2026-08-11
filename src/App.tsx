@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Trading from "./pages/Trading";
+import Agent from "./pages/Agent";
 import Calendar from "./pages/Calendar";
 import Profile from "./pages/Profile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -44,6 +45,7 @@ function AnimatedRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/trading" element={<Trading />} />
+          <Route path="/agent" element={<Agent />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />

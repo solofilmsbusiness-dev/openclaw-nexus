@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 const pages = [
   { path: "/", label: "Dashboard", adminOnly: true },
   { path: "/trading", label: "Trading", adminOnly: false },
+  { path: "/agent", label: "Agent", adminOnly: false },
   { path: "/calendar", label: "Calendar", adminOnly: false },
   { path: "/profile", label: "Profile", adminOnly: false },
 ];
