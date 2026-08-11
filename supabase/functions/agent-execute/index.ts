@@ -90,7 +90,7 @@ async function reconcileTopstep(sb: SB, cfg: any) {
   for (const raw of (stale ?? []) as Position[]) {
     const ids = (raw.topstep_position_ids ?? {}) as Record<string, any>;
     if (ids.entryOrderId && !ids.flattened) {
-      await topstepClose(sb, cfg, raw, raw as any && "reconcile: internal position closed");
+      await topstepClose(sb, cfg, raw, "reconcile: internal position closed");
     }
   }
 }
@@ -233,13 +233,28 @@ Deno.serve(async (req) => {
     await logEvent(sb, inserted.id, "OPENED", `${side} ${contracts} ${cfg.paper_symbol} (${d.source})`, {
       entry: d.entry, stop: d.stop, target: d.target, rr: d.rr, source: d.source, tv_signal_id: d.tv_signal_id,
     });
+
+    // Mirror onto TopstepX (practice account only — enforced inside the executor).
+    const topstepRes = await topstep(sb, cfg as any, inserted.id, {
+      action: "open",
+      side,
+      size: Math.max(1, Number((cfg as any).contracts_per_trade ?? 1)),
+      stop_price: Number(d.stop),
+      target_price: Number(d.target),
+    });
+
     if (d.tv_signal_id) {
       await sb.from("tradingview_signals")
         .update({ consumed: true, consumed_at: new Date().toISOString(), consume_reason: "entered" })
         .eq("id", d.tv_signal_id);
     }
 
-    return json({ ok: true, opened: { id: inserted.id, side, contracts }, guardActions });
+    return json({
+      ok: true,
+      opened: { id: inserted.id, side, contracts },
+      topstep: topstepRes ? { ok: topstepRes.ok, entryOrderId: topstepRes.entryOrderId ?? null, error: topstepRes.error ?? null } : null,
+      guardActions,
+    });
   } catch (e) {
     return json({ ok: false, error: String((e as Error).message ?? e) }, 200);
   }
