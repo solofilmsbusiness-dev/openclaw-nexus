@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.tradingview-webhook]
 verify_jwt = false
+
+[functions.topstepx-executor]
+verify_jwt = false
