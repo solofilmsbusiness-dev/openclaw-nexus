@@ -26,8 +26,10 @@ export type Database = {
           data_proxy_symbol: string
           htf_timeframe: string
           id: string
+          kill_switch: boolean
           ltf_timeframe: string
           max_hold_minutes: number
+          max_stop_ticks: number
           min_rr: number
           min_zone_touches: number
           one_setup_per_zone_session: boolean
@@ -39,6 +41,8 @@ export type Database = {
           risk_per_trade_pct: number
           symbol: string
           tick_size: number
+          tv_confluence_required: boolean
+          tv_signal_ttl_minutes: number
           updated_at: string
         }
         Insert: {
@@ -52,8 +56,10 @@ export type Database = {
           data_proxy_symbol?: string
           htf_timeframe?: string
           id?: string
+          kill_switch?: boolean
           ltf_timeframe?: string
           max_hold_minutes?: number
+          max_stop_ticks?: number
           min_rr?: number
           min_zone_touches?: number
           one_setup_per_zone_session?: boolean
@@ -65,6 +71,8 @@ export type Database = {
           risk_per_trade_pct?: number
           symbol?: string
           tick_size?: number
+          tv_confluence_required?: boolean
+          tv_signal_ttl_minutes?: number
           updated_at?: string
         }
         Update: {
@@ -78,8 +86,10 @@ export type Database = {
           data_proxy_symbol?: string
           htf_timeframe?: string
           id?: string
+          kill_switch?: boolean
           ltf_timeframe?: string
           max_hold_minutes?: number
+          max_stop_ticks?: number
           min_rr?: number
           min_zone_touches?: number
           one_setup_per_zone_session?: boolean
@@ -91,6 +101,8 @@ export type Database = {
           risk_per_trade_pct?: number
           symbol?: string
           tick_size?: number
+          tv_confluence_required?: boolean
+          tv_signal_ttl_minutes?: number
           updated_at?: string
         }
         Relationships: []
@@ -105,10 +117,12 @@ export type Database = {
           reason: string | null
           rr: number | null
           snapshot: Json | null
+          source: string
           steps_passed: Json
           stop: number | null
           symbol: string
           target: number | null
+          tv_signal_id: string | null
         }
         Insert: {
           created_at?: string
@@ -119,10 +133,12 @@ export type Database = {
           reason?: string | null
           rr?: number | null
           snapshot?: Json | null
+          source?: string
           steps_passed?: Json
           stop?: number | null
           symbol: string
           target?: number | null
+          tv_signal_id?: string | null
         }
         Update: {
           created_at?: string
@@ -133,12 +149,22 @@ export type Database = {
           reason?: string | null
           rr?: number | null
           snapshot?: Json | null
+          source?: string
           steps_passed?: Json
           stop?: number | null
           symbol?: string
           target?: number | null
+          tv_signal_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_decisions_tv_signal_id_fkey"
+            columns: ["tv_signal_id"]
+            isOneToOne: false
+            referencedRelation: "tradingview_signals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       graph_configs: {
         Row: {
@@ -458,6 +484,41 @@ export type Database = {
         }
         Relationships: []
       }
+      trade_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          note: string | null
+          position_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          note?: string | null
+          position_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          note?: string | null
+          position_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_events_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "paper_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trade_history: {
         Row: {
           asset: string
@@ -488,6 +549,54 @@ export type Database = {
           pnl?: number | null
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      tradingview_signals: {
+        Row: {
+          consume_reason: string | null
+          consumed: boolean
+          consumed_at: string | null
+          direction: string
+          entry: number | null
+          id: string
+          indicator: string | null
+          raw_payload: Json
+          received_at: string
+          sl: number | null
+          symbol: string
+          timeframe: string | null
+          tp: number | null
+        }
+        Insert: {
+          consume_reason?: string | null
+          consumed?: boolean
+          consumed_at?: string | null
+          direction: string
+          entry?: number | null
+          id?: string
+          indicator?: string | null
+          raw_payload?: Json
+          received_at?: string
+          sl?: number | null
+          symbol: string
+          timeframe?: string | null
+          tp?: number | null
+        }
+        Update: {
+          consume_reason?: string | null
+          consumed?: boolean
+          consumed_at?: string | null
+          direction?: string
+          entry?: number | null
+          id?: string
+          indicator?: string | null
+          raw_payload?: Json
+          received_at?: string
+          sl?: number | null
+          symbol?: string
+          timeframe?: string | null
+          tp?: number | null
         }
         Relationships: []
       }
