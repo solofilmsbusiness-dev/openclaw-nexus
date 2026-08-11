@@ -22,7 +22,7 @@ type Position = Tables<"paper_positions">;
 type TvSignal = Tables<"tradingview_signals">;
 
 const NUM_FIELDS: { key: keyof Config; label: string; hint: string; step?: string }[] = [
-  { key: "max_hold_minutes", label: "Max hold (min)", hint: "Force-flatten any position at this age. 300 = 5 hours." },
+  { key: "max_hold_minutes", label: "Max hold (min)", hint: "0 = disabled (no time-based exit). Any value > 0 force-flattens at that age." },
   { key: "profit_lock_rr", label: "Profit lock at R", hint: "Move stop into profit once open R reaches this.", step: "0.1" },
   { key: "profit_lock_ticks", label: "Profit lock ticks", hint: "Ticks of guaranteed profit when the lock arms." },
   { key: "min_zone_touches", label: "Min zone touches", hint: "HTF reactions required to qualify a S/R zone." },

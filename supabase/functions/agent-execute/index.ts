@@ -50,15 +50,17 @@ async function riskGuard(sb: SB, cfg: AgentConfig, price: number | null) {
     .from("paper_positions").select("*").eq("status", "OPEN");
   for (const raw of (positions ?? []) as Position[]) {
     const p = raw;
-    const heldMin = (Date.now() - new Date(p.opened_at).getTime()) / 60_000;
-
-    // 1. Hard max-hold flatten — always wins, regardless of P/L.
-    if (heldMin >= cfg.max_hold_minutes) {
-      actions.push(await closePosition(
-        sb, cfg, p, price ?? p.entry_price,
-        `max hold ${cfg.max_hold_minutes}m reached (${Math.round(heldMin)}m)`,
-      ));
-      continue;
+    // 1. Optional max-hold flatten. 0 / null / negative = DISABLED (no time exit).
+    const maxHold = Number(cfg.max_hold_minutes);
+    if (Number.isFinite(maxHold) && maxHold > 0) {
+      const heldMin = (Date.now() - new Date(p.opened_at).getTime()) / 60_000;
+      if (heldMin >= maxHold) {
+        actions.push(await closePosition(
+          sb, cfg, p, price ?? p.entry_price,
+          `max hold ${maxHold}m reached (${Math.round(heldMin)}m)`,
+        ));
+        continue;
+      }
     }
     if (price == null) continue;
 
