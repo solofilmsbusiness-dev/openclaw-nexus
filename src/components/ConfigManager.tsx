@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useAgents } from "@/contexts/AgentContext";
+import { useAgents, type LayoutData } from "@/contexts/AgentContext";
 import { toast } from "sonner";
 import { Save, FolderOpen, Trash2, Pencil, Loader2 } from "lucide-react";
 import type { Agent, Edge } from "@/data/agents";
@@ -85,7 +85,7 @@ export function ConfigManager({ open, onOpenChange }: ConfigManagerProps) {
   };
 
   const handleLoad = (config: GraphConfig) => {
-    const agentsData = config.agents_data as unknown as { agents?: Agent[]; layout?: Record<string, unknown> } | Agent[];
+    const agentsData = config.agents_data as unknown as { agents?: Agent[]; layout?: LayoutData } | Agent[];
     const edgesData = config.edges_data as unknown as Edge[];
     if (agentsData && typeof agentsData === "object" && !Array.isArray(agentsData) && agentsData.agents) {
       loadConfig(agentsData.agents as Agent[], edgesData as Edge[], agentsData.layout);

@@ -19,6 +19,7 @@ const BUILTIN_LABELS: Record<BuiltinPanelId, string> = {
   watchlist: "Watchlist",
   analytics: "Analytics",
   "ai-evaluator": "AI Evaluator",
+  chart: "Market Chart",
 };
 
 interface PremadeTemplate {

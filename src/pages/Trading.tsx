@@ -26,6 +26,7 @@ import { useTradingLayout, type PanelItem, TOP_BAR_ITEMS } from "@/contexts/Trad
 import { Switch } from "@/components/ui/switch";
 import Watchlist from "@/components/trading/Watchlist";
 import AnalyticsPanel from "@/components/trading/AnalyticsPanel";
+import MarketChart from "@/components/trading/MarketChart";
 import PanelWrapper from "@/components/trading/PanelWrapper";
 import CustomPanel from "@/components/trading/CustomPanel";
 import AddPanelDialog from "@/components/trading/AddPanelDialog";
@@ -189,6 +190,8 @@ const Trading = () => {
         return <AnalyticsInner stats={stats} tradeHistory={tradeHistory} />;
       case "ai-evaluator":
         return <AIEvaluatorPanel />;
+      case "chart":
+        return <MarketChart compact className="border-0 bg-transparent" />;
       default:
         return null;
     }

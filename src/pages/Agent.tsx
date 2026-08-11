@@ -7,6 +7,7 @@ import {
   ShieldAlert, Signal, TrendingDown, TrendingUp,
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
+import MarketChart from "@/components/trading/MarketChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -227,13 +228,19 @@ export default function Agent() {
           </div>
         )}
 
-        <Tabs defaultValue="config">
+        <Tabs defaultValue="chart">
           <TabsList className="h-8">
+            <TabsTrigger value="chart" className="text-[11px]">Chart</TabsTrigger>
             <TabsTrigger value="config" className="text-[11px]">Configuration</TabsTrigger>
             <TabsTrigger value="decisions" className="text-[11px]">Decisions</TabsTrigger>
             <TabsTrigger value="positions" className="text-[11px]">Positions</TabsTrigger>
             <TabsTrigger value="signals" className="text-[11px]">TradingView</TabsTrigger>
           </TabsList>
+
+          {/* CHART */}
+          <TabsContent value="chart" className="mt-4">
+            <MarketChart />
+          </TabsContent>
 
           {/* CONFIG */}
           <TabsContent value="config" className="mt-4 space-y-4">

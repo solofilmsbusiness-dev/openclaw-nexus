@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.ai-evaluate]
 verify_jwt = true
 
+[functions.market-bars]
+verify_jwt = true
+
 [functions.agent-cron]
 verify_jwt = false
 
