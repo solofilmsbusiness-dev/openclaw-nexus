@@ -199,9 +199,12 @@ export const PROVIDERS: Record<string, BarProvider> = {
 
 let providerOverride: string | null = null;
 
-/** Called once per tick with agent_config.data_provider. */
-export function setProvider(name?: string | null) {
+/** Called once per tick with agent_config.data_provider. Returns the effective provider name. */
+export function setProvider(name?: string | null): string {
   providerOverride = name && PROVIDERS[name] ? name : null;
+  if (providerOverride === "polygon" && !Deno.env.get("POLYGON_API_KEY")) return "yahoo";
+  if (providerOverride === "alphavantage" && !Deno.env.get("ALPHA_VANTAGE_API_KEY")) return "yahoo";
+  return providerOverride ?? "yahoo";
 }
 
 function providerFor(_tf: string): BarProvider {
