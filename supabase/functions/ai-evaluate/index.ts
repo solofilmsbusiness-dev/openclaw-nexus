@@ -9,8 +9,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { symbol } = await req.json();
-    if (!symbol || typeof symbol !== "string") {
+    if (!symbol || typeof symbol !== "string" || !/^[A-Za-z0-9=^.\-]{1,12}$/.test(symbol)) {
       return new Response(JSON.stringify({ error: "Symbol is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

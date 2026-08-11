@@ -22,7 +22,12 @@ const Index = () => {
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const { loadLastConfig } = useAgents();
+  const {
+    loadLastConfig,
+    agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
+    handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
+    handleAddEdge, handleDeleteEdge,
+  } = useAgents();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -32,11 +37,11 @@ const Index = () => {
         return;
       }
       // Guard: only admins can access dashboard
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-      const isAdmin = roles?.some((r) => r.role === "admin");
+      const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
+        _user_id: session.user.id,
+        _role: "admin",
+      });
+      if (roleErr) console.error("Failed to verify admin role:", roleErr);
       if (!isAdmin) {
         navigate("/trading", { replace: true });
         return;
@@ -55,12 +60,6 @@ const Index = () => {
       </div>
     );
   }
-
-  const {
-    agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
-    handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
-    handleAddEdge, handleDeleteEdge,
-  } = useAgents();
 
   return (
     <div className={`h-screen bg-background flex flex-col overflow-hidden ${layout.compactMode ? "text-[0.9em]" : ""}`}>
