@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, json } from "../_shared/cors.ts";
-import { admin, loadConfig, type AgentConfig } from "../_shared/db.ts";
+import { admin, loadConfig, logEvent, type AgentConfig } from "../_shared/db.ts";
 import { inNewsWindow, rr, type Dir } from "../_shared/brt.ts";
 
 const BRT_SYSTEM_PROMPT = `You are the risk officer for a single-strategy NQ futures agent that trades ONLY the
@@ -76,8 +76,9 @@ type Decision = {
   stop: number | null;
   target: number | null;
   rr: number | null;
-  source: "brt" | "tradingview" | "tradingview-trigger-only" | "confluence" | "none";
+  source: "brt" | "tradingview" | "tradingview-trigger-only" | "confluence" | "reversal-warning" | "none";
   tv_signal_id: string | null;
+  tv_timeframe: string | null;
   zone_key: string | null;
 };
 
@@ -93,6 +94,7 @@ function hold(reason: string, steps: Record<string, boolean>, bias: string, extr
     rr: null,
     source: "none",
     tv_signal_id: null,
+    tv_timeframe: null,
     zone_key: null,
     ...extra,
   };
