@@ -225,6 +225,7 @@ export default function MarketChart({ compact = false, className = "", height }:
       open: b.o, high: b.h, low: b.l, close: b.c,
     }));
     candle.setData(candles);
+    console.log('[MarketChart] applied bars', candles.length, candles[candles.length-1]);
 
     if (volumeRef.current) {
       const vols: HistogramData<Time>[] = bars.map((b) => ({
