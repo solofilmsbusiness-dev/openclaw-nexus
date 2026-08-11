@@ -30,6 +30,8 @@ Deno.serve(async (req) => {
       snapshot: {
         proxySymbol: research?.proxySymbol,
         proxyPrice: research?.proxyPrice,
+        tv_timeframe: decision.tv_timeframe ?? null,
+        bracket_source: decision.bracket_source ?? null,
         zones: research?.zones,
         aiNote: decision.ai_note ?? null,
       },
