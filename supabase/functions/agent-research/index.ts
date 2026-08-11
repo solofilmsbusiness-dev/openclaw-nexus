@@ -3,6 +3,7 @@ import { corsHeaders, json } from "../_shared/cors.ts";
 import { admin, loadConfig } from "../_shared/db.ts";
 import { fetchBars, lastPrice, setProvider, type Bar } from "../_shared/bars.ts";
 import {
+  atr,
   detectBreak,
   detectIFVG,
   detectRetest,
@@ -96,6 +97,16 @@ Deno.serve(async (req) => {
       htfBias: bias,
       zones,
       setups,
+      atr: {
+        ltf: atr(ltfEntry, 14),
+        structure: atr(ltfStructure, 14),
+      },
+      liquidity: price != null
+        ? {
+          long: nextLiquidity(ltfStructure, price, "long"),
+          short: nextLiquidity(ltfStructure, price, "short"),
+        }
+        : { long: null, short: null },
       bars: { htf: summarize(htf), ltf: summarize(ltfEntry), structure: summarize(ltfStructure) },
     });
   } catch (e) {
