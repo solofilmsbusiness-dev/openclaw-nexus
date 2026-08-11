@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const sb = admin();
     const cfg = await loadConfig(sb);
 
-    setProvider(cfg.data_provider);
+    const provider = setProvider(cfg.data_provider);
     const proxy = cfg.data_proxy_symbol || "NQ=F";
     const [htf, ltfEntry, ltfStructure] = await Promise.all([
       fetchBars(proxy, cfg.htf_timeframe || "4h"),
@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
     return json({
       ok: true,
       symbol: cfg.symbol,
+      provider,
       proxySymbol: proxy,
       proxyPrice: price,
       htfTimeframe: cfg.htf_timeframe,
