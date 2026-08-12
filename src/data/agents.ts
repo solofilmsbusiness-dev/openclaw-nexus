@@ -35,23 +35,23 @@ export interface Edge {
   weight: number;
 }
 
-const randMetrics = (len = 20) => Array.from({ length: len }, () => Math.random());
+// Static roster of configured agents (labels only — no simulated metrics).
+const noMetrics = () => ({ latency: [] as number[], successRate: [] as number[], activity: [] as number[] });
 
 export const AGENTS: Agent[] = [
-  { id: "brain", name: "Brain", subtitle: "Chief Orchestrator", type: "orchestrator", status: "healthy", icon: "🧠", currentTask: "Campaign orchestration", progress: 78, backlogCount: 3, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "research", name: "Research", subtitle: "Intelligence Gatherer", type: "intelligence", status: "active", icon: "🔍", currentTask: "Trend scan", progress: 45, backlogCount: 5, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "scheduler", name: "Scheduler", subtitle: "Time Keeper", type: "operations", status: "healthy", icon: "📅", currentTask: "Queue management", progress: 90, backlogCount: 1, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "architect", name: "Architect", subtitle: "Systems Designer", type: "design", status: "healthy", icon: "🏗️", currentTask: "System design review", progress: 60, backlogCount: 2, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "scout", name: "Scout", subtitle: "Horizon Watcher", type: "intelligence", status: "active", icon: "🔭", currentTask: "Opportunity detection", progress: 33, backlogCount: 7, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "contentcmd", name: "Content Command", subtitle: "Narrative Engine", type: "content", status: "degraded", icon: "📝", currentTask: "Content pipeline", progress: 55, backlogCount: 12, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "webagency", name: "WebAgency", subtitle: "Digital Craftsman", type: "web", status: "degraded", icon: "🌐", currentTask: "Client deliverables", progress: 40, backlogCount: 8, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "thewire", name: "The Wire", subtitle: "Signal Tower", type: "comms", status: "healthy", icon: "📡", currentTask: "Signal relay", progress: 95, backlogCount: 0, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "flipengine", name: "FlipEngine", subtitle: "Commerce Engine", type: "commerce", status: "down", icon: "🔄", currentTask: "Halted", progress: 0, backlogCount: 15, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "videographer", name: "Videographer", subtitle: "Visual Storyteller", type: "media", status: "active", icon: "🎬", currentTask: "Video pipeline", progress: 70, backlogCount: 4, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "analyst", name: "Analyst", subtitle: "Pattern Reader", type: "analytics", status: "healthy", icon: "📊", currentTask: "Revenue analysis", progress: 85, backlogCount: 2, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
-  { id: "skoolmaster", name: "Skool Master", subtitle: "Knowledge Architect", type: "education", status: "degraded", icon: "🎓", currentTask: "Course updates", progress: 30, backlogCount: 9, metrics: { latency: randMetrics(), successRate: randMetrics(), activity: randMetrics() } },
+  { id: "brain", name: "Brain", subtitle: "Chief Orchestrator", type: "orchestrator", status: "healthy", icon: "🧠", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "research", name: "Research", subtitle: "Intelligence Gatherer", type: "intelligence", status: "healthy", icon: "🔍", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "scheduler", name: "Scheduler", subtitle: "Time Keeper", type: "operations", status: "healthy", icon: "📅", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "architect", name: "Architect", subtitle: "Systems Designer", type: "design", status: "healthy", icon: "🏗️", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "scout", name: "Scout", subtitle: "Horizon Watcher", type: "intelligence", status: "healthy", icon: "🔭", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "contentcmd", name: "Content Command", subtitle: "Narrative Engine", type: "content", status: "healthy", icon: "📝", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "webagency", name: "WebAgency", subtitle: "Digital Craftsman", type: "web", status: "healthy", icon: "🌐", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "thewire", name: "The Wire", subtitle: "Signal Tower", type: "comms", status: "healthy", icon: "📡", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "flipengine", name: "FlipEngine", subtitle: "Commerce Engine", type: "commerce", status: "healthy", icon: "🔄", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "videographer", name: "Videographer", subtitle: "Visual Storyteller", type: "media", status: "healthy", icon: "🎬", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "analyst", name: "Analyst", subtitle: "Pattern Reader", type: "analytics", status: "healthy", icon: "📊", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
+  { id: "skoolmaster", name: "Skool Master", subtitle: "Knowledge Architect", type: "education", status: "healthy", icon: "🎓", currentTask: "", progress: 0, backlogCount: 0, metrics: noMetrics() },
 ];
-
 export const EDGES: Edge[] = [
   { id: "e1", from: "core", to: "brain", kind: "control", weight: 1 },
   { id: "e2", from: "core", to: "research", kind: "data", weight: 0.8 },
@@ -70,21 +70,6 @@ export const EDGES: Edge[] = [
   { id: "e15", from: "research", to: "contentcmd", kind: "data", weight: 0.6 },
 ];
 
-export const SAMPLE_EVENTS: AgentEvent[] = [
-  { id: "ev1", agentId: "brain", agentName: "Brain", type: "kickoff", message: "New campaign: OnlyFans tease + Hoodtorial waitlist", ts: "2026-03-02T17:08:36Z" },
-  { id: "ev2", agentId: "research", agentName: "Research", type: "assignment", message: "Pulling 3 revenue-focused OF hooks + IG proof angles", ts: "2026-03-02T17:08:55Z" },
-  { id: "ev3", agentId: "research", agentName: "Research", type: "report", message: "Findings: tease loops + countdown bundles win", ts: "2026-03-02T17:09:12Z" },
-  { id: "ev4", agentId: "scheduler", agentName: "Scheduler", type: "publish", message: "Queued 5 posts across 3 platforms", ts: "2026-03-02T17:15:00Z" },
-  { id: "ev5", agentId: "architect", agentName: "Architect", type: "emit", message: "System design review complete", ts: "2026-03-02T17:20:00Z" },
-  { id: "ev6", agentId: "contentcmd", agentName: "Content Command", type: "draft", message: "Draft carousel: 5 slides ready for review", ts: "2026-03-02T17:25:00Z" },
-  { id: "ev7", agentId: "scout", agentName: "Scout", type: "alert", message: "Detected trending topic: AI automation", ts: "2026-03-02T17:30:00Z" },
-  { id: "ev8", agentId: "flipengine", agentName: "FlipEngine", type: "error", message: "Payment gateway timeout — retrying", ts: "2026-03-02T17:35:00Z" },
-  { id: "ev9", agentId: "videographer", agentName: "Videographer", type: "render", message: "Video render complete: 45s reel", ts: "2026-03-02T17:40:00Z" },
-  { id: "ev10", agentId: "analyst", agentName: "Analyst", type: "insight", message: "Revenue up 23% WoW — OF bundle converting", ts: "2026-03-02T17:45:00Z" },
-  { id: "ev11", agentId: "thewire", agentName: "The Wire", type: "relay", message: "Broadcast: campaign update to all agents", ts: "2026-03-02T17:50:00Z" },
-  { id: "ev12", agentId: "brain", agentName: "Brain", type: "decision", message: "Prioritizing content pipeline — backlog critical", ts: "2026-03-02T17:55:00Z" },
-];
-
 export const statusColor = (status: AgentStatus) => {
   switch (status) {
     case "healthy": return { bg: "hsl(152, 60%, 48%)", glow: "0 2px 12px hsl(152 60% 48% / 0.25)" };
@@ -94,11 +79,9 @@ export const statusColor = (status: AgentStatus) => {
   }
 };
 
-const randMetricsEmpty = (len = 20) => Array.from({ length: len }, () => 0);
-
 export function createAgent(overrides: Partial<Agent> = {}): Agent {
   return {
-    id: `agent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: `agent-${Date.now()}-${crypto.randomUUID().slice(0, 4)}`,
     name: "New Agent",
     subtitle: "Unassigned",
     type: "operations",
@@ -108,9 +91,9 @@ export function createAgent(overrides: Partial<Agent> = {}): Agent {
     progress: 0,
     backlogCount: 0,
     metrics: {
-      latency: randMetricsEmpty(),
-      successRate: randMetricsEmpty(),
-      activity: randMetricsEmpty(),
+      latency: [],
+      successRate: [],
+      activity: [],
     },
     ...overrides,
   };
@@ -118,7 +101,7 @@ export function createAgent(overrides: Partial<Agent> = {}): Agent {
 
 export function createEdge(from: string, to: string, kind: string = "data"): Edge {
   return {
-    id: `edge-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: `edge-${Date.now()}-${crypto.randomUUID().slice(0, 4)}`,
     from,
     to,
     kind,
