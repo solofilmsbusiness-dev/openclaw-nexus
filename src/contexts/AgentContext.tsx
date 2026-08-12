@@ -1,7 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
-import { AGENTS, EDGES, SAMPLE_EVENTS, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
-import { useSimulation } from "@/hooks/useSimulation";
+import { AGENTS, EDGES, createAgent, createEdge, type Agent, type AgentEvent, type AgentStatus, type Edge } from "@/data/agents";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface LayoutData {
@@ -41,17 +39,13 @@ const AgentContext = createContext<AgentContextValue | null>(null);
 export function AgentProvider({ children }: { children: ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
   const [edges, setEdges] = useState<Edge[]>(EDGES);
-  const [events, setEvents] = useState<AgentEvent[]>(SAMPLE_EVENTS);
+  const [events, setEvents] = useState<AgentEvent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const [nodeSizes, setNodeSizes] = useState<Record<string, number>>({});
 
   const handleAgentsChange = useCallback((newAgents: Agent[]) => setAgents(newAgents), []);
-  const handleNewEvent = useCallback((event: AgentEvent) => {
-    setEvents((prev) => [event, ...prev].slice(0, 50));
-  }, []);
-
   const handleStatusChange = useCallback((id: string, status: AgentStatus) => {
     setAgents((prev) =>
       prev.map((a) =>
@@ -156,9 +150,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     }
     return true;
   }, [loadConfig]);
-
-  const { pathname } = useLocation();
-  useSimulation(agents, handleAgentsChange, handleNewEvent, killSwitchActive, pathname);
 
   return (
     <AgentContext.Provider

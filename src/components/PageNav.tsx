@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 const pages = [
-  { path: "/", label: "Dashboard", adminOnly: true },
-  { path: "/trading", label: "Trading", adminOnly: false },
+  { path: "/", label: "Pipeline", adminOnly: true },
+  { path: "/trading", label: "Trading Desk", adminOnly: false },
   { path: "/agent", label: "Agent", adminOnly: false },
   { path: "/calendar", label: "Calendar", adminOnly: false },
   { path: "/profile", label: "Profile", adminOnly: false },

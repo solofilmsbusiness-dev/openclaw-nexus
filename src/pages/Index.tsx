@@ -1,33 +1,21 @@
-import { useState, useEffect } from "react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import MetricsBar from "@/components/MetricsBar";
-import OnboardingTour from "@/components/OnboardingTour";
-import AgentGraph from "@/components/AgentGraph";
-import EventTimeline from "@/components/EventTimeline";
-import TerminalLog from "@/components/TerminalLog";
-import AgentCards from "@/components/AgentCards";
-import CommandPalette from "@/components/CommandPalette";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useAgents } from "@/contexts/AgentContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import PageNav from "@/components/PageNav";
+import PipelineView from "@/components/agent/PipelineView";
+import StatusHeader from "@/components/agent/StatusHeader";
+import ActivityTimeline from "@/components/agent/ActivityTimeline";
+import { useAgentLive } from "@/hooks/useAgentLive";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { humanReason, relTime, fmtMoney } from "@/lib/agentLang";
+import { Workflow } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const { layout } = useSettings();
-  const [collapsed, setCollapsed] = useState(isMobile);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-
-  const {
-    loadLastConfig,
-    agents, edges, events, selectedAgentId, killSwitchActive, setSelectedAgentId,
-    handleAgentsChange, handleStatusChange, handleAddAgent, handleDeleteAgent,
-    handleAddEdge, handleDeleteEdge,
-  } = useAgents();
+  const { config, timeline, openPositions, today, loading } = useAgentLive();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,21 +24,19 @@ const Index = () => {
         navigate("/login", { replace: true });
         return;
       }
-      // Guard: only admins can access dashboard
-      const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
+      const { data: isAdmin, error } = await supabase.rpc("has_role", {
         _user_id: session.user.id,
         _role: "admin",
       });
-      if (roleErr) console.error("Failed to verify admin role:", roleErr);
+      if (error) console.error("Failed to verify admin role:", error);
       if (!isAdmin) {
-        navigate("/trading", { replace: true });
+        navigate("/agent", { replace: true });
         return;
       }
       setAuthChecked(true);
-      await loadLastConfig();
     };
     checkAuth();
-  }, [navigate, loadLastConfig]);
+  }, [navigate]);
 
   if (!authChecked) {
     return (
@@ -61,130 +47,106 @@ const Index = () => {
     );
   }
 
+  const recent = [...timeline].reverse().slice(0, 60);
+
   return (
-    <div className={`h-screen bg-background flex flex-col overflow-hidden ${layout.compactMode ? "text-[0.9em]" : ""}`}>
-      <OnboardingTour />
-      {layout.showMetricsBar && (
-        <div data-tour="metrics-bar">
-          <MetricsBar agents={agents} />
-        </div>
-      )}
-
-      <CommandPalette
-        agents={agents}
-        onSelectAgent={setSelectedAgentId}
-        onStatusChange={handleStatusChange}
-      />
-
-      <div className={`flex-1 flex flex-col lg:flex-row ${layout.compactMode ? "gap-1.5 p-1.5" : "gap-3 p-3"} min-h-0 overflow-hidden`}>
-        {/* Left sidebar */}
-        <div
-          data-tour="agent-cards"
-          className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            collapsed ? "w-0 lg:w-0" : `w-full`
-          }`}
-          style={!collapsed && !isMobile ? { width: layout.leftPanelWidth } : undefined}
-        >
-          <div className="h-full overflow-hidden" style={!isMobile ? { width: layout.leftPanelWidth } : undefined}>
-            <AgentCards
-              agents={agents}
-              onAgentsChange={handleAgentsChange}
-              selectedAgentId={selectedAgentId}
-              onSelectAgent={setSelectedAgentId}
-              onAddAgent={handleAddAgent}
-              onDeleteAgent={handleDeleteAgent}
-            />
-          </div>
-        </div>
-
-        {/* Toggle button */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-lg border border-border/30 hover:border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-colors self-center h-16"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />}
-        </button>
-
-        {/* Mobile toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-border/30 bg-secondary/30 text-[10px] font-mono tracking-wider text-muted-foreground self-start"
-        >
-          {collapsed ? <><ChevronRight className="w-3 h-3" /> Show Agents</> : <><ChevronLeft className="w-3 h-3" /> Hide Agents</>}
-        </button>
-
-        {/* Graph */}
-        <div className="flex-1 min-h-0 overflow-hidden" data-tour="agent-graph">
-          <AgentGraph
-            agents={agents}
-            edges={edges}
-            selectedAgentId={selectedAgentId}
-            onSelectAgent={setSelectedAgentId}
-            onAddEdge={handleAddEdge}
-            onDeleteEdge={handleDeleteEdge}
-            onDeleteAgent={handleDeleteAgent}
-            killSwitchActive={killSwitchActive}
-          />
-        </div>
-
-        {/* Right toggle */}
-        <button
-          onClick={() => setRightCollapsed(!rightCollapsed)}
-          className="hidden lg:flex items-center justify-center w-5 shrink-0 rounded-lg border border-border/30 hover:border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-colors self-center h-16"
-          title={rightCollapsed ? "Expand panels" : "Collapse panels"}
-        >
-          {rightCollapsed ? <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-        </button>
-
-        {/* Mobile right toggle */}
-        <button
-          onClick={() => setRightCollapsed(!rightCollapsed)}
-          className="lg:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-border/30 bg-secondary/30 text-[10px] font-mono tracking-wider text-muted-foreground self-start"
-        >
-          {rightCollapsed ? <><ChevronLeft className="w-3 h-3" /> Show Panels</> : <><ChevronRight className="w-3 h-3" /> Hide Panels</>}
-        </button>
-
-        {/* Right panel */}
-        <div
-          className={`relative transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            rightCollapsed ? "w-0 lg:w-0" : "w-full"
-          }`}
-          style={!rightCollapsed && !isMobile ? { width: layout.rightPanelWidth } : undefined}
-        >
-          <div className={`h-full flex flex-col ${layout.compactMode ? "gap-1.5" : "gap-3"} min-h-0 overflow-hidden`} style={!isMobile ? { width: layout.rightPanelWidth } : undefined}>
-            <div className="flex-1 min-h-0 overflow-hidden" data-tour="event-timeline">
-              <EventTimeline
-                events={events}
-                selectedAgentId={selectedAgentId}
-                onSelectAgent={setSelectedAgentId}
-              />
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden" data-tour="terminal-log">
-              <TerminalLog events={events} />
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-card/70 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Workflow className="w-4 h-4 text-primary" />
+            <div>
+              <h1 className="text-sm font-semibold tracking-tight">Pipeline</h1>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Cron → Tick → Research → Strategy → Execute → TopstepX
+              </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <PageNav />
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => navigate("/agent")}>
+              Open Agent
+            </Button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Settings button removed — now in MetricsBar */}
+      <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+        <StatusHeader config={config} todayPnl={today.pnl} todayTrades={today.trades} openCount={openPositions.length} />
+        <ActivityTimeline items={timeline} />
+        <PipelineView />
 
-      {/* Cmd+K hint */}
-      <div className="fixed bottom-4 right-4 z-50" data-tour="cmd-k">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel neon-border text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span>⌘K</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left" className="text-xs">
-            Command Palette
-          </TooltipContent>
-        </Tooltip>
-      </div>
+        <section className="grid lg:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-xl">
+            <h2 className="px-3 h-9 flex items-center text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+              Open positions
+            </h2>
+            <div className="divide-y divide-border/50">
+              {openPositions.length === 0 && (
+                <p className="p-5 text-xs text-muted-foreground">
+                  No open trade — the agent is waiting for a valid BRT setup.
+                </p>
+              )}
+              {openPositions.map((p) => (
+                <div key={p.id} className="p-3 text-xs">
+                  <span className={p.side === "LONG" ? "text-neon-green" : "text-neon-red"}>
+                    {p.side} {p.contracts} {p.symbol}
+                  </span>{" "}
+                  <span className="font-mono text-muted-foreground">
+                    entry {Number(p.entry_price).toFixed(2)} · stop {Number(p.stop_price).toFixed(2)} · target{" "}
+                    {Number(p.target_price).toFixed(2)} · opened {relTime(p.opened_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-xl">
+            <h2 className="px-3 h-9 flex items-center text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+              Live agent log
+            </h2>
+            <ScrollArea className="h-[320px]">
+              <div className="divide-y divide-border/50">
+                {loading && <p className="p-5 text-xs text-muted-foreground">Loading…</p>}
+                {!loading && recent.length === 0 && (
+                  <p className="p-5 text-xs text-muted-foreground">Nothing logged yet.</p>
+                )}
+                <AnimatePresence initial={false}>
+                  {recent.map((e) => (
+                    <motion.div
+                      key={e.id}
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="px-3 py-2 flex items-start gap-2 text-[11px]"
+                    >
+                      <span className="font-mono text-[10px] text-muted-foreground shrink-0">{relTime(e.ts)}</span>
+                      <span
+                        className={
+                          e.kind === "error"
+                            ? "text-neon-red"
+                            : e.kind === "reversal"
+                              ? "text-neon-orange"
+                              : e.direction === "long"
+                                ? "text-neon-green"
+                                : e.direction === "short"
+                                  ? "text-neon-red"
+                                  : "text-foreground"
+                        }
+                      >
+                        {e.title}
+                      </span>
+                      <span className="text-muted-foreground truncate">
+                        {humanReason(e.detail, e.kind === "decision-hold" ? "HOLD" : null)}
+                        {e.pnl != null ? ` · ${fmtMoney(e.pnl)}` : ""}
+                      </span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </ScrollArea>
+          </div>
+        </section>
+      </main>
     </div>
   );
 };

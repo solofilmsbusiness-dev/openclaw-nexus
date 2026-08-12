@@ -1,13 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import {
-  Activity, Bot, Clock, Gauge, Loader2, Power, RefreshCw, Save,
-  ShieldAlert, Signal, TrendingDown, TrendingUp,
+  Bot, Loader2, RefreshCw, Save, Signal, TrendingDown, TrendingUp,
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
 import MarketChart from "@/components/trading/MarketChart";
+import ActivityTimeline from "@/components/agent/ActivityTimeline";
+import PipelineView from "@/components/agent/PipelineView";
+import StatusHeader from "@/components/agent/StatusHeader";
+import DecisionsList from "@/components/agent/DecisionsList";
+import { useAgentLive } from "@/hooks/useAgentLive";
+import { humanReason, relTime } from "@/lib/agentLang";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +22,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Config = Tables<"agent_config">;
-type Decision = Tables<"agent_decisions">;
-type Position = Tables<"paper_positions">;
-type TvSignal = Tables<"tradingview_signals">;
 
 const NUM_FIELDS: { key: keyof Config; label: string; hint: string; step?: string }[] = [
   { key: "max_hold_minutes", label: "Max hold (min)", hint: "0 = disabled (no time-based exit). Any value > 0 force-flattens at that age." },
@@ -56,61 +57,13 @@ const BOOL_FIELDS: { key: keyof Config; label: string; hint: string }[] = [
   { key: "tv_confluence_required", label: "TradingView confluence required", hint: "Require BOTH the 5-step setup and a fresh indicator signal." },
 ];
 
-const STEP_ORDER = ["zone", "break", "retest", "ifvg", "trigger"] as const;
-const STEP_LABEL: Record<string, string> = {
-  zone: "1 Zone", break: "2 Break", retest: "3 Retest", ifvg: "4 IFVG", trigger: "5 Trigger",
-};
-
-function StepPips({ steps }: { steps: unknown }) {
-  const s = (steps ?? {}) as Record<string, boolean>;
-  if (!Object.keys(s).length) return <span className="text-[10px] text-muted-foreground">—</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {STEP_ORDER.map((k) => (
-        <span
-          key={k}
-          className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${
-            s[k]
-              ? "bg-primary/15 text-primary border-primary/30"
-              : "bg-muted/40 text-muted-foreground border-border"
-          }`}
-        >
-          {STEP_LABEL[k]}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 export default function Agent() {
-  const [config, setConfig] = useState<Config | null>(null);
+  const { loading, config, decisions, positions, signals, openPositions, timeline, today, reload } = useAgentLive();
   const [draft, setDraft] = useState<Partial<Config>>({});
-  const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [signals, setSignals] = useState<TvSignal[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ticking, setTicking] = useState(false);
-
-  const load = useCallback(async () => {
-    const [cfg, dec, pos, sig] = await Promise.all([
-      supabase.from("agent_config").select("*").eq("id", "default").maybeSingle(),
-      supabase.from("agent_decisions").select("*").order("created_at", { ascending: false }).limit(40),
-      supabase.from("paper_positions").select("*").order("opened_at", { ascending: false }).limit(25),
-      supabase.from("tradingview_signals").select("*").order("received_at", { ascending: false }).limit(15),
-    ]);
-    if (cfg.data) setConfig(cfg.data);
-    setDecisions(dec.data ?? []);
-    setPositions(pos.data ?? []);
-    setSignals(sig.data ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
-  }, [load]);
+  const [focusTime, setFocusTime] = useState<number | null>(null);
+  const load = reload;
 
   const value = <K extends keyof Config>(key: K): Config[K] | undefined =>
     (key in draft ? draft[key] : config?.[key]) as Config[K] | undefined;
@@ -140,7 +93,7 @@ export default function Agent() {
     load();
   };
 
-  const openPositions = positions.filter((p) => p.status === "OPEN");
+
   const lastDecision = decisions[0];
 
   if (loading) {
@@ -178,53 +131,27 @@ export default function Agent() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
-        {/* Status strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            {
-              icon: <Power className="w-3.5 h-3.5" />,
-              label: "Auto-trade",
-              value: config?.kill_switch ? "KILLED" : config?.auto_trade ? "ARMED" : "OBSERVING",
-              tone: config?.kill_switch ? "text-destructive" : config?.auto_trade ? "text-primary" : "text-muted-foreground",
-            },
-            {
-              icon: <Activity className="w-3.5 h-3.5" />,
-              label: "Last decision",
-              value: lastDecision?.decision ?? "—",
-              tone: lastDecision?.decision === "BUY" ? "text-primary" : lastDecision?.decision === "SELL" ? "text-destructive" : "text-muted-foreground",
-            },
-            {
-              icon: <Gauge className="w-3.5 h-3.5" />,
-              label: "HTF bias",
-              value: (lastDecision?.htf_bias ?? "none").toUpperCase(),
-              tone: "text-foreground",
-            },
-            {
-              icon: <Clock className="w-3.5 h-3.5" />,
-              label: "Open positions",
-              value: String(openPositions.length),
-              tone: openPositions.length ? "text-primary" : "text-muted-foreground",
-            },
-          ].map((s) => (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-xl p-3"
-            >
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                {s.icon}
-                <span className="text-[10px] font-mono uppercase tracking-wider">{s.label}</span>
-              </div>
-              <p className={`mt-1 text-lg font-semibold tabular-nums ${s.tone}`}>{s.value}</p>
-            </motion.div>
-          ))}
-        </div>
+        <StatusHeader
+          config={config}
+          todayPnl={today.pnl}
+          todayTrades={today.trades}
+          openCount={openPositions.length}
+        />
 
-        {lastDecision?.reason && (
-          <div className="rounded-xl border border-border/60 bg-card/40 backdrop-blur-xl px-3 py-2 flex items-start gap-2">
-            <ShieldAlert className="w-3.5 h-3.5 mt-0.5 text-muted-foreground shrink-0" />
-            <p className="text-xs text-muted-foreground">{lastDecision.reason}</p>
+        <ActivityTimeline
+          items={timeline}
+          onFocus={(item) => setFocusTime(Math.floor(new Date(item.ts).getTime() / 1000))}
+        />
+
+        <PipelineView />
+
+        {lastDecision && (
+          <div className="rounded-xl border border-border/60 bg-card/40 backdrop-blur-xl px-3 py-2 flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Right now</span>
+            <p className="text-xs text-muted-foreground">
+              {humanReason(lastDecision.reason, lastDecision.decision)} · higher-timeframe trend{" "}
+              {(lastDecision.htf_bias ?? "unknown").toUpperCase()} · {relTime(lastDecision.created_at)}
+            </p>
           </div>
         )}
 
@@ -239,7 +166,7 @@ export default function Agent() {
 
           {/* CHART */}
           <TabsContent value="chart" className="mt-4">
-            <MarketChart />
+            <MarketChart focusTime={focusTime} />
           </TabsContent>
 
           {/* CONFIG */}
@@ -306,50 +233,7 @@ export default function Agent() {
           {/* DECISIONS */}
           <TabsContent value="decisions" className="mt-4">
             <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-xl">
-              <ScrollArea className="h-[460px]">
-                <div className="divide-y divide-border/50">
-                  {decisions.length === 0 && (
-                    <p className="p-6 text-center text-xs text-muted-foreground">
-                      No decisions logged yet. The agent writes one entry every minute.
-                    </p>
-                  )}
-                  {decisions.map((d) => (
-                    <div key={d.id} className="p-3 space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] font-mono ${
-                            d.decision === "BUY"
-                              ? "border-primary/40 text-primary"
-                              : d.decision === "SELL"
-                                ? "border-destructive/40 text-destructive"
-                                : "border-border text-muted-foreground"
-                          }`}
-                        >
-                          {d.decision}
-                        </Badge>
-                        <span className="text-[10px] font-mono text-muted-foreground">
-                          {new Date(d.created_at).toLocaleTimeString()}
-                        </span>
-                        <span className="text-[10px] font-mono text-muted-foreground">src:{d.source}</span>
-                        {d.rr != null && (
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            {Number(d.rr).toFixed(2)}R
-                          </span>
-                        )}
-                      </div>
-                      <StepPips steps={d.steps_passed} />
-                      {d.reason && <p className="text-[11px] text-muted-foreground leading-snug">{d.reason}</p>}
-                      {d.entry != null && (
-                        <p className="text-[10px] font-mono text-muted-foreground">
-                          entry {Number(d.entry).toFixed(2)} · stop {Number(d.stop ?? 0).toFixed(2)} · target{" "}
-                          {Number(d.target ?? 0).toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+              <DecisionsList decisions={decisions} />
             </div>
           </TabsContent>
 

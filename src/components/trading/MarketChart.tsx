@@ -70,9 +70,11 @@ interface MarketChartProps {
   compact?: boolean;
   className?: string;
   height?: number;
+  /** Unix seconds — when set, the chart scrolls so that moment is centred. */
+  focusTime?: number | null;
 }
 
-export default function MarketChart({ compact = false, className = "", height }: MarketChartProps) {
+export default function MarketChart({ compact = false, className = "", height, focusTime = null }: MarketChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -237,6 +239,16 @@ export default function MarketChart({ compact = false, className = "", height }:
 
   // Signal to the data effects that a fresh chart instance is ready.
   useEffect(() => { setChartEpoch((n) => n + 1); }, [compact]);
+
+  // Centre the visible range on an externally requested moment (timeline chip click).
+  useEffect(() => {
+    if (!focusTime || !chartRef.current || bars.length === 0) return;
+    const span = Math.max(60, (bars[bars.length - 1].t - bars[0].t) / 12);
+    chartRef.current.timeScale().setVisibleRange({
+      from: (focusTime - span / 2) as UTCTimestamp,
+      to: (focusTime + span / 2) as UTCTimestamp,
+    });
+  }, [focusTime, bars, chartEpoch]);
 
   // Apply bar data in place (no re-create)
   useEffect(() => {

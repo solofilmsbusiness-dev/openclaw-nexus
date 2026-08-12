@@ -20,8 +20,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTradingSimulation, ALL_INSTRUMENTS } from "@/hooks/useTradingSimulation";
-import type { LearningNote, InstrumentInfo } from "@/hooks/useTradingSimulation";
+import { useLiveTrading, ALL_INSTRUMENTS } from "@/hooks/useLiveTrading";
+import type { LearningNote, InstrumentInfo } from "@/hooks/useLiveTrading";
 import { useTradingLayout, type PanelItem, TOP_BAR_ITEMS } from "@/contexts/TradingLayoutContext";
 import { Switch } from "@/components/ui/switch";
 import Watchlist from "@/components/trading/Watchlist";
@@ -119,7 +119,7 @@ const CATEGORY_LABELS: Record<InstrumentInfo["category"], string> = {
 const Trading = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
-  const sim = useTradingSimulation();
+  const sim = useLiveTrading();
   const { tickers, evaluations, considerations, executedTrades, tradeHistory, learningNotes, stats, dataSource, portfolio, deleteTrade, deleteLearningNote, addLearningNote, activeSymbols, setActiveSymbols, allInstruments } = sim;
   const layout = useTradingLayout();
   const { theme, setTheme } = useTheme();
@@ -293,7 +293,7 @@ const Trading = () => {
           <>
             <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
             <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
-              {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
+              {dataSource === "live" ? "Live Data" : "Loading…"}
             </span>
           </>
           )}
@@ -355,7 +355,7 @@ const Trading = () => {
 // ─── Extracted panel components ───
 
 function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
-  tickers: ReturnType<typeof useTradingSimulation>["tickers"];
+  tickers: ReturnType<typeof useLiveTrading>["tickers"];
   activeSymbols: string[];
   setActiveSymbols: (syms: string[]) => void;
 }) {
@@ -469,9 +469,9 @@ function MarketPanel({ tickers, activeSymbols, setActiveSymbols }: {
 }
 
 function AgentPanel({ evaluations, considerations, executedTrades }: {
-  evaluations: ReturnType<typeof useTradingSimulation>["evaluations"];
-  considerations: ReturnType<typeof useTradingSimulation>["considerations"];
-  executedTrades: ReturnType<typeof useTradingSimulation>["executedTrades"];
+  evaluations: ReturnType<typeof useLiveTrading>["evaluations"];
+  considerations: ReturnType<typeof useLiveTrading>["considerations"];
+  executedTrades: ReturnType<typeof useLiveTrading>["executedTrades"];
 }) {
   return (
     <>
@@ -556,7 +556,7 @@ function AgentPanel({ evaluations, considerations, executedTrades }: {
 }
 
 function HistoryPanel({ tradeHistory, deleteTrade }: {
-  tradeHistory: ReturnType<typeof useTradingSimulation>["tradeHistory"];
+  tradeHistory: ReturnType<typeof useLiveTrading>["tradeHistory"];
   deleteTrade: (id: string) => void;
 }) {
   const { selectedAgentId, tradeAgentMap } = useTradingData();
@@ -710,7 +710,7 @@ function JournalPanel({
   );
 }
 
-function PortfolioPanel({ portfolio }: { portfolio: ReturnType<typeof useTradingSimulation>["portfolio"] }) {
+function PortfolioPanel({ portfolio }: { portfolio: ReturnType<typeof useLiveTrading>["portfolio"] }) {
   return (
     <>
       <div className="flex items-center gap-2 mb-3">
@@ -774,11 +774,11 @@ function PortfolioPanel({ portfolio }: { portfolio: ReturnType<typeof useTrading
   );
 }
 
-function WatchlistInner({ tickers, activeSymbols }: { tickers: ReturnType<typeof useTradingSimulation>["tickers"]; activeSymbols: string[] }) {
+function WatchlistInner({ tickers, activeSymbols }: { tickers: ReturnType<typeof useLiveTrading>["tickers"]; activeSymbols: string[] }) {
   return <Watchlist tickers={tickers} availableSymbols={activeSymbols} />;
 }
 
-function AnalyticsInner({ stats, tradeHistory }: { stats: ReturnType<typeof useTradingSimulation>["stats"]; tradeHistory: ReturnType<typeof useTradingSimulation>["tradeHistory"] }) {
+function AnalyticsInner({ stats, tradeHistory }: { stats: ReturnType<typeof useLiveTrading>["stats"]; tradeHistory: ReturnType<typeof useLiveTrading>["tradeHistory"] }) {
   return <AnalyticsPanel stats={stats} tradeHistory={tradeHistory} />;
 }
 
