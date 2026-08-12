@@ -293,7 +293,7 @@ const Trading = () => {
           <>
             <div className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "bg-neon-green" : dataSource === "simulated" ? "bg-neon-orange" : "bg-muted-foreground"} animate-pulse-glow`} />
             <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
-              {dataSource === "live" ? "Live Data" : dataSource === "simulated" ? "Simulated" : "Loading…"}
+              {dataSource === "live" ? "Live Data" : "Loading…"}
             </span>
           </>
           )}
