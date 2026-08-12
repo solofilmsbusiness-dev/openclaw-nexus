@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { ExecutedTrade, AgentConsideration, AgentEvaluation } from "@/hooks/useTradingSimulation";
+import type { ExecutedTrade, AgentConsideration, AgentEvaluation } from "@/hooks/useLiveTrading";
 
 interface TradingDataContextValue {
   executedTrades: ExecutedTrade[];

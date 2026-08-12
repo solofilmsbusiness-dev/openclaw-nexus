@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { MarketTicker } from "@/hooks/useTradingSimulation";
+import type { MarketTicker } from "@/hooks/useLiveTrading";
 
 interface WatchlistItem {
   id: string;

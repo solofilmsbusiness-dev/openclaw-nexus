@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ALL_INSTRUMENTS } from "@/hooks/useTradingSimulation";
+import { ALL_INSTRUMENTS } from "@/hooks/useLiveTrading";
 
 type Mode = "calc" | "tickval" | "rr" | "pnl";
 

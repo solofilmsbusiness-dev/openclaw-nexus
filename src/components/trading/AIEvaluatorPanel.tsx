@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { ALL_INSTRUMENTS } from "@/hooks/useTradingSimulation";
+import { ALL_INSTRUMENTS } from "@/hooks/useLiveTrading";
 import { toast } from "sonner";
 
 interface Evaluation {
